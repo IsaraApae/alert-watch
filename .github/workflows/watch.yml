@@ -1,0 +1,27 @@
+name: watch
+on:
+  # Started every 30 minutes by an external scheduler (cron-job.org) calling the dispatch API:
+  # GitHub's own `schedule` trigger never fired for this repository.
+  workflow_dispatch:
+    inputs:
+      ping:
+        description: Send a test message instead of checking
+        type: boolean
+        default: false
+permissions:
+  contents: write
+concurrency: watch
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 watch.py ${{ inputs.ping && 'ping' || '' }}
+        env:
+          MANGA_STATE: ci-state.json
+          LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
+      - run: |
+          git config user.name manga-watch
+          git config user.email manga-watch@users.noreply.github.com
+          git add ci-state.json
+          git diff --cached --quiet || (git commit -qm "update state" && git push -q)

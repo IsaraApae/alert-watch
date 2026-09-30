@@ -1,0 +1,18 @@
+# name | AniList id (the number in the show's anilist.co address) | optional: episodes aired before this entry, added to the count
+As a Reincarnated Aristocrat Season 3 | 185756
+Reincarnated as a Sword Season 2 | 159042
+The Ramparts of Ice Season 2 | 213805
+The Apothecary Diaries Season 3 | 195516
+Tokyo Revengers Season 4 | 178083
+Even the Student Council Has Its Holes! | 191656
+Ranma 1/2 Season 3 | 209872
+Magic Repo Man | 202250
+Blue Box Season 2 | 189123
+HOTEL INHUMANS Season 2 | 199426
+The Detective Is Already Dead Season 2 | 152677
+Sasaki and Peeps Season 2 | 176314
+The Iceblade Sorcerer Shall Rule the World Season 2 | 212503
+Mission: Yozakura Family Season 2 Cour 2 | 213657
+Cyberpunk: Edgerunners 2 | 195539
+JoJo Part 7: Steel Ball Run 2nd-3rd Stage | 210482 | 1
+Chitose Is in the Ramune Bottle 2nd Cour | 198727
