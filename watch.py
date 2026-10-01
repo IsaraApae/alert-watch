@@ -234,7 +234,14 @@ if __name__ == "__main__":
         assert tv_aired(x, {8: 15}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: 15}, 1790868600)  # earliest channel, season numbering, nothing future
         print("ok")
     elif sys.argv[1:] == ["ping"]:
-        url = "https://manga-lc.net/manga/reborn-rich/"
-        notify("Alert Watch test: reborn-rich", "ตอนที่-194 (test)", "ตอนที่-194 (test)\n" + url, cover(url)[1], url)
+        # replays the real alert for Reincarnated as a Sword Season 2 episode 1 (aired 30 Sep 2026 22:30 Thai)
+        q = json.dumps({"query": "{Media(id:159042){episodes season seasonYear format coverImage{large}}}"}).encode()
+        r = urllib.request.Request("https://graphql.anilist.co", data=q, headers={"Content-Type": "application/json", "User-Agent": UA})
+        m = json.loads(urllib.request.urlopen(r, timeout=30).read())["data"]["Media"]
+        line = episode_line(1, m["episodes"], 1790782200)
+        yt = youtube_episode(youtube_videos(), "กลายเป็นดาบ|tensei shitara ken|reincarnated as a sword", {1}, 1790782200)
+        print("youtube link:", yt)
+        notify(f"New episode: Reincarnated as a Sword Season 2 ({m['season'].title()} {m['seasonYear']}, {m['format']})",
+               line, line + (f"\n{yt}" if yt else ""), m["coverImage"]["large"], yt)
     else:
         main()
