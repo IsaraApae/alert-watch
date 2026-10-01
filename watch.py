@@ -62,10 +62,14 @@ def anime(state):
     rows = [l.split(" | ") for l in (HERE / "anime.txt").read_text().splitlines() if l.strip() and not l.startswith("#")]
     names = {int(r[1]): r[0] for r in rows}
     offset = {int(r[1]): int(r[2]) for r in rows if len(r) > 2}  # episodes that aired before this AniList entry starts counting
+    pm = {int(r[1]) for r in rows if len(r) > 3 and r[3].strip() == "pm"}  # AniList lists these in the morning by mistake
+
+    def aired_at(media_id, t):  # moves a wrongly-AM time to PM; stops on its own once AniList is corrected
+        return t + 43200 if media_id in pm and datetime.fromtimestamp(t, timezone(timedelta(hours=9))).hour < 12 else t
     now = int(time.time())
     query = ("query($ids:[Int],$a:Int,$b:Int){Page(perPage:50){airingSchedules(mediaId_in:$ids,airingAt_greater:$a,"
              "airingAt_lesser:$b,sort:TIME){episode airingAt media{id episodes season seasonYear format}}}}")
-    body = json.dumps({"query": query, "variables": {"ids": list(names), "a": now - 7 * 86400, "b": now}}).encode()
+    body = json.dumps({"query": query, "variables": {"ids": list(names), "a": now - 8 * 86400, "b": now}}).encode()
     req = urllib.request.Request("https://graphql.anilist.co", data=body, headers={"Content-Type": "application/json", "User-Agent": UA})
     try:
         aired = json.loads(urllib.request.urlopen(req, timeout=30).read())["data"]["Page"]["airingSchedules"]
@@ -74,11 +78,12 @@ def anime(state):
         return
     seed = "anime" not in state  # first run: record the past week's episodes silently
     seen = state.setdefault("anime", [])
+    aired = [a for a in aired if aired_at(a["media"]["id"], a["airingAt"]) <= now]
     new = [a for a in aired if f"{a['media']['id']}:{a['episode']}" not in seen]
     for a in new:
         if not seed:
             off, total = offset.get(a["media"]["id"], 0), a["media"]["episodes"]
-            line = episode_line(a["episode"] + off, total and total + off, a["airingAt"])
+            line = episode_line(a["episode"] + off, total and total + off, aired_at(a["media"]["id"], a["airingAt"]))
             m = a["media"]  # broadcast season and format, e.g. "Fall 2026, TV"
             parts = [f"{m['season'].title()} {m['seasonYear']}" if m["season"] and m["seasonYear"] else "", (m["format"] or "").replace("_", " ")]
             label = f" ({', '.join(p for p in parts if p)})" if any(parts) else ""
