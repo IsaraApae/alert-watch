@@ -80,6 +80,7 @@ def cover(url):
 
 
 WEBTOON_APP = "https://isaraapae.github.io/manga-watch/w.html?t="  # redirect page on the gh-pages branch; opens linewebtoon://
+WEBTOON_SERIES_PAGE = {"6227", "9274"}  # Enrolling in the Transcendent Academy, Zodiac Girls: cards open the series page, not the episode
 BRAVE = "https://isaraapae.github.io/manga-watch/b.html?v="  # redirect page on the gh-pages branch; opens a YouTube video in Brave
 
 
@@ -207,9 +208,13 @@ def main():
             if "webtoons.com" in url:  # a cover card that opens the series straight in the WEBTOON app
                 no = re.search(r"title_no=(\d+)", url)[1]
                 eps = sorted(int(c[3:]) for c in new)  # "EP.216" -> 216; the card opens the first new one, so you read in order
-                text = "\n".join(f"EP.{e}\nlinewebtoon://viewer/webtoon?titleNo={no}&episodeNo={e}" for e in eps)
+                if no in WEBTOON_SERIES_PAGE:
+                    text, tap = f"{shown}\nlinewebtoon://episodeList/webtoon?titleNo={no}", WEBTOON_APP + no
+                else:
+                    text = "\n".join(f"EP.{e}\nlinewebtoon://viewer/webtoon?titleNo={no}&episodeNo={e}" for e in eps)
+                    tap = f"{WEBTOON_APP}{no}&e={eps[0]}"
                 title, image = cover(url)  # LINE cards only open web addresses, so the card goes via a page that hands off to the app
-                notify(f"New chapter: {title or name}", shown, text, image, f"{WEBTOON_APP}{no}&e={eps[0]}")
+                notify(f"New chapter: {title or name}", shown, text, image, tap)
             else:  # cover card that opens the first new chapter; the text version lists each new chapter's link
                 links = {c: quote(found[c], safe=":/%?=&#") for c in new}
                 order = sorted(new, key=lambda c: [int(x) for x in re.findall(r"\d+", c)] or [0])
