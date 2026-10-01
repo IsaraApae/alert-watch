@@ -139,7 +139,8 @@ def main():
         new = sorted(set(found) - set(state[url])) if url in state else []  # first sight of a url = seed silently
         if new:
             shown = ", ".join(re.sub(r"^ซี่?ซั่น-1/", "", c) for c in new)[:200]  # every series is on season 1; a later season would still show
-            notify(f"New chapter: {name}", shown, shown + "\n" + quote(url, safe=":/%"))  # series page, encoded so LINE makes it tappable
+            page = url.replace("://www.webtoons.com", "://m.webtoons.com")  # the Webtoon app claims m.webtoons.com series links
+            notify(f"New chapter: {name}", shown, shown + "\n" + quote(page, safe=":/%?=&"))  # series page, encoded so LINE makes it tappable
         print(f"{name}: {len(found)} chapters, {len(new)} new")
         state[url] = sorted(set(found) | set(state.get(url, [])))
     STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1))
