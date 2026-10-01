@@ -55,7 +55,8 @@ def notify(title, msg, links, image=None, uri=None):
     if not token:
         return
     plain = {"type": "text", "text": f"{title}\n{links}"[:4500]}
-    tries = ([{"type": "flex", "altText": f"{title} {msg}"[:400], "contents": card(title, msg, image, uri)}] if image else []) + [plain]
+    tries = ([{"type": "flex", "altText": f"{title} {msg}"[:400], "contents": card(title, msg, image, uri)}]
+             if image and re.search(r"\.(jpe?g|png)$", urlparse(image).path, re.I) else [])  # LINE cards show JPEG/PNG only + [plain]
     for message in tries:  # the card first when there is a cover; plain text if LINE refuses it, so the alert is never lost
         req = urllib.request.Request("https://api.line.me/v2/bot/message/broadcast", data=json.dumps({"messages": [message]}).encode(),
                                      headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
@@ -169,8 +170,9 @@ def main():
                 no = re.search(r"title_no=(\d+)", url)[1]
                 title, image = cover(url)  # LINE cards only open web addresses, so the card goes via a page that hands off to the app
                 notify(f"New chapter: {title or name}", shown, shown + "\nlinewebtoon://episodeList/webtoon?titleNo=" + no, image, WEBTOON_APP + no)
-            else:  # series page, encoded so LINE makes it tappable
-                notify(f"New chapter: {name}", shown, shown + "\n" + quote(url, safe=":/%"))
+            else:  # cover card that opens the series page (encoded so LINE accepts it)
+                link, image = quote(url, safe=":/%"), cover(url)[1]
+                notify(f"New chapter: {name}", shown, shown + "\n" + link, image and quote(image, safe=":/%?=&"), link)
         print(f"{name}: {len(found)} chapters, {len(new)} new")
         state[url] = sorted(set(found) | set(state.get(url, [])))
     STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1))
@@ -195,10 +197,7 @@ if __name__ == "__main__":
         assert tv_aired(x, {8: 15}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: 15}, 1790868600)  # earliest channel, season numbering, nothing future
         print("ok")
     elif sys.argv[1:] == ["ping"]:
-        q = '{"query": "{Media(id:213805){coverImage{large}}}"}'.encode()
-        r = urllib.request.Request("https://graphql.anilist.co", data=q, headers={"Content-Type": "application/json", "User-Agent": UA})
-        image = json.loads(urllib.request.urlopen(r, timeout=30).read())["data"]["Media"]["coverImage"]["large"]
-        line = episode_line(1, None, 1790868360)
-        notify("Alert Watch test: The Ramparts of Ice Season 2 (Fall 2026, TV)", line, line, image)
+        url = "https://manga-lc.net/manga/reborn-rich/"
+        notify("Alert Watch test: reborn-rich", "ตอนที่-194 (test)", "ตอนที่-194 (test)\n" + url, cover(url)[1], url)
     else:
         main()
