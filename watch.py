@@ -3,7 +3,7 @@
 import json, os, re, shutil, subprocess, sys, time, urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from urllib.parse import quote, unquote
+from urllib.parse import quote, unquote, urlparse
 
 HERE = Path(__file__).parent
 STATE = HERE / os.environ.get("MANGA_STATE", "state.json")  # GitHub Actions keeps its own state file
@@ -26,6 +26,12 @@ def chapters(url, html):
     for num, h in re.findall(r'data-num="([^"{]+)"[^>]*>.{0,300}?href="([^"#]+)"', html, re.S):
         out[num] = h
     return out
+
+
+def webtoon(url):
+    """LINE Webtoon: {"EP.216": link} from the series' RSS feed, which lists its latest free episodes."""
+    rss = get(url.replace("://m.webtoons.com", "://www.webtoons.com").replace("/list?", "/rss?"))
+    return {f"EP.{n}": link.replace("&amp;", "&") for link, n in re.findall(r"<link>([^<]*episode_no=(\d+))</link>", rss)}
 
 
 def get(url):
@@ -121,9 +127,9 @@ def main():
     state = json.loads(STATE.read_text()) if STATE.exists() else {}
     anime(state)
     for url in (HERE / "urls.txt").read_text().split():
-        name = unquote(url).rstrip("/").rsplit("/", 1)[-1]
+        name = [p for p in urlparse(unquote(url)).path.split("/") if p and p != "list"][-1]  # series slug
         try:
-            found = chapters(url, get(url))
+            found = webtoon(url) if "webtoons.com" in url else chapters(url, get(url))
         except Exception as e:
             print(f"FAIL {name}: {e}", file=sys.stderr)
             continue
@@ -141,11 +147,15 @@ def main():
 
 if __name__ == "__main__":
     if sys.argv[1:] == ["test"]:
+        from unittest import mock
         h = ('<a href="https://x.net/manga/a/%e0%b8%95-2/">2</a><a href="https://x.net/other/">o</a>'
              '<a href="https://x.net/manga/a/%e0%b8%95-3/"> ตอนที่ 3 - อัพเดท </a><a href="https://x.net/manga/a/%e0%b8%95-3/">last</a>'
              '<li data-num="{{number}}"><a href="#/chapter-{{number}}"></a><li data-num="7"> <div>\n<a href="https://x.net/a-7/">7</a>')
         want = {"ต-2": "https://x.net/manga/a/%e0%b8%95-2/", "7": "https://x.net/a-7/"}
         assert chapters("https://x.net/manga/a/", h) == want, chapters("https://x.net/manga/a/", h)
+        rss = "<item><link>https://www.webtoons.com/th/x/ep7-a/viewer?title_no=1&amp;episode_no=7</link></item>"
+        with mock.patch(__name__ + ".get", lambda u: rss if "/rss?title_no=1" in u and "://www." in u else ""):
+            assert webtoon("https://m.webtoons.com/th/x/y/list?title_no=1") == {"EP.7": "https://www.webtoons.com/th/x/ep7-a/viewer?title_no=1&episode_no=7"}
         assert episode_line(5, 12, 1790866800) == "Episode 05/12\nAired 01 Oct 2026 22:00", episode_line(5, 12, 1790866800)
         assert episode_line(3, None, 1790866800).startswith("Episode 03/?")
         x = ('<ProgItem><TID>8</TID><Count>15</Count><StTime>2026-10-02 00:26:00</StTime><Deleted>0</Deleted></ProgItem>'
