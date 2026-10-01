@@ -132,7 +132,7 @@ def main():
             continue
         new = sorted(set(found) - set(state[url])) if url in state else []  # first sight of a url = seed silently
         if new:
-            notify(f"New chapter: {name}", ", ".join(new)[:200], "\n".join(f"{c}\n{found[c]}" for c in new))
+            notify(f"New chapter: {name}", ", ".join(new)[:200], ", ".join(new)[:200] + "\n" + quote(url, safe=":/%"))  # series page, encoded so LINE makes it tappable
         print(f"{name}: {len(found)} chapters, {len(new)} new")
         state[url] = sorted(set(found) | set(state.get(url, [])))
     STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1))
