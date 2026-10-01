@@ -57,39 +57,64 @@ def episode_line(ep, total, aired_at):
     return f"Episode {ep:02d}/{f'{total:02d}' if total else '?'}\nAired {when}"
 
 
-def anime(state):
-    """Notify when AniList's airing schedule shows a new episode of a show in anime.txt (name | AniList id | optional episode offset)."""
-    rows = [l.split(" | ") for l in (HERE / "anime.txt").read_text().splitlines() if l.strip() and not l.startswith("#")]
-    names = {int(r[1]): r[0] for r in rows}
-    offset = {int(r[1]): int(r[2]) for r in rows if len(r) > 2}  # episodes that aired before this AniList entry starts counting
-    pm = {int(r[1]) for r in rows if len(r) > 3 and r[3].strip() == "pm"}  # AniList lists these in the morning by mistake
+JST = timezone(timedelta(hours=9))
 
-    def aired_at(media_id, t):  # moves a wrongly-AM time to PM; stops on its own once AniList is corrected
-        return t + 43200 if media_id in pm and datetime.fromtimestamp(t, timezone(timedelta(hours=9))).hour < 12 else t
+
+def tv_aired(xml, first_ep, now):
+    """{(TV-schedule id, season episode): earliest broadcast} from Syoboi Calendar's ProgLookup XML, for episodes already on air."""
+    out = {}
+    for item in re.findall(r"<ProgItem\b.*?</ProgItem>", xml, re.S):
+        p = dict(re.findall(r"<(\w+)>([^<]*)</\1>", item))
+        if p.get("Deleted") == "1" or not p.get("Count", "").isdigit() or int(p["TID"]) not in first_ep:
+            continue
+        t = datetime.strptime(p["StTime"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=JST).timestamp()
+        key = (int(p["TID"]), int(p["Count"]) - first_ep[int(p["TID"])] + 1)  # the TV schedule keeps counting across seasons
+        if t <= now and (key not in out or t < out[key]):
+            out[key] = t
+    return out
+
+
+def anime(state):
+    """Notify when a show in anime.txt airs a new episode: the Japanese TV schedule (Syoboi Calendar, earliest channel)
+    for TV shows, AniList's airing schedule for online-only ones. anime.txt: name | AniList id | TV-schedule id (0 = none)
+    | first episode number in the TV schedule | episodes before this AniList entry (added to the count)."""
+    rows = [l.split(" | ") for l in (HERE / "anime.txt").read_text().splitlines() if l.strip() and not l.startswith("#")]
+    shows = {int(r[1]): {"name": r[0], "tid": int(r[2]), "first": int(r[3]), "offset": int(r[4])} for r in rows}
     now = int(time.time())
-    query = ("query($ids:[Int],$a:Int,$b:Int){Page(perPage:50){airingSchedules(mediaId_in:$ids,airingAt_greater:$a,"
-             "airingAt_lesser:$b,sort:TIME){episode airingAt media{id episodes season seasonYear format}}}}")
-    body = json.dumps({"query": query, "variables": {"ids": list(names), "a": now - 8 * 86400, "b": now}}).encode()
+    query = ("query($ids:[Int],$web:[Int],$a:Int,$b:Int){info:Page(perPage:50){media(id_in:$ids){id episodes season seasonYear format}}"
+             " web:Page(perPage:50){airingSchedules(mediaId_in:$web,airingAt_greater:$a,airingAt_lesser:$b){episode airingAt media{id}}}}")
+    web_only = [i for i, s in shows.items() if not s["tid"]]
+    body = json.dumps({"query": query, "variables": {"ids": list(shows), "web": web_only or [0], "a": now - 8 * 86400, "b": now}}).encode()
     req = urllib.request.Request("https://graphql.anilist.co", data=body, headers={"Content-Type": "application/json", "User-Agent": UA})
     try:
-        aired = json.loads(urllib.request.urlopen(req, timeout=30).read())["data"]["Page"]["airingSchedules"]
+        data = json.loads(urllib.request.urlopen(req, timeout=30).read())["data"]
     except Exception as e:
         print(f"FAIL anilist: {e}", file=sys.stderr)
         return
+    info = {m["id"]: m for m in data["info"]["media"]}
+    aired = {(a["media"]["id"], a["episode"]): a["airingAt"] for a in data["web"]["airingSchedules"] if a["airingAt"] <= now}
+    by_tid = {s["tid"]: i for i, s in shows.items() if s["tid"]}
+    if by_tid:
+        span = f"{datetime.fromtimestamp(now - 8 * 86400, JST):%Y%m%d_%H%M%S}-{datetime.fromtimestamp(now, JST):%Y%m%d_%H%M%S}"
+        try:
+            xml = get(f"https://cal.syoboi.jp/db.php?Command=ProgLookup&TID={','.join(map(str, by_tid))}&Range={span}")
+            first = {tid: shows[i]["first"] for tid, i in by_tid.items()}
+            aired.update({(by_tid[tid], ep): t for (tid, ep), t in tv_aired(xml, first, now).items()})
+        except Exception as e:
+            print(f"FAIL tv schedule: {e}", file=sys.stderr)
     seed = "anime" not in state  # first run: record the past week's episodes silently
     seen = state.setdefault("anime", [])
-    aired = [a for a in aired if aired_at(a["media"]["id"], a["airingAt"]) <= now]
-    new = [a for a in aired if f"{a['media']['id']}:{a['episode']}" not in seen]
-    for a in new:
+    new = sorted((t, i, ep) for (i, ep), t in aired.items() if f"{i}:{ep}" not in seen)
+    for t, i, ep in new:
         if not seed:
-            off, total = offset.get(a["media"]["id"], 0), a["media"]["episodes"]
-            line = episode_line(a["episode"] + off, total and total + off, aired_at(a["media"]["id"], a["airingAt"]))
-            m = a["media"]  # broadcast season and format, e.g. "Fall 2026, TV"
-            parts = [f"{m['season'].title()} {m['seasonYear']}" if m["season"] and m["seasonYear"] else "", (m["format"] or "").replace("_", " ")]
-            label = f" ({', '.join(p for p in parts if p)})" if any(parts) else ""
-            notify(f"New episode: {names[m['id']]}{label}", line.replace("\n", " - "), line)
-        seen.append(f"{a['media']['id']}:{a['episode']}")
-    print(f"anime: {len(names)} watched, {len(new)} {'seeded' if seed else 'new'}")
+            s, m = shows[i], info.get(i, {})
+            total = m.get("episodes")
+            line = episode_line(ep + s["offset"], total and total + s["offset"], t)
+            parts = [f"{m['season'].title()} {m['seasonYear']}" if m.get("season") and m.get("seasonYear") else "", (m.get("format") or "").replace("_", " ")]
+            label = f" ({', '.join(p for p in parts if p)})" if any(parts) else ""  # e.g. "Fall 2026, TV"
+            notify(f"New episode: {s['name']}{label}", line.replace("\n", " - "), line)
+        seen.append(f"{i}:{ep}")
+    print(f"anime: {len(shows)} watched, {len(new)} {'seeded' if seed else 'new'}")
 
 
 def main():
@@ -122,6 +147,10 @@ if __name__ == "__main__":
         assert chapters("https://x.net/manga/a/", h) == want, chapters("https://x.net/manga/a/", h)
         assert episode_line(5, 12, 1790866800) == "Episode 05/12\nAired 01 Oct 2026 22:00", episode_line(5, 12, 1790866800)
         assert episode_line(3, None, 1790866800).startswith("Episode 03/?")
+        x = ('<ProgItem><TID>8</TID><Count>15</Count><StTime>2026-10-02 00:26:00</StTime><Deleted>0</Deleted></ProgItem>'
+             '<ProgItem><TID>8</TID><Count>15</Count><StTime>2026-10-02 02:00:00</StTime><Deleted>0</Deleted></ProgItem>'
+             '<ProgItem><TID>8</TID><Count>16</Count><StTime>2026-10-08 23:56:00</StTime><Deleted>0</Deleted></ProgItem>')
+        assert tv_aired(x, {8: 15}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: 15}, 1790868600)  # earliest channel, season numbering, nothing future
         print("ok")
     elif sys.argv[1:] == ["ping"]:
         notify("manga-watch test", "Phone notifications are working", "https://manga-lc.net/")
