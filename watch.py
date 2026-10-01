@@ -39,10 +39,10 @@ def get(url):
     return urllib.request.urlopen(req, timeout=30).read().decode("utf-8", "replace")
 
 
-def card(title, msg, image, uri):
-    """A small LINE card: cover on the left, title and chapter on the right; tapping anywhere opens uri."""
+def card(title, msg, image, uri=None):
+    """A small LINE card: cover on the left, title and chapter on the right; tapping anywhere opens uri, if given."""
     text = lambda t, **k: {"type": "text", "text": t, "size": "sm", "wrap": True, **k}
-    return {"type": "bubble", "size": "kilo", "action": {"type": "uri", "label": "open", "uri": uri},
+    return {"type": "bubble", "size": "kilo", **({"action": {"type": "uri", "label": "open", "uri": uri}} if uri else {}),
             "body": {"type": "box", "layout": "horizontal", "spacing": "md", "contents": [
                 {"type": "image", "url": image, "size": "sm", "aspectMode": "cover", "aspectRatio": "1:1", "flex": 0},
                 {"type": "box", "layout": "vertical", "contents": [text(title, weight="bold"), text(msg, color="#777777")]}]}}
@@ -55,7 +55,7 @@ def notify(title, msg, links, image=None, uri=None):
     if not token:
         return
     plain = {"type": "text", "text": f"{title}\n{links}"[:4500]}
-    tries = ([{"type": "flex", "altText": f"{title} {msg}"[:400], "contents": card(title, msg, image, uri)}] if image and uri else []) + [plain]
+    tries = ([{"type": "flex", "altText": f"{title} {msg}"[:400], "contents": card(title, msg, image, uri)}] if image else []) + [plain]
     for message in tries:  # the card first when there is a cover; plain text if LINE refuses it, so the alert is never lost
         req = urllib.request.Request("https://api.line.me/v2/bot/message/broadcast", data=json.dumps({"messages": [message]}).encode(),
                                      headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
@@ -113,7 +113,7 @@ def anime(state):
     rows = [l.split(" | ") for l in (HERE / "anime.txt").read_text().splitlines() if l.strip() and not l.startswith("#")]
     shows = {int(r[1]): {"name": r[0], "tid": int(r[2]), "first": int(r[3]), "offset": int(r[4])} for r in rows}
     now = int(time.time())
-    query = ("query($ids:[Int],$web:[Int],$a:Int,$b:Int){info:Page(perPage:50){media(id_in:$ids){id episodes season seasonYear format}}"
+    query = ("query($ids:[Int],$web:[Int],$a:Int,$b:Int){info:Page(perPage:50){media(id_in:$ids){id episodes season seasonYear format coverImage{large}}}"
              " web:Page(perPage:50){airingSchedules(mediaId_in:$web,airingAt_greater:$a,airingAt_lesser:$b){episode airingAt media{id}}}}")
     web_only = [i for i, s in shows.items() if not s["tid"]]
     body = json.dumps({"query": query, "variables": {"ids": list(shows), "web": web_only or [0], "a": now - 8 * 86400, "b": now}}).encode()
@@ -144,7 +144,7 @@ def anime(state):
             line = episode_line(ep + s["offset"], total and total + s["offset"], t)
             parts = [f"{m['season'].title()} {m['seasonYear']}" if m.get("season") and m.get("seasonYear") else "", (m.get("format") or "").replace("_", " ")]
             label = f" ({', '.join(p for p in parts if p)})" if any(parts) else ""  # e.g. "Fall 2026, TV"
-            notify(f"New episode: {s['name']}{label}", line.replace("\n", " - "), line)
+            notify(f"New episode: {s['name']}{label}", line, line, (m.get("coverImage") or {}).get("large"))  # cover card, no link
         seen.append(f"{i}:{ep}")
     print(f"anime: {len(shows)} watched, {len(new)} {'seeded' if seed else 'new'}")
 
@@ -195,9 +195,10 @@ if __name__ == "__main__":
         assert tv_aired(x, {8: 15}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: 15}, 1790868600)  # earliest channel, season numbering, nothing future
         print("ok")
     elif sys.argv[1:] == ["ping"]:
-        url = "https://www.webtoons.com/th/romance/ivy/list?title_no=4436"
-        title, image = cover(url)
-        notify(f"Alert Watch test: {title}", "EP.216 (test)", "EP.216 (test)\nlinewebtoon://episodeList/webtoon?titleNo=4436",
-               image, WEBTOON_APP + "4436")
+        q = '{"query": "{Media(id:213805){coverImage{large}}}"}'.encode()
+        r = urllib.request.Request("https://graphql.anilist.co", data=q, headers={"Content-Type": "application/json", "User-Agent": UA})
+        image = json.loads(urllib.request.urlopen(r, timeout=30).read())["data"]["Media"]["coverImage"]["large"]
+        line = episode_line(1, None, 1790868360)
+        notify("Alert Watch test: The Ramparts of Ice Season 2 (Fall 2026, TV)", line, line, image)
     else:
         main()
