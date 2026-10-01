@@ -139,7 +139,10 @@ def main():
         new = sorted(set(found) - set(state[url])) if url in state else []  # first sight of a url = seed silently
         if new:
             shown = ", ".join(re.sub(r"^ซี่?ซั่น-1/", "", c) for c in new)[:200]  # every series is on season 1; a later season would still show
-            page = url.replace("://www.webtoons.com", "://m.webtoons.com")  # the Webtoon app claims m.webtoons.com series links
+            if "webtoons.com" in url:  # the WEBTOON app's own address opens the series directly in the app
+                page = "linewebtoon://episodeList/webtoon?titleNo=" + re.search(r"title_no=(\d+)", url)[1]
+            else:
+                page = url
             notify(f"New chapter: {name}", shown, shown + "\n" + quote(page, safe=":/%?=&"))  # series page, encoded so LINE makes it tappable
         print(f"{name}: {len(found)} chapters, {len(new)} new")
         state[url] = sorted(set(found) | set(state.get(url, [])))
@@ -165,8 +168,7 @@ if __name__ == "__main__":
         assert tv_aired(x, {8: 15}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: 15}, 1790868600)  # earliest channel, season numbering, nothing future
         print("ok")
     elif sys.argv[1:] == ["ping"]:
-        notify("Alert Watch test 3", "Tap the link: it should open Ivy in the WEBTOON app",
-               "Tap the link, then allow \"Open in WEBTOON\": it should open Ivy in the app\n"
-               "https://isaraapae.github.io/manga-watch/w.html?t=4436")
+        notify("Alert Watch test", "Tap the link: it should open Ivy in the WEBTOON app",
+               "Tap the link: it should open Ivy in the WEBTOON app\nlinewebtoon://episodeList/webtoon?titleNo=4436")
     else:
         main()
