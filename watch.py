@@ -251,10 +251,16 @@ if __name__ == "__main__":
         assert tv_aired(x, {8: 15}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: 15}, 1790868600)  # earliest channel, season numbering, nothing future
         print("ok")
     elif sys.argv[1:] == ["ping"]:
-        url = "https://www.webtoons.com/th/romance/ivy/list?title_no=4436"  # test: a Webtoon card that opens the latest episode in the app
-        ep = max(int(c[3:]) for c in webtoon(url))
-        title, image = cover(url)
-        print("card opens:", f"{WEBTOON_APP}4436&e={ep}")
-        notify(f"New chapter: {title} (test)", f"EP.{ep}", f"EP.{ep}\nlinewebtoon://viewer/webtoon?titleNo=4436&episodeNo={ep}", image, f"{WEBTOON_APP}4436&e={ep}")
+        # test: one Webtoon card of each kind, built the same way as real alerts
+        for url, no in (("https://m.webtoons.com/th/fantasy/zodiac-girls/list?title_no=9274", "9274"),
+                        ("https://www.webtoons.com/th/action/dead-mansion/list?title_no=6865", "6865")):
+            ep = max(int(c[3:]) for c in webtoon(url))
+            title, image = cover(url)
+            if no in WEBTOON_SERIES_PAGE:
+                kind, text, tap = "series page", f"EP.{ep}\nlinewebtoon://episodeList/webtoon?titleNo={no}", WEBTOON_APP + no
+            else:
+                kind, text, tap = f"opens EP.{ep}", f"EP.{ep}\nlinewebtoon://viewer/webtoon?titleNo={no}&episodeNo={ep}", f"{WEBTOON_APP}{no}&e={ep}"
+            print(f"{title}: card opens {tap}")
+            notify(f"New chapter: {title} (test: {kind})", f"EP.{ep}", text, image, tap)
     else:
         main()
