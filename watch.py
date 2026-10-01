@@ -206,8 +206,10 @@ def main():
             shown = ", ".join(re.sub(r"^ซี่?ซั่น-1/", "", c) for c in new)[:200]  # every series is on season 1; a later season would still show
             if "webtoons.com" in url:  # a cover card that opens the series straight in the WEBTOON app
                 no = re.search(r"title_no=(\d+)", url)[1]
+                eps = sorted(int(c[3:]) for c in new)  # "EP.216" -> 216; the card opens the first new one, so you read in order
+                text = "\n".join(f"EP.{e}\nlinewebtoon://viewer/webtoon?titleNo={no}&episodeNo={e}" for e in eps)
                 title, image = cover(url)  # LINE cards only open web addresses, so the card goes via a page that hands off to the app
-                notify(f"New chapter: {title or name}", shown, shown + "\nlinewebtoon://episodeList/webtoon?titleNo=" + no, image, WEBTOON_APP + no)
+                notify(f"New chapter: {title or name}", shown, text, image, f"{WEBTOON_APP}{no}&e={eps[0]}")
             else:  # cover card that opens the first new chapter; the text version lists each new chapter's link
                 links = {c: quote(found[c], safe=":/%?=&#") for c in new}
                 order = sorted(new, key=lambda c: [int(x) for x in re.findall(r"\d+", c)] or [0])
@@ -244,12 +246,10 @@ if __name__ == "__main__":
         assert tv_aired(x, {8: 15}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: 15}, 1790868600)  # earliest channel, season numbering, nothing future
         print("ok")
     elif sys.argv[1:] == ["ping"]:
-        url = "https://manga-lc.net/manga/reborn-rich/"  # test: a manga card that opens the latest readable chapter
-        found = chapters(url, get(url))
-        c = max(found, key=lambda c: [int(x) for x in re.findall(r"\d+", c)] or [0])
-        link = quote(found[c], safe=":/%?=&#")
-        shown = re.sub(r"^ซี่?ซั่น-1/", "", c)
-        print("chapter link:", link)
-        notify("New chapter: reborn-rich (test)", shown, f"{shown}\n{link}", quote(cover(url)[1], safe=":/%?=&"), link)
+        url = "https://www.webtoons.com/th/romance/ivy/list?title_no=4436"  # test: a Webtoon card that opens the latest episode in the app
+        ep = max(int(c[3:]) for c in webtoon(url))
+        title, image = cover(url)
+        print("card opens:", f"{WEBTOON_APP}4436&e={ep}")
+        notify(f"New chapter: {title} (test)", f"EP.{ep}", f"EP.{ep}\nlinewebtoon://viewer/webtoon?titleNo=4436&episodeNo={ep}", image, f"{WEBTOON_APP}4436&e={ep}")
     else:
         main()
