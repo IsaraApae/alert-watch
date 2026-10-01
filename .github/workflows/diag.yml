@@ -1,0 +1,16 @@
+# Temporary reachability check. Safe to delete.
+name: diag
+on: workflow_dispatch
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for c in UC_SiYksQwHvKvdOWWJrEnog UCX0iQtGzoCaQq-phfGDDFIg UC45ONEZZfMDZCnEhgYmVu-A; do
+            echo "== youtube feed $c"
+            curl -s --max-time 30 -o /tmp/f -w "status %{http_code}\n" "https://www.youtube.com/feeds/videos.xml?channel_id=$c" || true
+            grep -oE '<(name|title|published)>[^<]*' /tmp/f | head -1
+            grep -oE '<published>[^<]*' /tmp/f | sed -n 2p
+          done
+          echo "== bilibili.tv"
+          curl -s --max-time 30 -o /dev/null -w "status %{http_code}\n" -A "Mozilla/5.0" https://www.bilibili.tv/th/anime || true
