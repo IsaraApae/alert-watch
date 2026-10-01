@@ -78,6 +78,9 @@ def cover(url):
         return None, None
 
 
+WEBTOON_APP = "https://isaraapae.github.io/manga-watch/w.html?t="  # redirect page on the gh-pages branch; opens linewebtoon://
+
+
 THAI = timezone(timedelta(hours=7))
 
 
@@ -163,9 +166,9 @@ def main():
         if new:
             shown = ", ".join(re.sub(r"^ซี่?ซั่น-1/", "", c) for c in new)[:200]  # every series is on season 1; a later season would still show
             if "webtoons.com" in url:  # a cover card that opens the series straight in the WEBTOON app
-                app = "linewebtoon://episodeList/webtoon?titleNo=" + re.search(r"title_no=(\d+)", url)[1]
-                title, image = cover(url)
-                notify(f"New chapter: {title or name}", shown, shown + "\n" + app, image, app)
+                no = re.search(r"title_no=(\d+)", url)[1]
+                title, image = cover(url)  # LINE cards only open web addresses, so the card goes via a page that hands off to the app
+                notify(f"New chapter: {title or name}", shown, shown + "\nlinewebtoon://episodeList/webtoon?titleNo=" + no, image, WEBTOON_APP + no)
             else:  # series page, encoded so LINE makes it tappable
                 notify(f"New chapter: {name}", shown, shown + "\n" + quote(url, safe=":/%"))
         print(f"{name}: {len(found)} chapters, {len(new)} new")
@@ -195,6 +198,6 @@ if __name__ == "__main__":
         url = "https://www.webtoons.com/th/romance/ivy/list?title_no=4436"
         title, image = cover(url)
         notify(f"Alert Watch test: {title}", "EP.216 (test)", "EP.216 (test)\nlinewebtoon://episodeList/webtoon?titleNo=4436",
-               image, "linewebtoon://episodeList/webtoon?titleNo=4436")
+               image, WEBTOON_APP + "4436")
     else:
         main()
