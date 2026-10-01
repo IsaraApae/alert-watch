@@ -165,7 +165,9 @@ if __name__ == "__main__":
         assert tv_aired(x, {8: 15}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: 15}, 1790868600)  # earliest channel, season numbering, nothing future
         print("ok")
     elif sys.argv[1:] == ["ping"]:
-        notify("Alert Watch test", "Tap the link: it should open Ivy in the Webtoon app",
-               "Tap the link: it should open Ivy in the Webtoon app\nhttps://m.webtoons.com/th/romance/ivy/list?title_no=4436")
+        notify("Alert Watch test 2", "Tap link A: it should open Ivy in the Webtoon app",
+               "Link A, tap it: should open Ivy in the Webtoon app\n"
+               "https://m.webtoons.com/launchApp/linewebtoon/episodeList/webtoon?titleNo=4436&tab=episodes\n\n"
+               "Link B, only if A fails: copy it into Safari's address bar\nlinewebtoon://episodeList/webtoon?titleNo=4436")
     else:
         main()
