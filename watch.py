@@ -208,9 +208,12 @@ def main():
                 no = re.search(r"title_no=(\d+)", url)[1]
                 title, image = cover(url)  # LINE cards only open web addresses, so the card goes via a page that hands off to the app
                 notify(f"New chapter: {title or name}", shown, shown + "\nlinewebtoon://episodeList/webtoon?titleNo=" + no, image, WEBTOON_APP + no)
-            else:  # cover card that opens the series page (encoded so LINE accepts it)
-                link, image = quote(url, safe=":/%"), cover(url)[1]
-                notify(f"New chapter: {name}", shown, shown + "\n" + link, image and quote(image, safe=":/%?=&"), link)
+            else:  # cover card that opens the first new chapter; the text version lists each new chapter's link
+                links = {c: quote(found[c], safe=":/%?=&#") for c in new}
+                order = sorted(new, key=lambda c: [int(x) for x in re.findall(r"\d+", c)] or [0])
+                text = "\n".join(f"{re.sub(r'^ซี่?ซั่น-1/', '', c)}\n{links[c]}" for c in order)
+                image = cover(url)[1]
+                notify(f"New chapter: {name}", shown, text, image and quote(image, safe=":/%?=&"), links[order[0]])
         print(f"{name}: {len(found)} chapters, {len(new)} new")
         state[url] = sorted(set(found) | set(state.get(url, [])))
     STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1))
@@ -241,14 +244,12 @@ if __name__ == "__main__":
         assert tv_aired(x, {8: 15}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: 15}, 1790868600)  # earliest channel, season numbering, nothing future
         print("ok")
     elif sys.argv[1:] == ["ping"]:
-        # replays the real alert for Reincarnated as a Sword Season 2 episode 1 (aired 30 Sep 2026 22:30 Thai)
-        q = json.dumps({"query": "{Media(id:159042){episodes season seasonYear format coverImage{large}}}"}).encode()
-        r = urllib.request.Request("https://graphql.anilist.co", data=q, headers={"Content-Type": "application/json", "User-Agent": UA})
-        m = json.loads(urllib.request.urlopen(r, timeout=30).read())["data"]["Media"]
-        line = episode_line(1, m["episodes"], 1790782200)
-        yt = youtube_episode(youtube_videos(), "กลายเป็นดาบ|tensei shitara ken|reincarnated as a sword", {1}, 1790782200)
-        print("youtube link:", yt)
-        notify(f"New episode: Reincarnated as a Sword Season 2 ({m['season'].title()} {m['seasonYear']}, {m['format']})",
-               line, line + (f"\n{yt}" if yt else ""), m["coverImage"]["large"], yt and in_brave(yt))
+        url = "https://manga-lc.net/manga/reborn-rich/"  # test: a manga card that opens the latest readable chapter
+        found = chapters(url, get(url))
+        c = max(found, key=lambda c: [int(x) for x in re.findall(r"\d+", c)] or [0])
+        link = quote(found[c], safe=":/%?=&#")
+        shown = re.sub(r"^ซี่?ซั่น-1/", "", c)
+        print("chapter link:", link)
+        notify("New chapter: reborn-rich (test)", shown, f"{shown}\n{link}", quote(cover(url)[1], safe=":/%?=&"), link)
     else:
         main()
