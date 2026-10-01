@@ -80,6 +80,12 @@ def cover(url):
 
 
 WEBTOON_APP = "https://isaraapae.github.io/manga-watch/w.html?t="  # redirect page on the gh-pages branch; opens linewebtoon://
+BRAVE = "https://isaraapae.github.io/manga-watch/b.html?v="  # redirect page on the gh-pages branch; opens a YouTube video in Brave
+
+
+def in_brave(youtube_link):
+    """Card link that opens this YouTube video in the Brave browser (LINE cards only allow https:// links)."""
+    return BRAVE + re.search(r"[?&]v=([A-Za-z0-9_-]{11})", youtube_link)[1]
 
 
 THAI = timezone(timedelta(hours=7))
@@ -177,7 +183,7 @@ def anime(state):
             label = f" ({', '.join(p for p in parts if p)})" if any(parts) else ""  # e.g. "Fall 2026, TV"
             # if an official channel already has this episode up with Thai subs, the card opens that video; otherwise no link
             yt = s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"], 1) - 1}, t)
-            notify(f"New episode: {s['name']}{label}", line, line + (f"\n{yt}" if yt else ""), (m.get("coverImage") or {}).get("large"), yt or None)
+            notify(f"New episode: {s['name']}{label}", line, line + (f"\n{yt}" if yt else ""), (m.get("coverImage") or {}).get("large"), yt and in_brave(yt))
         seen.append(f"{i}:{ep}")
     print(f"anime: {len(shows)} watched, {len(new)} {'seeded' if seed else 'new'}")
 
@@ -228,6 +234,7 @@ if __name__ == "__main__":
              ("ซวยเหลือหลายเกิดใหม่กลายเป็นดาบ ซีซั่น 2 ตอนที่ 1 [ซับไทย]", "sub", 1790782200.0)]
         assert youtube_episode(v, "กลายเป็นดาบ", {1}, 1790782200) == "sub"  # Thai-sub, this season, right episode
         assert youtube_episode(v, "กลายเป็นดาบ", {2}, 1790782200) is None
+        assert in_brave("https://www.youtube.com/watch?v=j7zFyWX6t8M") == BRAVE + "j7zFyWX6t8M"
         x = ('<ProgItem><TID>8</TID><Count>15</Count><StTime>2026-10-02 00:26:00</StTime><Deleted>0</Deleted></ProgItem>'
              '<ProgItem><TID>8</TID><Count>15</Count><StTime>2026-10-02 02:00:00</StTime><Deleted>0</Deleted></ProgItem>'
              '<ProgItem><TID>8</TID><Count>16</Count><StTime>2026-10-08 23:56:00</StTime><Deleted>0</Deleted></ProgItem>')
@@ -242,6 +249,6 @@ if __name__ == "__main__":
         yt = youtube_episode(youtube_videos(), "กลายเป็นดาบ|tensei shitara ken|reincarnated as a sword", {1}, 1790782200)
         print("youtube link:", yt)
         notify(f"New episode: Reincarnated as a Sword Season 2 ({m['season'].title()} {m['seasonYear']}, {m['format']})",
-               line, line + (f"\n{yt}" if yt else ""), m["coverImage"]["large"], yt)
+               line, line + (f"\n{yt}" if yt else ""), m["coverImage"]["large"], yt and in_brave(yt))
     else:
         main()
