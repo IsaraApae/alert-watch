@@ -1,0 +1,15 @@
+# Temporary reachability check. Safe to delete.
+name: diag
+on: workflow_dispatch
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+          for u in https://anifume.com/ https://anifume.com/feed/; do
+            echo "== $u"
+            curl -sL -A "$UA" --max-time 30 -o /tmp/b -D /tmp/h -w "status %{http_code} size %{size_download}\n" "$u" || true
+            grep -iE '^(server|cf-mitigated):' /tmp/h || true
+            grep -oiE '<title>[^<]*' /tmp/b | head -1 || true
+          done
