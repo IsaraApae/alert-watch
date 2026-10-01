@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Notify (macOS) when a watched manga page lists a chapter it didn't list last run."""
-import json, os, re, shutil, subprocess, sys, time, urllib.request
+import html, json, os, re, shutil, subprocess, sys, time, urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote, unquote, urlparse
@@ -107,12 +107,41 @@ def tv_aired(xml, first_ep, now):
     return out
 
 
+YT_CHANNELS = ["UCn8hjQOnGYR1AZtYYMYP5jQ", "UCw2bdNSXh4x6e0NCduVoxMQ"]  # Muse Thailand, Ani-One Thailand: official uploads
+
+
+def youtube_videos():
+    """[(title, link, published timestamp)] from the official channels' public feeds (latest 15 each)."""
+    out = []
+    for cid in YT_CHANNELS:
+        try:
+            x = get(f"https://www.youtube.com/feeds/videos.xml?channel_id={cid}")
+        except Exception as e:
+            print(f"FAIL youtube {cid}: {e}", file=sys.stderr)
+            continue
+        for e in re.findall(r"<entry>.*?</entry>", x, re.S):
+            t, l, p = (re.search(r, e) for r in (r"<title>([^<]*)</title>", r'<link rel="alternate" href="([^"]+)"', r"<published>([^<]+)</published>"))
+            if t and l and p:
+                out.append((html.unescape(t[1]), l[1], datetime.fromisoformat(p[1]).timestamp()))
+    return out
+
+
+def youtube_episode(videos, pattern, eps, aired):
+    """Link to a [ซับไทย] upload of one of these episode numbers, posted around broadcast (not an older season's video)."""
+    for title, link, published in videos:
+        t = title.lower()
+        if "ซับไทย" in t and "พากย์ไทย" not in t and re.search(pattern, t) and published >= aired - 6 * 3600 \
+                and any(re.search(rf"(?:ตอนที่|ep\.?|episode)\s*0*{e}(?!\d)", t) for e in eps):
+            return link
+    return None
+
+
 def anime(state):
     """Notify when a show in anime.txt airs a new episode: the Japanese TV schedule (Syoboi Calendar, earliest channel)
     for TV shows, AniList's airing schedule for online-only ones. anime.txt: name | AniList id | TV-schedule id (0 = none)
     | first episode number in the TV schedule | episodes before this AniList entry (added to the count)."""
     rows = [l.split(" | ") for l in (HERE / "anime.txt").read_text().splitlines() if l.strip() and not l.startswith("#")]
-    shows = {int(r[1]): {"name": r[0], "tid": int(r[2]), "first": int(r[3]), "offset": int(r[4])} for r in rows}
+    shows = {int(r[1]): {"name": r[0], "tid": int(r[2]), "first": int(r[3]), "offset": int(r[4]), "yt": r[5] if len(r) > 5 else ""} for r in rows}
     now = int(time.time())
     query = ("query($ids:[Int],$web:[Int],$a:Int,$b:Int){info:Page(perPage:50){media(id_in:$ids){id episodes season seasonYear format coverImage{large}}}"
              " web:Page(perPage:50){airingSchedules(mediaId_in:$web,airingAt_greater:$a,airingAt_lesser:$b){episode airingAt media{id}}}}")
@@ -138,6 +167,7 @@ def anime(state):
     seed = "anime" not in state  # first run: record the past week's episodes silently
     seen = state.setdefault("anime", [])
     new = sorted((t, i, ep) for (i, ep), t in aired.items() if f"{i}:{ep}" not in seen)
+    videos = youtube_videos() if new and not seed else []
     for t, i, ep in new:
         if not seed:
             s, m = shows[i], info.get(i, {})
@@ -145,7 +175,9 @@ def anime(state):
             line = episode_line(ep + s["offset"], total and total + s["offset"], t)
             parts = [f"{m['season'].title()} {m['seasonYear']}" if m.get("season") and m.get("seasonYear") else "", (m.get("format") or "").replace("_", " ")]
             label = f" ({', '.join(p for p in parts if p)})" if any(parts) else ""  # e.g. "Fall 2026, TV"
-            notify(f"New episode: {s['name']}{label}", line, line, (m.get("coverImage") or {}).get("large"))  # cover card, no link
+            # if an official channel already has this episode up with Thai subs, the card opens that video; otherwise no link
+            yt = s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"], 1) - 1}, t)
+            notify(f"New episode: {s['name']}{label}", line, line + (f"\n{yt}" if yt else ""), (m.get("coverImage") or {}).get("large"), yt or None)
         seen.append(f"{i}:{ep}")
     print(f"anime: {len(shows)} watched, {len(new)} {'seeded' if seed else 'new'}")
 
@@ -191,6 +223,11 @@ if __name__ == "__main__":
             assert webtoon("https://m.webtoons.com/th/x/y/list?title_no=1") == {"EP.7": "https://www.webtoons.com/th/x/ep7-a/viewer?title_no=1&episode_no=7"}
         assert episode_line(5, 12, 1790866800) == "Episode 05/12\nAired 01 Oct 2026 22:00", episode_line(5, 12, 1790866800)
         assert episode_line(3, None, 1790866800).startswith("Episode 03/?")
+        v = [("[พากย์ไทย] ซวยเหลือหลายเกิดใหม่กลายเป็นดาบ ซีซั่น 2 ตอนที่ 1", "dub", 1790782200.0),
+             ("ซวยเหลือหลายเกิดใหม่กลายเป็นดาบ ตอนที่ 1 [ซับไทย]", "season1", 1700000000.0),
+             ("ซวยเหลือหลายเกิดใหม่กลายเป็นดาบ ซีซั่น 2 ตอนที่ 1 [ซับไทย]", "sub", 1790782200.0)]
+        assert youtube_episode(v, "กลายเป็นดาบ", {1}, 1790782200) == "sub"  # Thai-sub, this season, right episode
+        assert youtube_episode(v, "กลายเป็นดาบ", {2}, 1790782200) is None
         x = ('<ProgItem><TID>8</TID><Count>15</Count><StTime>2026-10-02 00:26:00</StTime><Deleted>0</Deleted></ProgItem>'
              '<ProgItem><TID>8</TID><Count>15</Count><StTime>2026-10-02 02:00:00</StTime><Deleted>0</Deleted></ProgItem>'
              '<ProgItem><TID>8</TID><Count>16</Count><StTime>2026-10-08 23:56:00</StTime><Deleted>0</Deleted></ProgItem>')
