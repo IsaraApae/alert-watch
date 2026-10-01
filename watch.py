@@ -39,20 +39,43 @@ def get(url):
     return urllib.request.urlopen(req, timeout=30).read().decode("utf-8", "replace")
 
 
-def notify(title, msg, links):
+def card(title, msg, image, uri):
+    """A small LINE card: cover on the left, title and chapter on the right; tapping anywhere opens uri."""
+    text = lambda t, **k: {"type": "text", "text": t, "size": "sm", "wrap": True, **k}
+    return {"type": "bubble", "size": "kilo", "action": {"type": "uri", "label": "open", "uri": uri},
+            "body": {"type": "box", "layout": "horizontal", "spacing": "md", "contents": [
+                {"type": "image", "url": image, "size": "sm", "aspectMode": "cover", "aspectRatio": "1:1", "flex": 0},
+                {"type": "box", "layout": "vertical", "contents": [text(title, weight="bold"), text(msg, color="#777777")]}]}}
+
+
+def notify(title, msg, links, image=None, uri=None):
     if shutil.which("osascript"):  # absent on the GitHub runner
         subprocess.run(["osascript", "-e", f"display notification {json.dumps(msg)} with title {json.dumps(title)}"])
     token = os.environ.get("LINE_TOKEN")  # phone push: LINE official account broadcast; only set on GitHub
-    if token:
-        body = json.dumps({"messages": [{"type": "text", "text": f"{title}\n{links}"[:4500]}]}).encode()
-        req = urllib.request.Request("https://api.line.me/v2/bot/message/broadcast", data=body,
+    if not token:
+        return
+    plain = {"type": "text", "text": f"{title}\n{links}"[:4500]}
+    tries = ([{"type": "flex", "altText": f"{title} {msg}"[:400], "contents": card(title, msg, image, uri)}] if image and uri else []) + [plain]
+    for message in tries:  # the card first when there is a cover; plain text if LINE refuses it, so the alert is never lost
+        req = urllib.request.Request("https://api.line.me/v2/bot/message/broadcast", data=json.dumps({"messages": [message]}).encode(),
                                      headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
         try:
             urllib.request.urlopen(req, timeout=30)
+            return
         except Exception as e:
-            print(f"FAIL line: {e} {getattr(e, 'read', lambda: b'')()[:300]}", file=sys.stderr)
-            if "ping" in sys.argv:
-                sys.exit(1)
+            print(f"FAIL line ({message['type']}): {e} {getattr(e, 'read', lambda: b'')()[:300]}", file=sys.stderr)
+    if "ping" in sys.argv:
+        sys.exit(1)
+
+
+def cover(url):
+    """(title, cover image) from a series page's preview tags, or (None, None)."""
+    try:
+        tags = dict(re.findall(r'<meta property="og:(title|image)" content="([^"]+)"', get(url)))
+        return tags.get("title"), tags.get("image")
+    except Exception as e:
+        print(f"FAIL cover {url}: {e}", file=sys.stderr)
+        return None, None
 
 
 THAI = timezone(timedelta(hours=7))
@@ -139,11 +162,12 @@ def main():
         new = sorted(set(found) - set(state[url])) if url in state else []  # first sight of a url = seed silently
         if new:
             shown = ", ".join(re.sub(r"^ซี่?ซั่น-1/", "", c) for c in new)[:200]  # every series is on season 1; a later season would still show
-            if "webtoons.com" in url:  # the WEBTOON app's own address opens the series directly in the app
-                page = "linewebtoon://episodeList/webtoon?titleNo=" + re.search(r"title_no=(\d+)", url)[1]
-            else:
-                page = url
-            notify(f"New chapter: {name}", shown, shown + "\n" + quote(page, safe=":/%?=&"))  # series page, encoded so LINE makes it tappable
+            if "webtoons.com" in url:  # a cover card that opens the series straight in the WEBTOON app
+                app = "linewebtoon://episodeList/webtoon?titleNo=" + re.search(r"title_no=(\d+)", url)[1]
+                title, image = cover(url)
+                notify(f"New chapter: {title or name}", shown, shown + "\n" + app, image, app)
+            else:  # series page, encoded so LINE makes it tappable
+                notify(f"New chapter: {name}", shown, shown + "\n" + quote(url, safe=":/%"))
         print(f"{name}: {len(found)} chapters, {len(new)} new")
         state[url] = sorted(set(found) | set(state.get(url, [])))
     STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1))
@@ -168,7 +192,9 @@ if __name__ == "__main__":
         assert tv_aired(x, {8: 15}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: 15}, 1790868600)  # earliest channel, season numbering, nothing future
         print("ok")
     elif sys.argv[1:] == ["ping"]:
-        notify("Alert Watch test", "Tap the link: it should open Ivy in the WEBTOON app",
-               "Tap the link: it should open Ivy in the WEBTOON app\nlinewebtoon://episodeList/webtoon?titleNo=4436")
+        url = "https://www.webtoons.com/th/romance/ivy/list?title_no=4436"
+        title, image = cover(url)
+        notify(f"Alert Watch test: {title}", "EP.216 (test)", "EP.216 (test)\nlinewebtoon://episodeList/webtoon?titleNo=4436",
+               image, "linewebtoon://episodeList/webtoon?titleNo=4436")
     else:
         main()
