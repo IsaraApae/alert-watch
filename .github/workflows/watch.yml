@@ -8,6 +8,10 @@ on:
         description: Send a test message instead of checking
         type: boolean
         default: false
+      richmenu:
+        description: Install the Alert Watch menu in the LINE chat
+        type: boolean
+        default: false
 permissions:
   contents: write
 concurrency: watch
@@ -16,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: python3 watch.py ${{ inputs.ping && 'ping' || '' }}
+      - run: python3 watch.py ${{ inputs.ping && 'ping' || '' }}${{ inputs.richmenu && 'richmenu' || '' }}
         env:
           MANGA_STATE: ci-state.json
           LINE_TOKEN: ${{ secrets.LINE_TOKEN }}

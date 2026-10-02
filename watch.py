@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Notify (macOS) when a watched manga page lists a chapter it didn't list last run."""
-import html, json, os, re, shutil, subprocess, sys, time, urllib.request
+import html, json, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote, unquote, urlparse
@@ -247,6 +247,32 @@ def anime(state):
     print(f"anime: {len(shows)} watched, {len(new)} {'seeded' if seed else 'new'}")
 
 
+def setup_richmenu():
+    """Install the Alert Watch menu at the bottom of the LINE chat: two buttons opening the countdown site.
+    Run once (workflow input richmenu); replaces any earlier menu this created."""
+    auth = {"Authorization": f"Bearer {os.environ['LINE_TOKEN']}"}
+
+    def call(method, url, body=None, ctype="application/json"):
+        req = urllib.request.Request(url, data=body, method=method, headers={**auth, **({"Content-Type": ctype} if body else {})})
+        try:
+            return json.loads(urllib.request.urlopen(req, timeout=30).read() or b"{}")
+        except urllib.error.HTTPError as e:
+            print(f"FAIL line {method} {url}: {e} {e.read()[:300]}", file=sys.stderr)
+            raise
+
+    site = "https://isaraapae.github.io/manga-watch/"
+    menu = {"size": {"width": 2500, "height": 843}, "selected": True, "name": "Alert Watch", "chatBarText": "Anime schedule",
+            "areas": [{"bounds": {"x": 0, "y": 0, "width": 1250, "height": 843}, "action": {"type": "uri", "label": "Next episode", "uri": site + "#next-up"}},
+                      {"bounds": {"x": 1250, "y": 0, "width": 1250, "height": 843}, "action": {"type": "uri", "label": "This week", "uri": site + "#week"}}]}
+    old = [m["richMenuId"] for m in call("GET", "https://api.line.me/v2/bot/richmenu/list")["richmenus"] if m["name"] == "Alert Watch"]
+    rid = call("POST", "https://api.line.me/v2/bot/richmenu", json.dumps(menu).encode())["richMenuId"]
+    call("POST", f"https://api-data.line.me/v2/bot/richmenu/{rid}/content", (HERE / "richmenu.png").read_bytes(), "image/png")
+    call("POST", f"https://api.line.me/v2/bot/user/all/richmenu/{rid}")
+    for o in old:
+        call("DELETE", f"https://api.line.me/v2/bot/richmenu/{o}")
+    print(f"rich menu set: {rid} (replaced {len(old)})")
+
+
 def main():
     state = json.loads(STATE.read_text()) if STATE.exists() else {}
     anime(state)
@@ -328,5 +354,7 @@ if __name__ == "__main__":
                 kind, text, tap = f"opens EP.{ep}", f"EP.{ep}\nlinewebtoon://viewer/webtoon?titleNo={no}&episodeNo={ep}", f"{WEBTOON_APP}{no}&e={ep}"
             print(f"{title}: card opens {tap}")
             notify(f"New chapter: {title} (test: {kind})", f"EP.{ep}", text, image, tap)
+    elif sys.argv[1:] == ["richmenu"]:
+        setup_richmenu()
     else:
         main()
