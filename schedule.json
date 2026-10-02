@@ -1,5 +1,5 @@
 {
- "updated": 1790935812,
+ "updated": 1790945527,
  "shows": [
   {
    "name": "As a Reincarnated Aristocrat Season 3",
@@ -735,6 +735,51 @@
     {
      "ep": 9,
      "at": 1795883400.0
+    }
+   ]
+  },
+  {
+   "name": "FX Senshi Kurumi-chan",
+   "label": "Fall 2026, TV",
+   "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx206401-8cAebkI0i8BA.png",
+   "total": null,
+   "episodes": [
+    {
+     "ep": 1,
+     "at": 1790857800.0,
+     "watch": "https://isaraapae.github.io/alert-watch/b.html?v=LkuR5TFFb94"
+    },
+    {
+     "ep": 2,
+     "at": 1791462600.0
+    },
+    {
+     "ep": 3,
+     "at": 1792067400.0
+    },
+    {
+     "ep": 4,
+     "at": 1792672200.0
+    },
+    {
+     "ep": 5,
+     "at": 1793277000.0
+    },
+    {
+     "ep": 6,
+     "at": 1793881800.0
+    },
+    {
+     "ep": 7,
+     "at": 1794486600.0
+    },
+    {
+     "ep": 8,
+     "at": 1795091400.0
+    },
+    {
+     "ep": 9,
+     "at": 1795696200.0
     }
    ]
   }
