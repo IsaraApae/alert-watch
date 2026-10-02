@@ -186,7 +186,7 @@ def tv_aired(xml, first_ep, now):
 
 
 YT_CHANNELS = {"UCn8hjQOnGYR1AZtYYMYP5jQ": "Muse Thailand", "UCw2bdNSXh4x6e0NCduVoxMQ": "Ani-One Thailand"}  # official uploads
-BILIBILI_SCHEDULE = "https://api.bilibili.tv/intl/gateway/web/v2/ogv/timeline?s_locale=th_TH&platform=web"  # Bilibili Thailand, this week
+BILIBILI_SCHEDULE = "https://api.bilibili.tv/intl/gateway/web/v2/ogv/timeline?s_locale=th_TH&platform=web"  # Bilibili Thailand's week; it only fills in for connections from Thailand, so the cloud learns nothing from it and keeps what was learned before
 
 
 def youtube_videos():
@@ -280,7 +280,7 @@ def schedule():
                     "total": total and total + s["offset"], "episodes": rows})
     try:
         week = json.loads(get(BILIBILI_SCHEDULE))["data"]["items"]
-        cards = [(c.get("title") or "", int(c["pub_time_ts"]) / 1000, c.get("index_show") or "") for d in week for c in d["cards"] if c.get("pub_time_ts")]
+        cards = [(c.get("title") or "", int(c["pub_time_ts"]) / 1000, c.get("index_show") or "") for d in week for c in (d.get("cards") or []) if c.get("pub_time_ts")]
     except Exception as e:
         print(f"FAIL bilibili schedule: {e}", file=sys.stderr)
         cards = []
