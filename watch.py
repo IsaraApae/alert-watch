@@ -155,11 +155,12 @@ def anime_list():
         if not line.strip() or line.startswith("#"):
             continue
         r = [x.strip() for x in line.split("|", 5)]  # tolerant of missing spaces around |
+        r += [""] * (6 - len(r))  # just "name | AniList id" works: times then come from AniList
         try:  # a mistyped line is skipped, so one bad edit can't stop every other alert
             shows[int(r[1])] = {"name": r[0], "tid": int(r[2] or 0), "first": [int(x) for x in (r[3] or "1").split(",")],
                                 "offset": int(r[4] or 0), "yt": r[5] if len(r) > 5 else ""}
         except (IndexError, ValueError):
-            print(f"SKIP anime.txt line (needs: name | AniList id | TV id | first episode | offset): {line[:80]}", file=sys.stderr)
+            print(f"SKIP anime.txt line (needs at least: name | AniList id): {line[:80]}", file=sys.stderr)
     return shows
 
 
