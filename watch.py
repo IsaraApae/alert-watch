@@ -69,8 +69,15 @@ def notify(title, msg, links, image=None, uri=None):
         sys.exit(1)
 
 
+COVER_OVERRIDES = {  # series whose own cover LINE can't show (AVIF): a JPEG copy on the GitHub Pages site
+    "https://speed-manga.net/manga/investors-who-see-the-future/": "https://isaraapae.github.io/alert-watch/covers/investors-who-see-the-future.jpg",
+}
+
+
 def cover(url):
     """(title, cover image) from a series page's preview tags, or (None, None)."""
+    if url in COVER_OVERRIDES:
+        return None, COVER_OVERRIDES[url]
     try:
         page = get(url)
         tags = dict(re.findall(r'<meta property="og:(title|image)" content="([^"]+)"', page))
@@ -299,7 +306,7 @@ def library(state):
     out = []
     for url in (HERE / "urls.txt").read_text().split():
         prev = old.get(url, {})
-        if "cover" in prev:
+        if "cover" in prev and url not in COVER_OVERRIDES:
             title, image = prev.get("title"), prev["cover"]
         else:
             title, image = cover(url)

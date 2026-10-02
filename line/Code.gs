@@ -64,7 +64,12 @@ function addManga(url) {
   writeFile("urls.txt", lines.concat(url).join("\n") + "\n", f.sha, "Add series from LINE");
   const host = url.split("/")[2].replace(/^(www|m)\./, "");
   const untested = KNOWN_SITES.indexOf(host) < 0 ? "\n\nThis site hasn't been tested. If the watcher can't read it, it's skipped." : "";
-  return `Added: ${seriesName(url)}\n\nWithin 10 minutes it records what's out now; alerts start from the next new chapter.${untested}`;
+  const note = `Within 10 minutes it records what's out now; alerts start from the next new chapter.${untested}`;
+  return {
+    messages: [{ type: "flex", altText: "Added " + seriesName(url), contents: bubble(seriesName(url), "Added", pageCover(url), null, "kilo") },
+               { type: "text", text: note }],
+    fallback: `Added: ${seriesName(url)}\n\n${note}`,
+  };
 }
 
 function addAnime(title) {
@@ -105,7 +110,11 @@ function remove(word) {
   if (hits.length > 1) return `More than one matches "${word}":\n` + hits.map(l => "- " + label(l)).join("\n") + "\nSend a longer part of the name.";
   const x = files.find(x => x.hits.length);
   writeFile(x.path, x.lines.filter(l => l !== x.hits[0]).join("\n"), x.f.sha, "Remove series from LINE");
-  return "Removed: " + label(x.hits[0]);
+  const name = label(x.hits[0]);
+  return {
+    messages: [{ type: "flex", altText: "Removed " + name, contents: bubble(name, "Removed", knownCover(x.hits[0]), null, "kilo") }],
+    fallback: "Removed: " + name,
+  };
 }
 
 function list() {
@@ -132,6 +141,21 @@ function bubble(name, sub, image, uri, size) {
     card.hero = { type: "image", url: image, size: "full", aspectRatio: "3:4", aspectMode: "cover" };
   if (uri) card.action = { type: "uri", label: "open", uri: uri };
   return card;
+}
+// cover of a series being added: the page's preview image, or the one in its layout (some sites)
+function pageCover(url) {
+  try {
+    const page = UrlFetchApp.fetch(url, { muteHttpExceptions: true, headers: { "User-Agent": "Mozilla/5.0" } }).getContentText();
+    const m = page.match(/<meta property="og:image" content="([^"]+)"/) || page.match(/<div class="(?:summary_image|thumb)"[^>]*>[\s\S]*?<img[^>]+?(?:data-src|src)="([^"]+)"/);
+    return m ? encodeURI(decodeURI(m[1])) : null;
+  } catch (e) { return null; }
+}
+// cover of a tracked series, from what the watcher publishes (library.json for manga, schedule.json for anime)
+function knownCover(line) {
+  try {
+    if (/^\s*https?:/.test(line)) { const m = published("library.json").manga.find(x => x.url === line.trim()); return m && m.cover; }
+    const s = published("schedule.json").shows.find(x => x.name === label(line)); return s && s.cover;
+  } catch (e) { return null; }
 }
 function carousel(alt, bubbles) { return { type: "flex", altText: alt, contents: { type: "carousel", contents: bubbles } }; }
 function chunks(a, n) { const out = []; for (let i = 0; i < a.length; i += n) out.push(a.slice(i, i + n)); return out; }
