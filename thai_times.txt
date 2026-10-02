@@ -10,7 +10,7 @@
 209872 | Netflix | - | -
 189123 | Netflix | - | -
 178083 | Disney+ | - | -
-195516 | Netflix | - | -
+195516 | Netflix | Fri | 22:00
 210482 | Netflix | - | -
 195539 | Netflix | - | -
 176314 | Muse Thailand | Wed | 20:00
