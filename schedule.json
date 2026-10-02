@@ -1,5 +1,5 @@
 {
- "updated": 1790918239,
+ "updated": 1790918929,
  "shows": [
   {
    "name": "As a Reincarnated Aristocrat Season 3",
@@ -57,8 +57,7 @@
    "episodes": [
     {
      "ep": 1,
-     "at": 1790782200.0,
-     "watch": "https://isaraapae.github.io/alert-watch/b.html?v=j7zFyWX6t8M"
+     "at": 1790782200.0
     },
     {
      "ep": 2,
@@ -691,6 +690,50 @@
     {
      "ep": 7,
      "at": 1795528800.0
+    }
+   ]
+  },
+  {
+   "name": "Kashita Maryoku wa Ribobarai de Kyousei Choushuu",
+   "label": "Fall 2026, TV",
+   "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx202250-duq4XpZP8TU3.jpg",
+   "total": null,
+   "episodes": [
+    {
+     "ep": 1,
+     "at": 1791045000.0
+    },
+    {
+     "ep": 2,
+     "at": 1791649800.0
+    },
+    {
+     "ep": 3,
+     "at": 1792254600.0
+    },
+    {
+     "ep": 4,
+     "at": 1792859400.0
+    },
+    {
+     "ep": 5,
+     "at": 1793464200.0
+    },
+    {
+     "ep": 6,
+     "at": 1794069000.0
+    },
+    {
+     "ep": 7,
+     "at": 1794673800.0
+    },
+    {
+     "ep": 8,
+     "at": 1795278600.0
+    },
+    {
+     "ep": 9,
+     "at": 1795883400.0
     }
    ]
   }
