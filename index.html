@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F5F3F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>Alert Watch Anime</title>
+<script>try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<style>
+/* Layout: one 640px column, two views: next episode (countdown, then today and the next six days) and a Monday-to-Sunday timetable; glass only on the Watch buttons. */
+:root {
+  --bg: #F5F3F7;
+  --wash: 0.17;
+  --card: rgba(255, 255, 255, 0.75);
+  --text: #1C1C1E;
+  --text-2: #636366;
+  --hairline: rgba(60, 60, 67, 0.22);
+  --accent: #DF1B2B;
+  --primary: #C24A44;
+  --glass-fill: rgba(255, 255, 255, 0.55);
+  --glass-edge: rgba(255, 255, 255, 0.7);
+  --glass-hi: rgba(255, 255, 255, 0.9);
+  --glass-lo: rgba(255, 255, 255, 0.35);
+  --seg-on: rgba(255, 255, 255, 0.92);
+  --pill-on: rgba(223, 27, 43, 0.12);
+  --cover-bg: rgba(60, 60, 67, 0.12);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Sukhumvit Set", "Thonburi", "Noto Sans Thai", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000;
+    --wash: 0.26;
+    --card: rgba(28, 28, 30, 0.75);
+    --text: #F2F2F7;
+    --text-2: #A1A1A8;
+    --hairline: rgba(84, 84, 88, 0.6);
+    --accent: #FF6961;
+    --glass-fill: rgba(58, 58, 60, 0.5);
+    --glass-edge: rgba(255, 255, 255, 0.14);
+    --glass-hi: rgba(255, 255, 255, 0.18);
+    --glass-lo: rgba(255, 255, 255, 0.06);
+    --seg-on: rgba(255, 255, 255, 0.2);
+    --pill-on: rgba(255, 105, 97, 0.18);
+    --cover-bg: rgba(255, 255, 255, 0.08);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000;
+  --wash: 0.26;
+  --card: rgba(28, 28, 30, 0.75);
+  --text: #F2F2F7;
+  --text-2: #A1A1A8;
+  --hairline: rgba(84, 84, 88, 0.6);
+  --accent: #FF6961;
+  --glass-fill: rgba(58, 58, 60, 0.5);
+  --glass-edge: rgba(255, 255, 255, 0.14);
+  --glass-hi: rgba(255, 255, 255, 0.18);
+  --glass-lo: rgba(255, 255, 255, 0.06);
+  --seg-on: rgba(255, 255, 255, 0.2);
+  --pill-on: rgba(255, 105, 97, 0.18);
+  --cover-bg: rgba(255, 255, 255, 0.08);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }  /* sections set display: grid, which would otherwise override hiding */
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 17px/1.45 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--accent); color: #fff; }
+input, textarea { caret-color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+a { color: var(--accent); }
+
+/* fixed colour wash for the glass to blur */
+.wash { position: fixed; inset: -20vmax; z-index: -1; pointer-events: none; filter: blur(70px); opacity: var(--wash); }
+.wash i { position: absolute; width: 60vmax; height: 60vmax; border-radius: 50%; }
+.wash i:nth-child(1) { background: #FF3B30; left: 0; top: 0; }
+.wash i:nth-child(2) { background: #FF9F0A; right: 0; top: 18vmax; }
+.wash i:nth-child(3) { background: #AF52DE; left: 10vmax; bottom: 0; }
+.wash i:nth-child(4) { background: #FF2D55; right: 6vmax; bottom: 12vmax; }
+
+.page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: calc(env(safe-area-inset-top, 0px) + 20px) calc(env(safe-area-inset-bottom, 0px) + 40px);
+  display: grid;
+  gap: 14px;
+}
+
+/* glass recipe, used for every control */
+.glass {
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(22px) saturate(190%);
+  backdrop-filter: blur(22px) saturate(190%);
+  border: 0.5px solid var(--glass-edge);
+  box-shadow: inset 0 1px 0 var(--glass-hi), inset 0 -1px 0 var(--glass-lo),
+              0 10px 30px -6px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+.press { transition: transform 0.35s var(--ease); }
+.press:active { transform: scale(0.94); }
+
+header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+h1 { margin: 0; font-size: 32px; line-height: 1.15; font-weight: 700; text-wrap: balance; }
+.sub { margin: 2px 0 0; font-size: 15px; color: var(--text-2); }
+svg.ico { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.label { margin: 10px 4px -6px; font-size: 13px; color: var(--text-2); }
+.label b { color: var(--text); font-weight: 600; }
+section { display: grid; gap: 14px; scroll-margin-top: 90px; }
+
+.card { background: var(--card); border-radius: 26px; padding: 20px; min-width: 0; }
+.card.list { padding: 6px 0; }
+
+.cover { border-radius: 14px; object-fit: cover; background: var(--cover-bg); flex: none; }
+
+/* next up */
+.next { display: flex; gap: 16px; align-items: center; }
+.next .cover { width: 92px; height: 130px; border-radius: 18px; }
+.next .info { min-width: 0; display: grid; gap: 4px; }
+.next .name { font-size: 20px; font-weight: 600; line-height: 1.25; text-wrap: balance; }
+.meta { font-size: 15px; color: var(--text-2); }
+.count { margin-top: 18px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
+.count b { display: block; font-size: 34px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.count span { font-size: 13px; color: var(--text-2); }
+
+/* list rows */
+.row { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 12px 20px; position: relative; }
+.row + .row::before { content: ""; position: absolute; top: 0; left: 20px; right: 20px; border-top: 0.5px solid var(--hairline); }
+.row .cover { width: 44px; height: 62px; border-radius: 10px; }
+.row .info { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.row .name { font-weight: 600; font-size: 16px; line-height: 1.3; overflow-wrap: anywhere; }
+.row .side { text-align: right; display: grid; gap: 4px; justify-items: end; font-variant-numeric: tabular-nums; }
+.time { font-weight: 600; font-variant-numeric: tabular-nums; }
+.until { font-size: 13px; color: var(--text-2); white-space: nowrap; }
+.until.aired { color: var(--text-2); }
+.watch {
+  display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 12px;
+  border-radius: 999px; color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 600;
+}
+.watch svg { width: 15px; height: 15px; }
+.empty { padding: 18px 20px; color: var(--text-2); }
+/* view menu: a glass segmented control that stays at the top */
+.seg {
+  position: sticky; top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 2;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 999px;
+}
+.seg.static { position: static; grid-template-columns: repeat(3, 1fr); }
+.seg a, .seg button {
+  min-height: 44px; display: grid; place-items: center; padding: 0 10px; border-radius: 999px;
+  color: var(--text); text-decoration: none; font-weight: 600; font-size: 15px; text-align: center;
+}
+.seg button { border: 0; background: transparent; font-family: var(--font); cursor: pointer; }
+.seg a[aria-current="page"], .seg button[aria-pressed="true"] {
+  background: var(--seg-on); color: var(--accent);
+  box-shadow: 0 3px 10px -2px rgba(0, 0, 0, 0.18), inset 0 1px 0 var(--glass-hi);
+}
+.label b.today { color: var(--accent); }
+
+.primary {
+  border: 0; border-radius: 999px; min-height: 44px; padding: 0 20px; cursor: pointer;
+  background: var(--primary); color: #fff; font: 600 16px var(--font);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press, .press:active { transition: none; transform: none; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+<div class="wash" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+<main class="page">
+  <header class="top">
+    <div>
+      <h1>Anime</h1>
+      <p class="sub" id="sub">Loading the schedule…</p>
+    </div>
+  </header>
+
+  <nav class="seg glass" aria-label="View">
+    <a href="./" class="press" data-view="next">Next episode</a>
+    <a href="?v=week" class="press" data-view="week">Weekly timetable</a>
+  </nav>
+
+  <section id="next-up" aria-labelledby="next-label">
+    <p class="label" id="next-label">Next up</p>
+    <div class="card" id="next"><p class="meta" style="margin:0">Loading the schedule…</p></div>
+  </section>
+
+  <section id="week" aria-label="Schedule"></section>
+
+  <section aria-labelledby="look-label">
+    <p class="label" id="look-label">Appearance</p>
+    <div class="seg static glass" role="group" aria-labelledby="look-label">
+      <button type="button" class="press" data-choice="light">Light</button>
+      <button type="button" class="press" data-choice="dark">Dark</button>
+      <button type="button" class="press" data-choice="device">Device</button>
+    </div>
+  </section>
+</main>
+
+<script>
+// Data comes from schedule.json, which the Alert Watch cloud job rewrites whenever the schedule changes.
+const DATA = "https://raw.githubusercontent.com/IsaraApae/alert-watch/main/schedule.json";
+const TZ = "Asia/Bangkok";
+const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" });
+const hhmm = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
+const dateLong = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, weekday: "short", day: "numeric", month: "short" });
+const weekdayLong = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, weekday: "long" });
+const dayDate = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, day: "numeric", month: "short" });
+const PLAY = '<svg class="ico" viewBox="0 0 24 24"><path d="M8 5.5v13l10-6.5z"/></svg>';
+
+let shows = [], episodes = [], selected = null;
+
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const pad = n => String(n).padStart(2, "0");
+const epText = (ep, total) => `EP ${pad(ep)}` + (total ? `/${pad(total)}` : "");
+
+function parts(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return { d: Math.floor(s / 86400), h: Math.floor(s / 3600) % 24, m: Math.floor(s / 60) % 60, s: s % 60 };
+}
+function until(at) {
+  const ms = at - Date.now();
+  if (ms <= 0) return "Aired";
+  const p = parts(ms);
+  if (p.d) return `in ${p.d}d ${p.h}h`;
+  if (p.h) return `in ${p.h}h ${pad(p.m)}m`;
+  return `in ${p.m}m ${pad(p.s)}s`;
+}
+
+function cover(show, cls, eager) {
+  const img = el("img", "cover " + cls);
+  img.alt = ""; img.loading = eager ? "eager" : "lazy"; img.decoding = "async";
+  if (show.cover) img.src = show.cover;
+  return img;
+}
+function watchLink(href) {
+  const a = el("a", "watch glass press"); a.href = href; a.target = "_blank"; a.rel = "noopener";
+  a.innerHTML = PLAY; a.append("Watch"); a.setAttribute("aria-label", "Watch the Thai-sub episode");
+  return a;
+}
+
+function renderNext() {
+  const box = document.getElementById("next");
+  box.replaceChildren();
+  const next = episodes.find(e => e.at > Date.now());
+  if (!next) { box.append(el("p", "meta", "No upcoming episodes in the schedule yet.")); return; }
+  const top = el("div", "next");
+  const info = el("div", "info");
+  info.append(el("div", "name", next.show.name),
+              el("div", "meta", `${epText(next.ep, next.show.total)} · ${dateLong.format(next.at)} · ${hhmm.format(next.at)}`));
+  top.append(cover(next.show, "", true), info);
+  const count = el("div", "count");
+  count.dataset.at = next.at;
+  count.setAttribute("role", "timer"); count.setAttribute("aria-label", "Time until it airs");
+  for (const u of ["days", "hours", "min", "sec"]) { const c = el("div"); c.append(el("b"), el("span", null, u)); count.append(c); }
+  box.append(top, count);
+  tickNext();
+}
+function tickNext() {
+  const c = document.querySelector("#next .count");
+  if (!c) return;
+  const ms = Number(c.dataset.at) - Date.now();
+  if (ms <= 0) { renderAll(); return; }
+  const p = parts(ms);
+  [p.d, pad(p.h), pad(p.m), pad(p.s)].forEach((v, i) => c.children[i].firstChild.textContent = v);
+}
+
+// ?v=week opens the Monday-to-Sunday timetable (the LINE menu's right button); anything else opens the next-episode view
+let VIEW = new URLSearchParams(location.search).get("v") === "week" || location.hash === "#week" ? "week" : "next";
+const WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+function episodeRow(e) {
+  const row = el("div", "row");
+  const info = el("div", "info");
+  info.append(el("div", "name", e.show.name), el("div", "meta", epText(e.ep, e.show.total)));
+  const side = el("div", "side");
+  const u = el("div", "until" + (e.at <= Date.now() ? " aired" : ""), until(e.at)); u.dataset.at = e.at;
+  side.append(el("div", "time", hhmm.format(e.at)), u);
+  if (e.watch && e.at <= Date.now()) side.append(watchLink(e.watch));
+  row.append(cover(e.show, ""), info, side);
+  return row;
+}
+function group(box, title, today, rows, emptyText) {
+  const label = el("p", "label"); label.append(el("b", today ? "today" : null, title));
+  const card = el("div", "card list");
+  if (rows.length) rows.forEach(r => card.append(r)); else card.append(el("p", "empty", emptyText));
+  box.append(label, card);
+}
+function renderDays() {  // next-episode view: today and the six days after it (2 Oct -> 8 Oct), under the countdown
+  const box = document.getElementById("week");
+  box.replaceChildren();
+  for (let i = 0; i < 7; i++) {
+    const t = Date.now() + i * 86400000, key = dayKey.format(t);
+    const name = i === 0 ? "Today" : i === 1 ? "Tomorrow" : weekdayLong.format(t);
+    group(box, `${name} · ${dayDate.format(t)}`, false, episodes.filter(e => dayKey.format(e.at) === key).map(episodeRow), "No episodes");
+  }
+}
+function renderTimetable() {  // timetable view: each show under the weekday it airs, Monday to Sunday
+  const box = document.getElementById("week");
+  box.replaceChildren();
+  const now = Date.now(), today = weekdayLong.format(now);
+  const slots = Object.fromEntries(WEEK.map(d => [d, []]));
+  const undated = [];
+  for (const s of shows) {
+    const next = s.eps.find(e => e.at > now), ref = next || [...s.eps].reverse()[0];
+    if (!next) { undated.push(s); continue; }
+    slots[weekdayLong.format(ref.at)].push({ s, next });
+  }
+  for (const day of WEEK) {
+    const rows = slots[day].sort((a, b) => hhmm.format(a.next.at).localeCompare(hhmm.format(b.next.at))).map(({ s, next }) => {
+      const row = el("div", "row");
+      const info = el("div", "info");
+      info.append(el("div", "name", s.name), el("div", "meta", `Next ${epText(next.ep, s.total)} · ${dayDate.format(next.at)}`));
+      const side = el("div", "side");
+      const u = el("div", "until", until(next.at)); u.dataset.at = next.at;
+      side.append(el("div", "time", hhmm.format(next.at)), u);
+      row.append(cover(s, ""), info, side);
+      return row;
+    });
+    group(box, day === today ? `${day} · Today` : day, day === today, rows, "Nothing airs");
+  }
+  if (undated.length) {
+    group(box, "No date yet", false, undated.map(s => {
+      const row = el("div", "row"); const info = el("div", "info");
+      info.append(el("div", "name", s.name), el("div", "meta", "Next episode not announced"));
+      row.append(cover(s, ""), info); return row;
+    }), "");
+  }
+}
+let season = "";
+function updateHeader() {
+  document.getElementById("sub").textContent = `${season ? season + " · " : ""}${shows.length} shows`;
+  document.querySelectorAll(".seg a").forEach(a => a.setAttribute("aria-current", a.dataset.view === VIEW ? "page" : "false"));
+}
+document.querySelectorAll(".seg a").forEach(a => a.onclick = ev => {  // switch views in place; the address changes so a reload keeps the view
+  ev.preventDefault();
+  VIEW = a.dataset.view;
+  history.replaceState(null, "", VIEW === "week" ? "?v=week" : location.pathname);
+  updateHeader(); renderAll(); window.scrollTo(0, 0);
+});
+function renderAll() {
+  document.getElementById("next-up").hidden = VIEW === "week";
+  if (VIEW === "week") renderTimetable(); else { renderNext(); renderDays(); }
+}
+
+function tick() {
+  tickNext();
+  document.querySelectorAll(".until[data-at]").forEach(u => {
+    const at = Number(u.dataset.at);
+    u.textContent = until(at);
+    u.classList.toggle("aired", at <= Date.now());
+  });
+}
+
+async function load() {
+  const sub = document.getElementById("sub");
+  try {
+    const r = await fetch(DATA + "?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    shows = data.shows.map(s => ({ ...s, eps: s.episodes.map(e => ({ ...e, at: e.at * 1000 })) }));
+    episodes = shows.flatMap(s => s.eps.map(e => ({ ...e, show: s }))).sort((a, b) => a.at - b.at);
+    season = ((shows.find(s => s.label) || {}).label || "").split(", ")[0];
+    updateHeader();
+    renderAll();
+  } catch (err) {
+    sub.textContent = "Couldn't load the schedule";
+    const box = document.getElementById("next");
+    box.replaceChildren(el("p", "meta", "The schedule didn't load. Check your connection, then try again."));
+    const b = el("button", "primary press", "Try again"); b.type = "button"; b.onclick = load; b.style.marginTop = "14px";
+    box.append(b);
+  }
+}
+
+// appearance: Light, Dark, or follow the device; remembered on this phone
+function setTheme(choice) {
+  if (choice === "device") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = choice;
+  try { choice === "device" ? localStorage.removeItem("theme") : localStorage.setItem("theme", choice); } catch (e) {}
+  document.querySelectorAll("[data-choice]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.choice === choice)));
+}
+document.querySelectorAll("[data-choice]").forEach(b => b.onclick = () => setTheme(b.dataset.choice));
+setTheme(document.documentElement.dataset.theme || "device");
+
+load();
+setInterval(tick, 1000);
+setInterval(load, 5 * 60 * 1000);
+</script>
+</body>
+</html>

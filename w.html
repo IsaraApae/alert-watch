@@ -1,0 +1,22 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Open in WEBTOON</title>
+<style>body{font:18px -apple-system,sans-serif;margin:40px 20px;text-align:center}a{display:inline-block;margin-top:16px;padding:12px 20px;border-radius:10px;background:#00d564;color:#000;text-decoration:none}</style>
+<p id="msg">Opening WEBTOON…</p>
+<a id="go" href="#">Open in the WEBTOON app</a>
+<script>
+// Alert Watch: hands a series number to the WEBTOON app, since LINE only makes https:// links tappable.
+const q = new URLSearchParams(location.search), t = q.get("t") || "", e = q.get("e") || "";
+if (/^\d{1,9}$/.test(t) && /^\d{0,6}$/.test(e)) {  // numbers only, so this page can't be used to open anything else
+  const app = e ? "linewebtoon://viewer/webtoon?titleNo=" + t + "&episodeNo=" + e  // that episode
+                : "linewebtoon://episodeList/webtoon?titleNo=" + t;                   // the series' episode list
+  document.getElementById("go").href = app;
+  location.href = app;
+} else {
+  document.getElementById("msg").textContent = "Missing or invalid series number.";
+  document.getElementById("go").remove();
+}
+// once the app has taken over (this page is hidden), try to close the tab; browsers that forbid it just ignore this
+document.addEventListener("visibilitychange", () => { if (document.hidden) window.close(); });
+</script>

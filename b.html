@@ -1,0 +1,21 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Open in Brave</title>
+<style>body{font:18px -apple-system,sans-serif;margin:40px 20px;text-align:center}a{display:inline-block;margin-top:16px;padding:12px 20px;border-radius:10px;background:#fb542b;color:#fff;text-decoration:none}</style>
+<p id="msg">Opening Brave…</p>
+<a id="go" href="#">Open in Brave</a>
+<script>
+// Alert Watch: hands a YouTube video to the Brave browser, since LINE cards only open https:// links.
+const v = new URLSearchParams(location.search).get("v") || "";
+if (/^[A-Za-z0-9_-]{11}$/.test(v)) {  // YouTube video IDs only, so this page can't open anything else
+  const app = "brave://open-url?url=" + encodeURIComponent("https://www.youtube.com/watch?v=" + v);
+  document.getElementById("go").href = app;
+  location.href = app;
+} else {
+  document.getElementById("msg").textContent = "Missing or invalid video.";
+  document.getElementById("go").remove();
+}
+// once the app has taken over (this page is hidden), try to close the tab; browsers that forbid it just ignore this
+document.addEventListener("visibilitychange", () => { if (document.hidden) window.close(); });
+</script>
