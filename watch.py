@@ -112,9 +112,12 @@ def thai_times():
     path = HERE / "thai_times.txt"
     for line in path.read_text().splitlines() if path.exists() else []:
         r = [x.strip() for x in line.split("|")]
-        if line.startswith("#") or len(r) != 4 or not r[0].isdigit() or r[2][:3].title() not in WEEKDAYS or not re.fullmatch(r"\d{1,2}[:.]\d{2}", r[3]):
+        if line.startswith("#") or len(r) != 4 or not r[0].isdigit():
             continue
-        out[int(r[0])] = (r[1], r[2][:3].title(), r[3].replace(".", ":"))
+        if r[2] == r[3] == "-":  # platform known, release time not: keep the Japanese time, but name where to watch
+            out[int(r[0])] = (r[1], None, None)
+        elif r[2][:3].title() in WEEKDAYS and re.fullmatch(r"\d{1,2}[:.]\d{2}", r[3]):
+            out[int(r[0])] = (r[1], r[2][:3].title(), r[3].replace(".", ":"))
     return out
 
 
@@ -236,7 +239,7 @@ def schedule():
             eps = {n["episode"]: n["airingAt"] for n in (m.get("airingSchedule") or {}).get("nodes", [])}
         rows = []
         for ep, t in sorted(eps.items()):
-            t = thai_slot(t, *thai[i][1:]) if i in thai else t
+            t = thai_slot(t, *thai[i][1:]) if i in thai and thai[i][1] else t
             if now - 8 * 86400 <= t <= now + 60 * 86400:
                 yt = t <= now and s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
                 rows.append({"ep": ep + s["offset"], "at": t, **({"watch": in_brave(yt)} if yt else {})})
@@ -345,7 +348,7 @@ def anime(state):
     seed = "anime" not in state  # first run: record the past week's episodes silently
     seen = state.setdefault("anime", [])
     thai = thai_times()  # shows released later with Thai subs: alert at that time instead of the Japanese broadcast
-    aired = {k: (thai_slot(t, *thai[k[0]][1:]) if k[0] in thai else t) for k, t in aired.items()}
+    aired = {k: (thai_slot(t, *thai[k[0]][1:]) if k[0] in thai and thai[k[0]][1] else t) for k, t in aired.items()}
     aired = {k: t for k, t in aired.items() if t <= now}
     new = sorted((t, i, ep) for (i, ep), t in aired.items() if f"{i}:{ep}" not in seen)
     videos = youtube_videos() if new and not seed else []
