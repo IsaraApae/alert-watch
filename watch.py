@@ -277,7 +277,7 @@ def schedule():
                 rows.append({"ep": ep + s["offset"], "at": t, **({"watch": in_brave(yt)} if yt else {})})
         total = m.get("episodes")
         out.append({"name": s["name"], "label": season_label(m), "cover": (m.get("coverImage") or {}).get("large"),
-                    "total": total and total + s["offset"], "episodes": rows})
+                    "total": total and total + s["offset"], "where": thai[i][0] if i in thai else None, "episodes": rows})
     try:
         week = json.loads(get(BILIBILI_SCHEDULE))["data"]["items"]
         cards = [(c.get("title") or "", int(c["pub_time_ts"]) / 1000, c.get("index_show") or "") for d in week for c in (d.get("cards") or []) if c.get("pub_time_ts")]
