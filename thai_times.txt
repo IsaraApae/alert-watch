@@ -1,7 +1,7 @@
 # When the Thai-sub episode comes out on a Thai platform, for shows where that's later than the Japanese broadcast.
 # AniList id | where | weekday (Mon..Sun) | time in Thailand   ("- | -" = time unknown: keep the Japanese time, just name the platform)
 # Each episode is placed at the first such slot after its Japanese broadcast, so delayed or skipped weeks still line up.
-202250 | Bilibili | Sun | 01:00
+202250 | Muse Thailand | Sun | 01:00
 185756 | Ani-One Thailand | Sun | 22:00
 199426 | Ani-One Thailand | Sun | 22:45
 212503 | Bilibili | Thu | 23:58
@@ -13,3 +13,5 @@
 195516 | Netflix | - | -
 210482 | Netflix | - | -
 195539 | Netflix | - | -
+176314 | Muse Thailand | Wed | 20:00
+152677 | Muse Thailand | Wed | 20:30
