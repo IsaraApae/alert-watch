@@ -172,10 +172,11 @@ def youtube_videos():
 
 
 def youtube_episode(videos, pattern, eps, aired):
-    """Link to a [ซับไทย] upload of one of these episode numbers, posted around broadcast (not an older season's video)."""
+    """Link to a [ซับไทย] upload of one of these episode numbers, posted no more than 4 days before its release
+    (channels sometimes post early, as Ani-One did for HOTEL INHUMANS episode 14) and so never an older season's video."""
     for title, link, published in videos:
         t = title.lower()
-        if "ซับไทย" in t and "พากย์ไทย" not in t and re.search(pattern, t) and published >= aired - 6 * 3600 \
+        if "ซับไทย" in t and "พากย์ไทย" not in t and re.search(pattern, t) and published >= aired - 4 * 86400 \
                 and any(re.search(rf"(?:ตอนที่|ep\.?|episode)\s*0*{e}(?!\d)", t) for e in eps):
             return link
     return None

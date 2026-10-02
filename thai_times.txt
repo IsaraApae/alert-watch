@@ -4,3 +4,5 @@
 202250 | Bilibili | Sun | 01:00
 185756 | Ani-One Thailand | Sun | 22:00
 199426 | Ani-One Thailand | Sun | 22:45
+212503 | Bilibili | Thu | 23:58
+198727 | Bilibili | Tue | 23:30
