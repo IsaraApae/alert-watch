@@ -258,14 +258,16 @@ def tv_entry(native, start, days_after=21):
 
 
 def complete_anime():
-    """Fill in short anime.txt lines ("name | AniList id", as the LINE command adds them) with the Japanese TV schedule
-    details and YouTube title keywords, so they get TV times and Thai-sub links like the hand-made entries."""
+    """Fill in short anime.txt lines ("name | AniList id", as the LINE command adds them, maybe with a Thai name sent by
+    the LINE "thai" command in the last field) with the Japanese TV schedule details and YouTube title keywords,
+    so they get TV times and Thai-sub links like the hand-made entries. A Thai name already there is kept."""
     path = HERE / "anime.txt"
     lines = path.read_text().splitlines()
     done = []
     for n, line in enumerate(lines):
-        r = [x.strip() for x in line.split("|")]
-        if line.startswith("#") or len(r) != 2 or not r[1].isdigit():
+        r = [x.strip() for x in line.split("|", 5)]
+        pending = len(r) == 2 or (len(r) == 6 and not r[2] and not r[3])  # "name | id" or "name | id |  |  |  | Thai name"
+        if line.startswith("#") or not pending or not r[1].isdigit():
             continue
         name, aid = r[0], int(r[1])
         m = anilist("query($i:Int){Media(id:$i){format title{romaji english native} synonyms airingSchedule(perPage:1){nodes{airingAt}}}}", {"i": aid})["Media"]
@@ -279,7 +281,7 @@ def complete_anime():
         # the English and romaji names (before any subtitle), plus any Thai title AniList knows, for matching YouTube uploads
         words = {t.split(":")[0].strip().lower() for t in (m["title"]["english"], m["title"]["romaji"]) if t}
         words |= {x.lower() for x in m.get("synonyms") or [] if re.search(r"[\u0E00-\u0E7F]", x)}
-        keywords = "|".join(re.escape(x) for x in sorted(words) if len(x) >= 4)
+        keywords = "|".join([re.escape(x) for x in sorted(words) if len(x) >= 4] + ([r[5]] if len(r) == 6 and r[5] else []))
         lines[n] = f"{name} | {aid} | {tid} | {first} | 0 | {keywords}"
         done.append(f"{name}: TV schedule {tid or 'none, AniList times'}, first episode {first or '-'}")
     if done:

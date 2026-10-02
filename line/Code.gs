@@ -13,6 +13,7 @@ const HELP = [
   "Commands:",
   "add <link>  -  add a manga or Webtoon series",
   "anime <title>  -  add an anime",
+  "thai <Thai name>  -  the Thai name of the anime you added last, so Thai-sub YouTube links work",
   "remove <name>  -  stop tracking (part of the name or link is enough)",
   "list  -  everything you track, as cover cards",
 ].join("\n");
@@ -51,6 +52,7 @@ function handle(text) {
   const cmd = words[0].toLowerCase(), arg = words.slice(1).join(" ").trim();
   if (cmd === "add") return addManga(arg);
   if (cmd === "anime") return addAnime(arg);
+  if (cmd === "thai") return addThai(arg);
   if (cmd === "remove") return remove(arg);
   if (cmd === "list") return list();
   return HELP;
@@ -90,12 +92,32 @@ function addAnime(title) {
   writeFile("anime.txt", f.text.replace(/\n*$/, "\n") + `${name} | ${pick.id}\n`, f.sha, "Add anime from LINE");
   const season = pick.season ? pick.season[0] + pick.season.slice(1).toLowerCase() + " " + pick.seasonYear : "";
   const about = [season, pick.format].filter(Boolean).join(", ");
-  const note = `If an episode aired in the past week, you'll get an alert for it at the next check. Wrong show? Send: remove ${name}`;
+  const note = `Now send its Thai name, so the card can open the Thai-sub YouTube episode:\nthai ชื่อไทย\n\n` +
+               `If an episode aired in the past week, you'll get an alert for it at the next check. Wrong show? Send: remove ${name}`;
   return {
     messages: [{ type: "flex", altText: "Added " + name, contents: bubble(name, "Added · " + about, pick.coverImage && pick.coverImage.large, null, "kilo") },
                { type: "text", text: note }],
     fallback: `Added: ${name}\n(${about}) anilist.co/anime/${pick.id}\n\n${note}`,
   };
+}
+
+// adds a Thai name to the YouTube keywords of the anime added last (the bottom line of anime.txt)
+function addThai(thai) {
+  thai = thai.replace(/\|/g, " ").trim();
+  if (!thai) return "Send it like this:\nthai ปฏิบัติการลับ บ้านโยซากุระ";
+  const f = readFile("anime.txt"), lines = f.text.replace(/\n+$/, "").split("\n");
+  const i = lines.map(l => l.trim() && !l.startsWith("#")).lastIndexOf(true);
+  if (i < 0) return "There's no anime to add it to yet.";
+  const r = lines[i].split("|").map(x => x.trim());
+  const fields = r.slice(0, 5).concat([r.slice(5).join("|")]);  // the keywords field can itself contain |
+  while (fields.length < 6) fields.push("");
+  const words = fields[5] ? fields[5].split("|") : [];
+  const key = thai.toLowerCase().replace(/[.*+?^${}()[\]\\]/g, "\\$&");
+  if (words.indexOf(key) >= 0) return `${fields[0]} already has that Thai name.`;
+  fields[5] = words.concat([key]).join("|");
+  lines[i] = fields.join(" | ");
+  writeFile("anime.txt", lines.join("\n") + "\n", f.sha, "Add Thai name from LINE");
+  return `Added the Thai name to ${fields[0]}:\n${thai}`;
 }
 
 function remove(word) {
