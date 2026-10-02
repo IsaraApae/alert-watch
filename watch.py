@@ -108,7 +108,11 @@ def tv_aired(xml, first_ep, now):
         if p.get("Deleted") == "1" or not p.get("Count", "").isdigit() or int(p["TID"]) not in first_ep:
             continue
         t = datetime.strptime(p["StTime"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=JST).timestamp()
-        key = (int(p["TID"]), int(p["Count"]) - first_ep[int(p["TID"])] + 1)  # the TV schedule keeps counting across seasons
+        # the TV schedule keeps counting across seasons, and some channels count from a different start (Blue Box: 1 and 26)
+        start = max((f for f in first_ep[int(p["TID"])] if f <= int(p["Count"])), default=None)
+        if start is None:
+            continue
+        key = (int(p["TID"]), int(p["Count"]) - start + 1)
         if t <= now and (key not in out or t < out[key]):
             out[key] = t
     return out
@@ -143,12 +147,67 @@ def youtube_episode(videos, pattern, eps, aired):
     return None
 
 
+def anime_list():
+    """anime.txt: name | AniList id | TV-schedule id (0 = none) | first episode number(s) in the TV schedule, comma-separated when channels count differently
+    | episodes before this AniList entry (added to the count) | YouTube title keywords."""
+    rows = [l.split(" | ") for l in (HERE / "anime.txt").read_text().splitlines() if l.strip() and not l.startswith("#")]
+    return {int(r[1]): {"name": r[0], "tid": int(r[2]), "first": [int(x) for x in r[3].split(",")], "offset": int(r[4]), "yt": r[5] if len(r) > 5 else ""} for r in rows}
+
+
+def season_label(m):
+    """AniList media -> "Fall 2026, TV"."""
+    parts = [f"{m['season'].title()} {m['seasonYear']}" if m.get("season") and m.get("seasonYear") else "", (m.get("format") or "").replace("_", " ")]
+    return ", ".join(p for p in parts if p)
+
+
+def anilist(query, variables):
+    body = json.dumps({"query": query, "variables": variables}).encode()
+    req = urllib.request.Request("https://graphql.anilist.co", data=body, headers={"Content-Type": "application/json", "User-Agent": UA})
+    return json.loads(urllib.request.urlopen(req, timeout=30).read())["data"]
+
+
+def schedule():
+    """Write schedule.json for the countdown page: every show's episodes from a week ago to two months ahead,
+    with the same times and numbering as the alerts. Rewritten only when something changed, so it isn't committed every run."""
+    shows, now = anime_list(), int(time.time())
+    q = "query($ids:[Int]){Page(perPage:50){media(id_in:$ids){id episodes season seasonYear format coverImage{large} airingSchedule(perPage:50){nodes{episode airingAt}}}}}"
+    try:
+        info = {m["id"]: m for m in anilist(q, {"ids": list(shows)})["Page"]["media"]}
+        by_tid = {s["tid"]: i for i, s in shows.items() if s["tid"]}
+        span = f"{datetime.fromtimestamp(now - 8 * 86400, JST):%Y%m%d_%H%M%S}-{datetime.fromtimestamp(now + 60 * 86400, JST):%Y%m%d_%H%M%S}"
+        xml = get(f"https://cal.syoboi.jp/db.php?Command=ProgLookup&TID={','.join(map(str, by_tid))}&Range={span}")
+        tv = tv_aired(xml, {tid: shows[i]["first"] for tid, i in by_tid.items()}, now + 60 * 86400)
+    except Exception as e:  # keep the previous file rather than publish a half-empty one
+        print(f"FAIL schedule: {e}", file=sys.stderr)
+        return
+    videos = youtube_videos()
+    out = []
+    for i, s in shows.items():
+        m = info.get(i, {})
+        if s["tid"]:
+            eps = {ep: t for (tid, ep), t in tv.items() if tid == s["tid"] and ep >= 1}
+        else:
+            eps = {n["episode"]: n["airingAt"] for n in (m.get("airingSchedule") or {}).get("nodes", [])}
+        rows = []
+        for ep, t in sorted(eps.items()):
+            if now - 8 * 86400 <= t <= now + 60 * 86400:
+                yt = t <= now and s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
+                rows.append({"ep": ep + s["offset"], "at": t, **({"watch": in_brave(yt)} if yt else {})})
+        total = m.get("episodes")
+        out.append({"name": s["name"], "label": season_label(m), "cover": (m.get("coverImage") or {}).get("large"),
+                    "total": total and total + s["offset"], "episodes": rows})
+    path = HERE / "schedule.json"
+    old = json.loads(path.read_text()) if path.exists() else {}
+    if old.get("shows") != out:
+        path.write_text(json.dumps({"updated": now, "shows": out}, ensure_ascii=False, indent=1))
+    print(f"schedule: {sum(len(x['episodes']) for x in out)} episodes, {'updated' if old.get('shows') != out else 'unchanged'}")
+
+
 def anime(state):
     """Notify when a show in anime.txt airs a new episode: the Japanese TV schedule (Syoboi Calendar, earliest channel)
     for TV shows, AniList's airing schedule for online-only ones. anime.txt: name | AniList id | TV-schedule id (0 = none)
     | first episode number in the TV schedule | episodes before this AniList entry (added to the count)."""
-    rows = [l.split(" | ") for l in (HERE / "anime.txt").read_text().splitlines() if l.strip() and not l.startswith("#")]
-    shows = {int(r[1]): {"name": r[0], "tid": int(r[2]), "first": int(r[3]), "offset": int(r[4]), "yt": r[5] if len(r) > 5 else ""} for r in rows}
+    shows = anime_list()
     now = int(time.time())
     query = ("query($ids:[Int],$web:[Int],$a:Int,$b:Int){info:Page(perPage:50){media(id_in:$ids){id episodes season seasonYear format coverImage{large}}}"
              " web:Page(perPage:50){airingSchedules(mediaId_in:$web,airingAt_greater:$a,airingAt_lesser:$b){episode airingAt media{id}}}}")
@@ -180,10 +239,9 @@ def anime(state):
             s, m = shows[i], info.get(i, {})
             total = m.get("episodes")
             line = episode_line(ep + s["offset"], total and total + s["offset"], t)
-            parts = [f"{m['season'].title()} {m['seasonYear']}" if m.get("season") and m.get("seasonYear") else "", (m.get("format") or "").replace("_", " ")]
-            label = f" ({', '.join(p for p in parts if p)})" if any(parts) else ""  # e.g. "Fall 2026, TV"
+            label = f" ({season_label(m)})" if season_label(m) else ""  # e.g. "Fall 2026, TV"
             # if an official channel already has this episode up with Thai subs, the card opens that video; otherwise no link
-            yt = s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"], 1) - 1}, t)
+            yt = s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
             notify(f"New episode: {s['name']}{label}", line, line + (f"\n{yt}" if yt else ""), (m.get("coverImage") or {}).get("large"), yt and in_brave(yt))
         seen.append(f"{i}:{ep}")
     print(f"anime: {len(shows)} watched, {len(new)} {'seeded' if seed else 'new'}")
@@ -192,6 +250,10 @@ def anime(state):
 def main():
     state = json.loads(STATE.read_text()) if STATE.exists() else {}
     anime(state)
+    try:
+        schedule()
+    except Exception as e:  # the countdown page must never stop the alerts
+        print(f"FAIL schedule: {e}", file=sys.stderr)
     for url in (HERE / "urls.txt").read_text().split():
         name = [p for p in urlparse(unquote(url)).path.split("/") if p and p != "list"][-1]  # series slug
         try:
@@ -245,10 +307,14 @@ if __name__ == "__main__":
         assert youtube_episode(v, "กลายเป็นดาบ", {1}, 1790782200) == "sub"  # Thai-sub, this season, right episode
         assert youtube_episode(v, "กลายเป็นดาบ", {2}, 1790782200) is None
         assert in_brave("https://www.youtube.com/watch?v=j7zFyWX6t8M") == BRAVE + "j7zFyWX6t8M"
+        assert season_label({"season": "FALL", "seasonYear": 2026, "format": "TV_SHORT"}) == "Fall 2026, TV SHORT" and season_label({}) == ""
         x = ('<ProgItem><TID>8</TID><Count>15</Count><StTime>2026-10-02 00:26:00</StTime><Deleted>0</Deleted></ProgItem>'
              '<ProgItem><TID>8</TID><Count>15</Count><StTime>2026-10-02 02:00:00</StTime><Deleted>0</Deleted></ProgItem>'
              '<ProgItem><TID>8</TID><Count>16</Count><StTime>2026-10-08 23:56:00</StTime><Deleted>0</Deleted></ProgItem>')
-        assert tv_aired(x, {8: 15}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: 15}, 1790868600)  # earliest channel, season numbering, nothing future
+        assert tv_aired(x, {8: [15]}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: [15]}, 1790868600)  # earliest channel, season numbering, nothing future
+        x2 = ('<ProgItem><TID>9</TID><Count>1</Count><StTime>2026-10-04 16:30:00</StTime></ProgItem>'
+              '<ProgItem><TID>9</TID><Count>26</Count><StTime>2026-10-06 20:00:00</StTime></ProgItem>')
+        assert set(tv_aired(x2, {9: [1, 26]}, 1791298800)) == {(9, 1)}  # the other channel's 26 is the same episode 1 (checked 7 Oct 00:00 JST)
         print("ok")
     elif sys.argv[1:] == ["ping"]:
         # test: one Webtoon card of each kind, built the same way as real alerts

@@ -23,5 +23,5 @@ jobs:
       - run: |
           git config user.name manga-watch
           git config user.email manga-watch@users.noreply.github.com
-          git add ci-state.json
+          git add ci-state.json schedule.json
           git diff --cached --quiet || (git commit -qm "update state" && git push -q)
