@@ -103,9 +103,32 @@ def in_brave(youtube_link):
 THAI = timezone(timedelta(hours=7))
 
 
-def episode_line(ep, total, aired_at):
+WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+
+def thai_times():
+    """thai_times.txt: {AniList id: (where, weekday, "HH:MM")} for shows whose Thai-sub release is later than Japanese TV."""
+    out = {}
+    path = HERE / "thai_times.txt"
+    for line in path.read_text().splitlines() if path.exists() else []:
+        r = [x.strip() for x in line.split("|")]
+        if line.startswith("#") or len(r) != 4 or not r[0].isdigit() or r[2][:3].title() not in WEEKDAYS or not re.fullmatch(r"\d{1,2}[:.]\d{2}", r[3]):
+            continue
+        out[int(r[0])] = (r[1], r[2][:3].title(), r[3].replace(".", ":"))
+    return out
+
+
+def thai_slot(broadcast, day, hhmm):
+    """The first `day` at `hhmm` Thai time at or after the Japanese broadcast: Sat 23:30 -> "Sun 01:00" gives Sun 01:00."""
+    h, m = map(int, hhmm.split(":"))
+    t = datetime.fromtimestamp(broadcast, THAI).replace(hour=h, minute=m, second=0, microsecond=0)
+    t += timedelta(days=(WEEKDAYS.index(day) - t.weekday()) % 7)
+    return (t + timedelta(days=7) if t.timestamp() < broadcast else t).timestamp()
+
+
+def episode_line(ep, total, aired_at, where=None):
     when = datetime.fromtimestamp(aired_at, THAI).strftime("%d %b %Y %H:%M")
-    return f"Episode {ep:02d}/{f'{total:02d}' if total else '?'}\nAired {when}"
+    return f"Episode {ep:02d}/{f'{total:02d}' if total else '?'}\n{f'{where} · ' if where else 'Aired '}{when}"
 
 
 JST = timezone(timedelta(hours=9))
@@ -202,6 +225,7 @@ def schedule():
         print(f"FAIL schedule: {e}", file=sys.stderr)
         return
     videos = youtube_videos()
+    thai = thai_times()
     out = []
     for i, s in shows.items():
         m = info.get(i, {})
@@ -211,6 +235,7 @@ def schedule():
             eps = {n["episode"]: n["airingAt"] for n in (m.get("airingSchedule") or {}).get("nodes", [])}
         rows = []
         for ep, t in sorted(eps.items()):
+            t = thai_slot(t, *thai[i][1:]) if i in thai else t
             if now - 8 * 86400 <= t <= now + 60 * 86400:
                 yt = t <= now and s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
                 rows.append({"ep": ep + s["offset"], "at": t, **({"watch": in_brave(yt)} if yt else {})})
@@ -318,13 +343,16 @@ def anime(state):
             print(f"FAIL tv schedule: {e}", file=sys.stderr)
     seed = "anime" not in state  # first run: record the past week's episodes silently
     seen = state.setdefault("anime", [])
+    thai = thai_times()  # shows released later with Thai subs: alert at that time instead of the Japanese broadcast
+    aired = {k: (thai_slot(t, *thai[k[0]][1:]) if k[0] in thai else t) for k, t in aired.items()}
+    aired = {k: t for k, t in aired.items() if t <= now}
     new = sorted((t, i, ep) for (i, ep), t in aired.items() if f"{i}:{ep}" not in seen)
     videos = youtube_videos() if new and not seed else []
     for t, i, ep in new:
         if not seed:
             s, m = shows[i], info.get(i, {})
             total = m.get("episodes")
-            line = episode_line(ep + s["offset"], total and total + s["offset"], t)
+            line = episode_line(ep + s["offset"], total and total + s["offset"], t, thai[i][0] if i in thai else None)
             label = f" ({season_label(m)})" if season_label(m) else ""  # e.g. "Fall 2026, TV"
             # if an official channel already has this episode up with Thai subs, the card opens that video; otherwise no link
             yt = s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
@@ -448,6 +476,12 @@ if __name__ == "__main__":
             assert webtoon("https://m.webtoons.com/th/x/y/list?title_no=1") == {"EP.7": "https://www.webtoons.com/th/x/ep7-a/viewer?title_no=1&episode_no=7"}
         assert episode_line(5, 12, 1790866800) == "Episode 05/12\nAired 01 Oct 2026 22:00", episode_line(5, 12, 1790866800)
         assert episode_line(3, None, 1790866800).startswith("Episode 03/?")
+        sat2330 = datetime(2026, 10, 3, 23, 30, tzinfo=THAI).timestamp()  # Magic Repo Man on Japanese TV
+        assert datetime.fromtimestamp(thai_slot(sat2330, "Sun", "01:00"), THAI) == datetime(2026, 10, 4, 1, 0, tzinfo=THAI)
+        sun2145 = datetime(2026, 10, 4, 21, 45, tzinfo=THAI).timestamp()
+        assert datetime.fromtimestamp(thai_slot(sun2145, "Sun", "22:00"), THAI) == datetime(2026, 10, 4, 22, 0, tzinfo=THAI)
+        assert datetime.fromtimestamp(thai_slot(sun2145, "Sun", "21:00"), THAI) == datetime(2026, 10, 11, 21, 0, tzinfo=THAI)  # never before the broadcast
+        assert episode_line(2, 12, sun2145, "Ani-One Thailand").endswith("\nAni-One Thailand · 04 Oct 2026 21:45")
         v = [("[พากย์ไทย] ซวยเหลือหลายเกิดใหม่กลายเป็นดาบ ซีซั่น 2 ตอนที่ 1", "dub", 1790782200.0),
              ("ซวยเหลือหลายเกิดใหม่กลายเป็นดาบ ตอนที่ 1 [ซับไทย]", "season1", 1700000000.0),
              ("ซวยเหลือหลายเกิดใหม่กลายเป็นดาบ ซีซั่น 2 ตอนที่ 1 [ซับไทย]", "sub", 1790782200.0)]
