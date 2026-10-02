@@ -1,19 +1,19 @@
 # name | AniList id | TV-schedule id at cal.syoboi.jp (0 = online-only, use AniList) | first episode number in the TV schedule | episodes before this AniList entry | YouTube title keywords (official Thai-sub channels)
-As a Reincarnated Aristocrat Season 3 | 185756 | 8009 | 25 | 0 | สกิลประเมิน|tensei kizoku|aristocrat
+As a Reincarnated Aristocrat Season 3 | 185756 | 8009 | 25 | 0 | สกิลประเมิน|tensei kizoku|aristocrat|เกิดใหม่เป็นขุนนาง
 Reincarnated as a Sword Season 2 | 159042 | 7981 | 1 | 0 | กลายเป็นดาบ|tensei shitara ken|reincarnated as a sword
 The Ramparts of Ice Season 2 | 213805 | 8008 | 15 | 0 | ปราการน้ำแข็ง|koori no jouheki|ramparts of ice
 The Apothecary Diaries Season 3 | 195516 | 8025 | 49 | 0 | หมอยา|kusuriya|apothecary
 Tokyo Revengers Season 4 | 178083 | 8001 | 51 | 0 | รีเวนเจอร์ส|tokyo revengers
-Even the Student Council Has Its Holes! | 191656 | 8005 | 1 | 0 | seitokai ni mo ana|student council has its holes
+Even the Student Council Has Its Holes! | 191656 | 8005 | 1 | 0 | seitokai ni mo ana|student council has its holes|สภานักเรียนฉบับรั่ว
 Ranma 1/2 Season 3 | 209872 | 8012 | 25 | 0 | รันม่า|ranma
 Blue Box Season 2 | 189123 | 8007 | 1,26 | 0 | กล่องรัก|ao no hako|blue box
 HOTEL INHUMANS Season 2 | 199426 | 8016 | 14 | 0 | โรงแรมเพชฌฆาต|hotel inhumans
 The Detective Is Already Dead Season 2 | 152677 | 8010 | 1 | 0 | นักสืบตายแล้ว|tantei wa mou|detective is already dead
 Sasaki and Peeps Season 2 | 176314 | 8023 | 1 | 0 | ซาซากิ|sasaki to pii|sasaki and peeps
-The Iceblade Sorcerer Shall Rule the World Season 2 | 212503 | 8037 | 1 | 0 | ดาบเหมันต์|hyouken|iceblade
+The Iceblade Sorcerer Shall Rule the World Season 2 | 212503 | 8037 | 1 | 0 | ดาบเหมันต์|hyouken|iceblade|เรย์ไวท์
 Mission: Yozakura Family Season 2 Cour 2 | 213657 | 8011 | 40 | 0 | โยซากุระ|yozakura
-Cyberpunk: Edgerunners 2 | 195539 | 0 | 0 | 0 | edgerunners
-JoJo Part 7: Steel Ball Run 2nd-3rd Stage | 210482 | 0 | 0 | 1 | steel ball run
+Cyberpunk: Edgerunners 2 | 195539 | 0 | 0 | 0 | edgerunners|อาชญากรแดนเถื่อน
+JoJo Part 7: Steel Ball Run 2nd-3rd Stage | 210482 | 0 | 0 | 1 | steel ball run|สตีล บอล รัน
 Chitose Is in the Ramune Bottle 2nd Cour | 198727 | 8022 | 14 | 0 | จิโตเสะ|chitose|ramune
-Magic Repo Man | 202250 | 7999 | 1 | 0 | magic repo|kashita maryoku|revo barai|ribobarai
+Magic Repo Man | 202250 | 7999 | 1 | 0 | magic repo|kashita maryoku|revo barai|ribobarai|พลังเวทที่ยืมไป
 FX Senshi Kurumi-chan | 206401 | 7998 | 1 | 0 | kurumi-chan|fx fighter kurumi|fx senshi kurumi
