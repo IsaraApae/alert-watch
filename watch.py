@@ -150,8 +150,17 @@ def youtube_episode(videos, pattern, eps, aired):
 def anime_list():
     """anime.txt: name | AniList id | TV-schedule id (0 = none) | first episode number(s) in the TV schedule, comma-separated when channels count differently
     | episodes before this AniList entry (added to the count) | YouTube title keywords."""
-    rows = [l.split(" | ") for l in (HERE / "anime.txt").read_text().splitlines() if l.strip() and not l.startswith("#")]
-    return {int(r[1]): {"name": r[0], "tid": int(r[2]), "first": [int(x) for x in r[3].split(",")], "offset": int(r[4]), "yt": r[5] if len(r) > 5 else ""} for r in rows}
+    shows = {}
+    for line in (HERE / "anime.txt").read_text().splitlines():
+        if not line.strip() or line.startswith("#"):
+            continue
+        r = [x.strip() for x in line.split("|", 5)]  # tolerant of missing spaces around |
+        try:  # a mistyped line is skipped, so one bad edit can't stop every other alert
+            shows[int(r[1])] = {"name": r[0], "tid": int(r[2] or 0), "first": [int(x) for x in (r[3] or "1").split(",")],
+                                "offset": int(r[4] or 0), "yt": r[5] if len(r) > 5 else ""}
+        except (IndexError, ValueError):
+            print(f"SKIP anime.txt line (needs: name | AniList id | TV id | first episode | offset): {line[:80]}", file=sys.stderr)
+    return shows
 
 
 def season_label(m):
