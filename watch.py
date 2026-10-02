@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Notify (macOS) when a watched manga page lists a chapter it didn't list last run."""
-import html, json, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
+import html, json, os, re, shutil, subprocess, sys, time, unicodedata, urllib.error, urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote, unquote, urlparse
@@ -224,6 +224,69 @@ def schedule():
     print(f"schedule: {sum(len(x['episodes']) for x in out)} episodes, {'updated' if old.get('shows') != out else 'unchanged'}")
 
 
+def base_title(t):
+    """A show's name without season or cour markers, spacing or punctuation, so listings of the same show compare equal:
+    "らんま1/2 (2024) 第3期" and "らんま1/2(2026)", "転生したら剣でした 第2期" and "転生したら剣でしたⅡ"."""
+    t = unicodedata.normalize("NFKC", t).lower()
+    t = re.sub(r"第\s*\d+\s*(期|クール|シリーズ)|\d+\s*クール|(season|シーズン)\s*\d+|\d+(st|nd|rd|th)\s*season|part\s*\d+|[(（]\d{4}[)）]|\b(ii|iii|iv)\b|[ⅡⅢⅣⅤ]", "", t)
+    return re.sub(r"[\s\W_]+", "", t)
+
+
+def same_show(a, b):
+    """True when two titles name the same show: equal once season markers are set aside, or one is nearly all of the other.
+    A franchise name alone ("ジョジョの奇妙な冒険") doesn't match a specific part of it."""
+    x, y = sorted((base_title(a), base_title(b)), key=len)
+    return bool(x) and x in y and len(x) >= 0.8 * len(y)
+
+
+def tv_entry(native, start, days_after=21):
+    """(TV-schedule id, first episode number) for a show airing between a week before `start` and `days_after` days after it,
+    found by its Japanese title; (0, 0) if the TV schedule has no such broadcasts."""
+    span = f"{datetime.fromtimestamp(start - 7 * 86400, JST):%Y%m%d_%H%M%S}-{datetime.fromtimestamp(start + days_after * 86400, JST):%Y%m%d_%H%M%S}"
+    native = unicodedata.normalize("NFKC", native)  # full-width "２" in AniList vs "2" in the TV schedule
+    short = re.split(r"[\s【（(\[]", native)[0]  # the search can miss "アオのハコ Season2" but finds "アオのハコ"
+    for key in dict.fromkeys((native, native[:8], short)):  # a long title may need its start only
+        found = json.loads(get("https://cal.syoboi.jp/json.php?Req=TitleSearch&Limit=10&Search=" + quote(key))).get("Titles") or {}
+        for t in sorted(found.values(), key=lambda t: -int(t["TID"]))[:6]:  # newest entry first: the current season
+            if not same_show(t["Title"], native):
+                continue
+            xml = get(f"https://cal.syoboi.jp/db.php?Command=ProgLookup&TID={t['TID']}&Range={span}")
+            counts = [int(c) for c in re.findall(r"<Count>(\d+)</Count>", xml)]
+            if counts:  # it really airs around this show's premiere
+                return int(t["TID"]), min(counts)
+    return 0, 0
+
+
+def complete_anime():
+    """Fill in short anime.txt lines ("name | AniList id", as the LINE command adds them) with the Japanese TV schedule
+    details and YouTube title keywords, so they get TV times and Thai-sub links like the hand-made entries."""
+    path = HERE / "anime.txt"
+    lines = path.read_text().splitlines()
+    done = []
+    for n, line in enumerate(lines):
+        r = [x.strip() for x in line.split("|")]
+        if line.startswith("#") or len(r) != 2 or not r[1].isdigit():
+            continue
+        name, aid = r[0], int(r[1])
+        m = anilist("query($i:Int){Media(id:$i){format title{romaji english native} synonyms airingSchedule(perPage:1){nodes{airingAt}}}}", {"i": aid})["Media"]
+        start = ((m.get("airingSchedule") or {}).get("nodes") or [{}])[0].get("airingAt")
+        tid, first = 0, 0
+        if m["format"] in ("TV", "TV_SHORT", "ONA") and m["title"].get("native"):  # online releases can air on TV too
+            # no air date on AniList yet: look for broadcasts over the next two months instead
+            tid, first = tv_entry(m["title"]["native"], start) if start else tv_entry(m["title"]["native"], int(time.time()), 60)
+        if not start and not tid:
+            continue  # nothing to go on yet: stays short and is tried again on a later check
+        # the English and romaji names (before any subtitle), plus any Thai title AniList knows, for matching YouTube uploads
+        words = {t.split(":")[0].strip().lower() for t in (m["title"]["english"], m["title"]["romaji"]) if t}
+        words |= {x.lower() for x in m.get("synonyms") or [] if re.search(r"[\u0E00-\u0E7F]", x)}
+        keywords = "|".join(re.escape(x) for x in sorted(words) if len(x) >= 4)
+        lines[n] = f"{name} | {aid} | {tid} | {first} | 0 | {keywords}"
+        done.append(f"{name}: TV schedule {tid or 'none, AniList times'}, first episode {first or '-'}")
+    if done:
+        path.write_text("\n".join(lines) + "\n")
+        print("completed anime:", "; ".join(done))
+
+
 def anime(state):
     """Notify when a show in anime.txt airs a new episode: the Japanese TV schedule (Syoboi Calendar, earliest channel)
     for TV shows, AniList's airing schedule for online-only ones. anime.txt: name | AniList id | TV-schedule id (0 = none)
@@ -323,6 +386,10 @@ def library(state):
 
 def main():
     state = json.loads(STATE.read_text()) if STATE.exists() else {}
+    try:
+        complete_anime()
+    except Exception as e:  # a short entry still works with AniList times, so this must never stop the alerts
+        print(f"FAIL completing anime: {e}", file=sys.stderr)
     anime(state)
     try:
         schedule()
@@ -393,6 +460,10 @@ if __name__ == "__main__":
         x2 = ('<ProgItem><TID>9</TID><Count>1</Count><StTime>2026-10-04 16:30:00</StTime></ProgItem>'
               '<ProgItem><TID>9</TID><Count>26</Count><StTime>2026-10-06 20:00:00</StTime></ProgItem>')
         assert set(tv_aired(x2, {9: [1, 26]}, 1791298800)) == {(9, 1)}  # the other channel's 26 is the same episode 1 (checked 7 Oct 00:00 JST)
+        assert same_show("らんま1/2 (2024) 第3期", "らんま1/2(2026)") and same_show("転生したら剣でした 第2期", "転生したら剣でしたⅡ")
+        assert same_show("千歳くんはラムネ瓶のなか 2クール", "千歳くんはラムネ瓶のなか(第2クール)") and same_show("アオのハコ Season２", "アオのハコ Season2")
+        assert same_show("佐々木とピーちゃん シーズン２", "佐々木とピーちゃん Season2")
+        assert not same_show("ジョジョの奇妙な冒険 スティール・ボール・ラン", "ジョジョの奇妙な冒険")  # a franchise name alone isn't the show
         print("ok")
     elif sys.argv[1:] == ["ping"]:
         # test: one Webtoon card of each kind, built the same way as real alerts

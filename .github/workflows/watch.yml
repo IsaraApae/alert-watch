@@ -27,5 +27,5 @@ jobs:
       - run: |
           git config user.name manga-watch
           git config user.email manga-watch@users.noreply.github.com
-          git add ci-state.json schedule.json library.json
+          git add ci-state.json schedule.json library.json anime.txt
           git diff --cached --quiet || (git commit -qm "update state" && git pull -q --rebase && git push -q)  # pull first: LINE commands may have edited the lists
