@@ -227,6 +227,7 @@ let shows = [], episodes = [], selected = null;
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const pad = n => String(n).padStart(2, "0");
 const epText = (ep, total) => `EP ${pad(ep)}` + (total ? `/${pad(total)}` : "");
+const on = show => show.where ? ` · ${show.where}` : "";  // where to watch: Netflix, Bilibili, Muse Thailand...
 
 function parts(ms) {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -261,7 +262,7 @@ function renderNext() {
   const top = el("div", "next");
   const info = el("div", "info");
   info.append(el("div", "name", next.show.name),
-              el("div", "meta", `${epText(next.ep, next.show.total)} · ${dateLong.format(next.at)} · ${hhmm.format(next.at)}`));
+              el("div", "meta", `${epText(next.ep, next.show.total)} · ${dateLong.format(next.at)} · ${hhmm.format(next.at)}${on(next.show)}`));
   top.append(cover(next.show, "", true), info);
   const count = el("div", "count");
   count.dataset.at = next.at;
@@ -286,7 +287,7 @@ const WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 function episodeRow(e) {
   const row = el("div", "row");
   const info = el("div", "info");
-  info.append(el("div", "name", e.show.name), el("div", "meta", epText(e.ep, e.show.total)));
+  info.append(el("div", "name", e.show.name), el("div", "meta", epText(e.ep, e.show.total) + on(e.show)));
   const side = el("div", "side");
   const u = el("div", "until" + (e.at <= Date.now() ? " aired" : ""), until(e.at)); u.dataset.at = e.at;
   side.append(el("div", "time", hhmm.format(e.at)), u);
@@ -324,7 +325,7 @@ function renderTimetable() {  // timetable view: each show under the weekday it 
     const rows = slots[day].sort((a, b) => hhmm.format(a.next.at).localeCompare(hhmm.format(b.next.at))).map(({ s, next }) => {
       const row = el("div", "row");
       const info = el("div", "info");
-      info.append(el("div", "name", s.name), el("div", "meta", `Next ${epText(next.ep, s.total)} · ${dayDate.format(next.at)}`));
+      info.append(el("div", "name", s.name), el("div", "meta", `Next ${epText(next.ep, s.total)} · ${dayDate.format(next.at)}${on(s)}`));
       const side = el("div", "side");
       const u = el("div", "until", until(next.at)); u.dataset.at = next.at;
       side.append(el("div", "time", hhmm.format(next.at)), u);
