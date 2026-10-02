@@ -48,23 +48,25 @@ def card(title, msg, image, uri=None):
                 {"type": "box", "layout": "vertical", "contents": [text(title, weight="bold"), text(msg, color="#777777")]}]}}
 
 
-def notify(title, msg, links, image=None, uri=None):
+def notify(title, msg, links, image=None, uri=None, extra=None):
+    """extra: a text message sent right after the card, for links LINE only makes tappable in text (linewebtoon://)."""
     if shutil.which("osascript"):  # absent on the GitHub runner
         subprocess.run(["osascript", "-e", f"display notification {json.dumps(msg)} with title {json.dumps(title)}"])
     token = os.environ.get("LINE_TOKEN")  # phone push: LINE official account broadcast; only set on GitHub
     if not token:
         return
     plain = {"type": "text", "text": f"{title}\n{links}"[:4500]}
-    tries = ([{"type": "flex", "altText": f"{title} {msg}"[:400], "contents": card(title, msg, image, uri)}]
-             if image and re.search(r"\.(jpe?g|png)$", urlparse(image).path, re.I) else [])  # LINE cards show JPEG/PNG only + [plain]
-    for message in tries:  # the card first when there is a cover; plain text if LINE refuses it, so the alert is never lost
-        req = urllib.request.Request("https://api.line.me/v2/bot/message/broadcast", data=json.dumps({"messages": [message]}).encode(),
+    flex = {"type": "flex", "altText": f"{title} {msg}"[:400], "contents": card(title, msg, image, uri)}
+    tries = ([[flex] + ([{"type": "text", "text": extra}] if extra else [])]
+             if image and re.search(r"\.(jpe?g|png)$", urlparse(image).path, re.I) else []) + [[plain]]  # LINE cards show JPEG/PNG only
+    for messages in tries:  # the card first when there is a cover; plain text if LINE refuses it, so the alert is never lost
+        req = urllib.request.Request("https://api.line.me/v2/bot/message/broadcast", data=json.dumps({"messages": messages}).encode(),
                                      headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
         try:
             urllib.request.urlopen(req, timeout=30)
             return
         except Exception as e:
-            print(f"FAIL line ({message['type']}): {e} {getattr(e, 'read', lambda: b'')()[:300]}", file=sys.stderr)
+            print(f"FAIL line ({messages[0]['type']}): {e} {getattr(e, 'read', lambda: b'')()[:300]}", file=sys.stderr)
     if "ping" in sys.argv:
         sys.exit(1)
 
@@ -296,13 +298,15 @@ def main():
             if "webtoons.com" in url:  # a cover card that opens the series straight in the WEBTOON app
                 no = re.search(r"title_no=(\d+)", url)[1]
                 eps = sorted(int(c[3:]) for c in new)  # "EP.216" -> 216; the card opens the first new one, so you read in order
-                if no in WEBTOON_SERIES_PAGE:
-                    text, tap = f"{shown}\nlinewebtoon://episodeList/webtoon?titleNo={no}", WEBTOON_APP + no
+                extra = None
+                if no in WEBTOON_SERIES_PAGE:  # cover card without a link, then the app's own address as text: one tap, no browser tab
+                    extra = f"linewebtoon://episodeList/webtoon?titleNo={no}"
+                    text, tap = f"{shown}\n{extra}", None
                 else:
                     text = "\n".join(f"EP.{e}\nlinewebtoon://viewer/webtoon?titleNo={no}&episodeNo={e}" for e in eps)
                     tap = f"{WEBTOON_APP}{no}&e={eps[0]}"
-                title, image = cover(url)  # LINE cards only open web addresses, so the card goes via a page that hands off to the app
-                notify(f"New chapter: {title or name}", shown, text, image, tap)
+                title, image = cover(url)  # LINE cards only open web addresses, so card taps go via a page that hands off to the app
+                notify(f"New chapter: {title or name}", shown, text, image, tap, extra)
             else:  # cover card that opens the first new chapter; the text version lists each new chapter's link
                 links = {c: quote(found[c], safe=":/%?=&#") for c in new}
                 order = sorted(new, key=lambda c: [int(x) for x in re.findall(r"\d+", c)] or [0])
@@ -343,17 +347,13 @@ if __name__ == "__main__":
         assert set(tv_aired(x2, {9: [1, 26]}, 1791298800)) == {(9, 1)}  # the other channel's 26 is the same episode 1 (checked 7 Oct 00:00 JST)
         print("ok")
     elif sys.argv[1:] == ["ping"]:
-        # test: one Webtoon card of each kind, built the same way as real alerts
-        for url, no in (("https://m.webtoons.com/th/fantasy/zodiac-girls/list?title_no=9274", "9274"),
-                        ("https://www.webtoons.com/th/action/dead-mansion/list?title_no=6865", "6865")):
-            ep = max(int(c[3:]) for c in webtoon(url))
-            title, image = cover(url)
-            if no in WEBTOON_SERIES_PAGE:
-                kind, text, tap = "series page", f"EP.{ep}\nlinewebtoon://episodeList/webtoon?titleNo={no}", WEBTOON_APP + no
-            else:
-                kind, text, tap = f"opens EP.{ep}", f"EP.{ep}\nlinewebtoon://viewer/webtoon?titleNo={no}&episodeNo={ep}", f"{WEBTOON_APP}{no}&e={ep}"
-            print(f"{title}: card opens {tap}")
-            notify(f"New chapter: {title} (test: {kind})", f"EP.{ep}", text, image, tap)
+        # test: a series-page Webtoon alert, built the same way as real alerts (cover card, then link B as text)
+        url, no = "https://m.webtoons.com/th/fantasy/zodiac-girls/list?title_no=9274", "9274"
+        ep = max(int(c[3:]) for c in webtoon(url))
+        title, image = cover(url)
+        extra = f"linewebtoon://episodeList/webtoon?titleNo={no}"
+        print(f"{title}: card without link, then {extra}")
+        notify(f"New chapter: {title} (test)", f"EP.{ep}", f"EP.{ep}\n{extra}", image, None, extra)
     elif sys.argv[1:] == ["richmenu"]:
         setup_richmenu()
     else:
