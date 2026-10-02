@@ -1,5 +1,5 @@
 {
- "updated": 1790918068,
+ "updated": 1790918239,
  "shows": [
   {
    "name": "As a Reincarnated Aristocrat Season 3",
@@ -311,50 +311,6 @@
     {
      "ep": 9,
      "at": 1795881300.0
-    }
-   ]
-  },
-  {
-   "name": "Magic Repo Man",
-   "label": "Fall 2026, TV",
-   "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx202250-duq4XpZP8TU3.jpg",
-   "total": null,
-   "episodes": [
-    {
-     "ep": 1,
-     "at": 1791045000.0
-    },
-    {
-     "ep": 2,
-     "at": 1791649800.0
-    },
-    {
-     "ep": 3,
-     "at": 1792254600.0
-    },
-    {
-     "ep": 4,
-     "at": 1792859400.0
-    },
-    {
-     "ep": 5,
-     "at": 1793464200.0
-    },
-    {
-     "ep": 6,
-     "at": 1794069000.0
-    },
-    {
-     "ep": 7,
-     "at": 1794673800.0
-    },
-    {
-     "ep": 8,
-     "at": 1795278600.0
-    },
-    {
-     "ep": 9,
-     "at": 1795883400.0
     }
    ]
   },
