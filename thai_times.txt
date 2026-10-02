@@ -1,0 +1,6 @@
+# When the Thai-sub episode comes out on a Thai platform, for shows where that's later than the Japanese broadcast.
+# AniList id | where | weekday (Mon..Sun) | time in Thailand
+# Each episode is placed at the first such slot after its Japanese broadcast, so delayed or skipped weeks still line up.
+202250 | Bilibili | Sun | 01:00
+185756 | Ani-One Thailand | Sun | 22:00
+199426 | Ani-One Thailand | Sun | 22:45
