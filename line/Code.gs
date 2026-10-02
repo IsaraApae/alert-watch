@@ -14,7 +14,7 @@ const HELP = [
   "add <link>  -  add a manga or Webtoon series",
   "anime <title>  -  add an anime",
   "remove <name>  -  stop tracking (part of the name or link is enough)",
-  "list  -  everything you track",
+  "list  -  everything you track, as cover cards",
 ].join("\n");
 
 function doPost(e) {
@@ -40,7 +40,8 @@ function doPost(e) {
         lock.releaseLock();
       }
     }
-    reply(ev.replyToken, answer);
+    if (typeof answer === "string") reply(ev.replyToken, [{ type: "text", text: answer.slice(0, 4900) }]);
+    else if (!reply(ev.replyToken, answer.messages)) reply(ev.replyToken, [{ type: "text", text: answer.fallback.slice(0, 4900) }]);  // LINE refused the cards
   }
   return ContentService.createTextOutput("ok");
 }
@@ -68,7 +69,7 @@ function addManga(url) {
 
 function addAnime(title) {
   if (!title) return "Send it like this:\nanime FX Senshi Kurumi-chan";
-  const query = "query($s:String){Page(perPage:6){media(search:$s,type:ANIME,sort:[START_DATE_DESC]){id status season seasonYear format title{romaji english}}}}";
+  const query = "query($s:String){Page(perPage:6){media(search:$s,type:ANIME,sort:[START_DATE_DESC]){id status season seasonYear format coverImage{large} title{romaji english}}}}";
   const res = UrlFetchApp.fetch("https://graphql.anilist.co", {
     method: "post", contentType: "application/json", muteHttpExceptions: true,
     payload: JSON.stringify({ query: query, variables: { s: title } }),
@@ -83,8 +84,13 @@ function addAnime(title) {
   if (f.text.split("\n").some(l => (l.split("|")[1] || "").trim() === String(pick.id))) return "Already tracked: " + name;
   writeFile("anime.txt", f.text.replace(/\n*$/, "\n") + `${name} | ${pick.id}\n`, f.sha, "Add anime from LINE");
   const season = pick.season ? pick.season[0] + pick.season.slice(1).toLowerCase() + " " + pick.seasonYear : "";
-  return `Added: ${name}\n(${[season, pick.format].filter(Boolean).join(", ")}) anilist.co/anime/${pick.id}\n\n` +
-         `If an episode aired in the past week, you'll get an alert for it at the next check. Wrong show? Send: remove ${name}`;
+  const about = [season, pick.format].filter(Boolean).join(", ");
+  const note = `If an episode aired in the past week, you'll get an alert for it at the next check. Wrong show? Send: remove ${name}`;
+  return {
+    messages: [{ type: "flex", altText: "Added " + name, contents: bubble(name, "Added · " + about, pick.coverImage && pick.coverImage.large, null, "kilo") },
+               { type: "text", text: note }],
+    fallback: `Added: ${name}\n(${about}) anilist.co/anime/${pick.id}\n\n${note}`,
+  };
 }
 
 function remove(word) {
@@ -103,6 +109,38 @@ function remove(word) {
 }
 
 function list() {
+  const lib = published("library.json"), sched = published("schedule.json"), now = Date.now();
+  const manga = lib.manga.map(m => bubble(m.name, m.latest ? "Latest " + m.latest : "Waiting for first check", m.cover, m.open));
+  const anime = sched.shows.map(s => {
+    const next = s.episodes.find(e => e.at * 1000 > now), last = s.episodes.filter(e => e.at * 1000 <= now).pop();
+    const sub = next ? `Next EP ${pad(next.ep)} · ${Utilities.formatDate(new Date(next.at * 1000), "Asia/Bangkok", "EEE d MMM HH:mm")}`
+                     : last ? `Latest EP ${pad(last.ep)}` : "No date yet";
+    return bubble(s.name, sub, s.cover, null);
+  });
+  const rows = chunks(manga, 12).map((b, i, all) => carousel(`Manga ${i + 1}/${all.length}`, b))
+    .concat(chunks(anime, 12).map((b, i, all) => carousel(`Anime ${i + 1}/${all.length}`, b)));
+  const messages = rows.length <= 5 ? rows : rows.slice(0, 4).concat([{ type: "text", text: listText() }]);
+  return { messages: messages, fallback: listText() };
+}
+
+function bubble(name, sub, image, uri, size) {
+  const card = { type: "bubble", size: size || "micro",
+    body: { type: "box", layout: "vertical", spacing: "xs", paddingAll: "10px", contents: [
+      { type: "text", text: name, size: "xs", weight: "bold", wrap: true, maxLines: 2 },
+      { type: "text", text: sub, size: "xxs", color: "#8E8E93", wrap: true, maxLines: 2 } ] } };
+  if (image && /^https:\/\/\S+\.(jpe?g|png)(\?\S*)?$/i.test(image))  // LINE cards show JPEG/PNG over https only
+    card.hero = { type: "image", url: image, size: "full", aspectRatio: "3:4", aspectMode: "cover" };
+  if (uri) card.action = { type: "uri", label: "open", uri: uri };
+  return card;
+}
+function carousel(alt, bubbles) { return { type: "flex", altText: alt, contents: { type: "carousel", contents: bubbles } }; }
+function chunks(a, n) { const out = []; for (let i = 0; i < a.length; i += n) out.push(a.slice(i, i + n)); return out; }
+function pad(n) { return String(n).padStart(2, "0"); }
+function published(path) {  // files the watcher publishes in the repository (public, so no token needed)
+  return JSON.parse(UrlFetchApp.fetch(`https://raw.githubusercontent.com/${REPO}/${BRANCH}/${path}?t=${Date.now()}`).getContentText());
+}
+
+function listText() {
   const manga = readFile("urls.txt").text.split("\n").filter(l => l.trim()).map(l => "- " + label(l));
   const anime = readFile("anime.txt").text.split("\n").filter(l => l.trim() && !l.startsWith("#")).map(l => "- " + label(l));
   return `Manga (${manga.length})\n${manga.join("\n")}\n\nAnime (${anime.length})\n${anime.join("\n")}`;
@@ -137,10 +175,11 @@ function writeFile(path, text, sha, message) {
   github("put", path, { message: message, branch: BRANCH, sha: sha, content: Utilities.base64Encode(text, Utilities.Charset.UTF_8) });
 }
 
-function reply(token, text) {
-  UrlFetchApp.fetch("https://api.line.me/v2/bot/message/reply", {
+function reply(token, messages) {
+  const res = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/reply", {
     method: "post", contentType: "application/json", muteHttpExceptions: true,
     headers: { Authorization: "Bearer " + PropertiesService.getScriptProperties().getProperty("LINE_TOKEN") },
-    payload: JSON.stringify({ replyToken: token, messages: [{ type: "text", text: text.slice(0, 4900) }] }),
+    payload: JSON.stringify({ replyToken: token, messages: messages }),
   });
+  return res.getResponseCode() === 200;
 }

@@ -72,7 +72,11 @@ def notify(title, msg, links, image=None, uri=None):
 def cover(url):
     """(title, cover image) from a series page's preview tags, or (None, None)."""
     try:
-        tags = dict(re.findall(r'<meta property="og:(title|image)" content="([^"]+)"', get(url)))
+        page = get(url)
+        tags = dict(re.findall(r'<meta property="og:(title|image)" content="([^"]+)"', page))
+        if not tags.get("image"):  # some themes (slow-manga) show the cover only in the page layout
+            m = re.search(r'<div class="(?:summary_image|thumb)"[^>]*>.*?<img[^>]+?(?:data-src|src)="([^"]+)"', page, re.S)
+            tags["image"] = m and m.group(1)
         return tags.get("title"), tags.get("image")
     except Exception as e:
         print(f"FAIL cover {url}: {e}", file=sys.stderr)
@@ -283,6 +287,33 @@ def setup_richmenu():
     print(f"rich menu set: {rid} (replaced {len(old)})")
 
 
+def series_slug(url):
+    return [p for p in urlparse(unquote(url)).path.split("/") if p and p != "list"][-1]
+
+
+def library(state):
+    """library.json for the LINE "list" cards: every manga with its cover, latest chapter and where its card opens.
+    Covers are fetched once per series and reused; the file is rewritten only when something changed."""
+    path = HERE / "library.json"
+    old = {m["url"]: m for m in (json.loads(path.read_text())["manga"] if path.exists() else [])}
+    out = []
+    for url in (HERE / "urls.txt").read_text().split():
+        prev = old.get(url, {})
+        if "cover" in prev:
+            title, image = prev.get("title"), prev["cover"]
+        else:
+            title, image = cover(url)
+            title = title if "webtoons.com" in url else None  # other sites' page titles are full of extra words
+            image = quote(image, safe=":/%?=&") if image and re.search(r"\.(jpe?g|png)$", urlparse(image).path, re.I) else None
+        ids = state.get(url) or []
+        latest = max(ids, key=lambda c: [int(x) for x in re.findall(r"\d+", c)] or [0]) if ids else ""
+        tap = WEBTOON_APP + re.search(r"title_no=(\d+)", url)[1] if "webtoons.com" in url else quote(url, safe=":/%")
+        out.append({"url": url, "name": title or series_slug(url), "title": title, "cover": image,
+                    "latest": re.sub(r"^ซี่?ซั่น-1/", "", latest), "open": tap})
+    if old != {m["url"]: m for m in out} or len(old) != len(out):
+        path.write_text(json.dumps({"manga": out}, ensure_ascii=False, indent=1))
+
+
 def main():
     state = json.loads(STATE.read_text()) if STATE.exists() else {}
     anime(state)
@@ -291,7 +322,7 @@ def main():
     except Exception as e:  # the countdown page must never stop the alerts
         print(f"FAIL schedule: {e}", file=sys.stderr)
     for url in (HERE / "urls.txt").read_text().split():
-        name = [p for p in urlparse(unquote(url)).path.split("/") if p and p != "list"][-1]  # series slug
+        name = series_slug(url)
         try:
             found = webtoon(url) if "webtoons.com" in url else chapters(url, get(url))
         except Exception as e:
@@ -322,6 +353,10 @@ def main():
         print(f"{name}: {len(found)} chapters, {len(new)} new")
         state[url] = sorted(set(found) | set(state.get(url, [])))
     STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1))
+    try:
+        library(state)
+    except Exception as e:  # the LINE list cards must never stop the alerts
+        print(f"FAIL library: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":
