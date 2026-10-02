@@ -1,0 +1,15 @@
+# Temporary: asks LINE what webhook address it has and sends it a test. Safe to delete.
+name: diag
+on: workflow_dispatch
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
+        run: |
+          echo "== webhook LINE has on record"
+          curl -s -H "Authorization: Bearer $LINE_TOKEN" https://api.line.me/v2/bot/channel/webhook/endpoint | sed -E 's#(macros/s/)[A-Za-z0-9_-]{8}#\1…#'
+          echo; echo "== LINE's own test delivery to it"
+          curl -s -X POST -H "Authorization: Bearer $LINE_TOKEN" -H "Content-Type: application/json" -d '{}' https://api.line.me/v2/bot/channel/webhook/test
+          echo
