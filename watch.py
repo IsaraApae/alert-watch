@@ -108,7 +108,8 @@ WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 def thai_times():
     """thai_times.txt: {AniList id: (where, weekday, "HH:MM")} for shows whose Thai-sub release is later than Japanese TV."""
-    out = {}
+    auto = HERE / "thai_times_auto.json"  # learned by the watcher; thai_times.txt (yours) overrides it
+    out = {int(k): tuple(v) for k, v in (json.loads(auto.read_text()) if auto.exists() else {}).items()}
     path = HERE / "thai_times.txt"
     for line in path.read_text().splitlines() if path.exists() else []:
         r = [x.strip() for x in line.split("|")]
@@ -119,6 +120,35 @@ def thai_times():
         elif r[2][:3].title() in WEEKDAYS and re.fullmatch(r"\d{1,2}[:.]\d{2}", r[3]):
             out[int(r[0])] = (r[1], r[2][:3].title(), r[3].replace(".", ":"))
     return out
+
+
+def learn_release_times(shows, jp, videos, cards):
+    """{AniList id: [where, weekday or None, "HH:MM" or None]} from Thai-sub releases seen on the official channels (videos)
+    and Bilibili Thailand's schedule (cards: (title, release, episode text)), compared with each episode's Japanese
+    broadcast (jp: {AniList id: {episode: broadcast}}). Released up to 2 days later: that weekday and time; at the same time
+    (within 10 minutes): the platform name only. Earlier or later releases are early premieres or catch-up uploads and
+    say nothing about the regular slot. With several platforms, the one releasing first wins."""
+    best = {}
+    releases = [(t, p, t, ch) for t, _, p, ch in videos if "ซับไทย" in t.lower() and "พากย์ไทย" not in t.lower()]
+    releases += [(t, ts, ep, "Bilibili") for t, ts, ep in cards]
+    for title, release, eptext, where in releases:
+        n = re.search(r"(?:ตอนที่|บทที่|ep\.?|episode)\s*0*(\d+)", eptext.lower())
+        if not n:
+            continue
+        n = int(n.group(1))
+        for aid, s in shows.items():
+            if not s["yt"] or not re.search(s["yt"], title.lower()):
+                continue
+            eps = jp.get(aid, {})
+            broadcast = eps.get(n) or eps.get(n - max(s["first"][0], 1) + 1)  # channels may keep counting across seasons
+            delay = broadcast and release - broadcast
+            if broadcast is None or not -600 <= delay <= 2 * 86400:
+                continue
+            t = datetime.fromtimestamp(release, THAI)
+            slot = [where, None, None] if delay <= 600 else [where, WEEKDAYS[t.weekday()], t.strftime("%H:%M")]
+            if aid not in best or delay < best[aid][0]:
+                best[aid] = (delay, slot)
+    return {aid: slot for aid, (_, slot) in best.items()}
 
 
 def thai_slot(broadcast, day, hhmm):
@@ -155,11 +185,12 @@ def tv_aired(xml, first_ep, now):
     return out
 
 
-YT_CHANNELS = ["UCn8hjQOnGYR1AZtYYMYP5jQ", "UCw2bdNSXh4x6e0NCduVoxMQ"]  # Muse Thailand, Ani-One Thailand: official uploads
+YT_CHANNELS = {"UCn8hjQOnGYR1AZtYYMYP5jQ": "Muse Thailand", "UCw2bdNSXh4x6e0NCduVoxMQ": "Ani-One Thailand"}  # official uploads
+BILIBILI_SCHEDULE = "https://api.bilibili.tv/intl/gateway/web/v2/ogv/timeline?s_locale=th_TH&platform=web"  # Bilibili Thailand, this week
 
 
 def youtube_videos():
-    """[(title, link, published timestamp)] from the official channels' public feeds (latest 15 each)."""
+    """[(title, link, published timestamp, channel)] from the official channels' public feeds (latest 15 each)."""
     out = []
     for cid in YT_CHANNELS:
         try:
@@ -170,14 +201,14 @@ def youtube_videos():
         for e in re.findall(r"<entry>.*?</entry>", x, re.S):
             t, l, p = (re.search(r, e) for r in (r"<title>([^<]*)</title>", r'<link rel="alternate" href="([^"]+)"', r"<published>([^<]+)</published>"))
             if t and l and p:
-                out.append((html.unescape(t[1]), l[1], datetime.fromisoformat(p[1]).timestamp()))
+                out.append((html.unescape(t[1]), l[1], datetime.fromisoformat(p[1]).timestamp(), YT_CHANNELS[cid]))
     return out
 
 
 def youtube_episode(videos, pattern, eps, aired):
     """Link to a [ซับไทย] upload of one of these episode numbers, posted no more than 4 days before its release
     (channels sometimes post early, as Ani-One did for HOTEL INHUMANS episode 14) and so never an older season's video."""
-    for title, link, published in videos:
+    for title, link, published, *_ in videos:
         t = title.lower()
         if "ซับไทย" in t and "พากย์ไทย" not in t and re.search(pattern, t) and published >= aired - 4 * 86400 \
                 and any(re.search(rf"(?:ตอนที่|ep\.?|episode)\s*0*{e}(?!\d)", t) for e in eps):
@@ -230,13 +261,14 @@ def schedule():
         return
     videos = youtube_videos()
     thai = thai_times()
-    out = []
+    out, jp = [], {}
     for i, s in shows.items():
         m = info.get(i, {})
         if s["tid"]:
             eps = {ep: t for (tid, ep), t in tv.items() if tid == s["tid"] and ep >= 1}
         else:
             eps = {n["episode"]: n["airingAt"] for n in (m.get("airingSchedule") or {}).get("nodes", [])}
+        jp[i] = dict(eps)
         rows = []
         for ep, t in sorted(eps.items()):
             t = thai_slot(t, *thai[i][1:]) if i in thai and thai[i][1] else t
@@ -246,6 +278,19 @@ def schedule():
         total = m.get("episodes")
         out.append({"name": s["name"], "label": season_label(m), "cover": (m.get("coverImage") or {}).get("large"),
                     "total": total and total + s["offset"], "episodes": rows})
+    try:
+        week = json.loads(get(BILIBILI_SCHEDULE))["data"]["items"]
+        cards = [(c.get("title") or "", int(c["pub_time_ts"]) / 1000, c.get("index_show") or "") for d in week for c in d["cards"] if c.get("pub_time_ts")]
+    except Exception as e:
+        print(f"FAIL bilibili schedule: {e}", file=sys.stderr)
+        cards = []
+    auto = HERE / "thai_times_auto.json"
+    known = json.loads(auto.read_text()) if auto.exists() else {}
+    learned = {str(k): v for k, v in learn_release_times(shows, jp, videos, cards).items()}
+    merged = {k: v for k, v in {**known, **learned}.items() if int(k) in shows}  # a slot stays known after its week scrolls off
+    if merged != known:
+        auto.write_text(json.dumps(merged, ensure_ascii=False, indent=1))
+        print("learned Thai release times:", "; ".join(f"{shows[int(k)]['name']}: {' '.join(x for x in v if x)}" for k, v in merged.items() if known.get(k) != v))
     path = HERE / "schedule.json"
     old = json.loads(path.read_text()) if path.exists() else {}
     if old.get("shows") != out:
@@ -492,6 +537,12 @@ if __name__ == "__main__":
         assert youtube_episode(v, "กลายเป็นดาบ", {1}, 1790782200) == "sub"  # Thai-sub, this season, right episode
         assert youtube_episode(v, "กลายเป็นดาบ", {2}, 1790782200) is None
         assert in_brave("https://www.youtube.com/watch?v=j7zFyWX6t8M") == BRAVE + "j7zFyWX6t8M"
+        T = datetime(2026, 10, 4, 21, 30, tzinfo=THAI).timestamp()
+        sh = {1: {"yt": "abc", "first": [1]}, 2: {"yt": "xyz", "first": [14]}}
+        got = learn_release_times(sh, {1: {1: T}, 2: {1: T}}, [("abc ตอนที่ 1 [ซับไทย]", "l", T + 1800, "Ani-One Thailand"),
+                                                              ("abc ตอนที่ 1 [ซับไทย]", "l", T - 2 * 86400, "Muse Thailand")],  # an early premiere: ignored
+                                  [("xyz", T, "บทที่14 อัปเดตแล้ว"), ("abc", T + 3600, "บทที่1")])
+        assert got == {1: ["Ani-One Thailand", "Sun", "22:00"], 2: ["Bilibili", None, None]}, got  # the earlier of two releases wins
         assert season_label({"season": "FALL", "seasonYear": 2026, "format": "TV_SHORT"}) == "Fall 2026, TV SHORT" and season_label({}) == ""
         x = ('<ProgItem><TID>8</TID><Count>15</Count><StTime>2026-10-02 00:26:00</StTime><Deleted>0</Deleted></ProgItem>'
              '<ProgItem><TID>8</TID><Count>15</Count><StTime>2026-10-02 02:00:00</StTime><Deleted>0</Deleted></ProgItem>'
