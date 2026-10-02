@@ -79,9 +79,9 @@ def cover(url):
         return None, None
 
 
-WEBTOON_APP = "https://isaraapae.github.io/manga-watch/w.html?t="  # redirect page on the gh-pages branch; opens linewebtoon://
+WEBTOON_APP = "https://isaraapae.github.io/alert-watch/w.html?t="  # redirect page on the gh-pages branch; opens linewebtoon://
 WEBTOON_SERIES_PAGE = {"6227", "9274"}  # Enrolling in the Transcendent Academy, Zodiac Girls: cards open the series page, not the episode
-BRAVE = "https://isaraapae.github.io/manga-watch/b.html?v="  # redirect page on the gh-pages branch; opens a YouTube video in Brave
+BRAVE = "https://isaraapae.github.io/alert-watch/b.html?v="  # redirect page on the gh-pages branch; opens a YouTube video in Brave
 
 
 def in_brave(youtube_link):
@@ -260,7 +260,7 @@ def setup_richmenu():
             print(f"FAIL line {method} {url}: {e} {e.read()[:300]}", file=sys.stderr)
             raise
 
-    site = "https://isaraapae.github.io/manga-watch/"
+    site = "https://isaraapae.github.io/alert-watch/"
     menu = {"size": {"width": 2500, "height": 843}, "selected": True, "name": "Alert Watch", "chatBarText": "Anime schedule",
             "areas": [{"bounds": {"x": 0, "y": 0, "width": 1250, "height": 843}, "action": {"type": "uri", "label": "Next episode", "uri": site}},
                       {"bounds": {"x": 1250, "y": 0, "width": 1250, "height": 843}, "action": {"type": "uri", "label": "Timetable", "uri": site + "?v=week"}}]}
