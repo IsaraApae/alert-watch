@@ -405,6 +405,8 @@ def anime(state):
             label = f" ({season_label(m)})" if season_label(m) else ""  # e.g. "Fall 2026, TV"
             # if an official channel already has this episode up with Thai subs, the card opens that video; otherwise no link
             yt = s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
+            if not yt and i in thai and thai[i][0] in YT_CHANNELS.values() and now - t < 30 * 60:
+                continue  # the channel's video can take minutes to reach its feed: retry at the next check, up to 30 minutes
             notify(f"New episode: {s['name']}{label}", line, line + (f"\n{yt}" if yt else ""), (m.get("coverImage") or {}).get("large"), yt and in_brave(yt))
         seen.append(f"{i}:{ep}")
     print(f"anime: {len(shows)} watched, {len(new)} {'seeded' if seed else 'new'}")
