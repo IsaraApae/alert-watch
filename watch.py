@@ -396,7 +396,8 @@ def anime(state):
     aired = {k: (thai_slot(t, *thai[k[0]][1:]) if k[0] in thai and thai[k[0]][1] else t) for k, t in aired.items()}
     aired = {k: t for k, t in aired.items() if t <= now}
     new = sorted((t, i, ep) for (i, ep), t in aired.items() if f"{i}:{ep}" not in seen)
-    videos = youtube_videos() if new and not seed else []
+    pending = state.setdefault("watch_later", {})  # episodes alerted before their Thai-sub video showed up: {key: release}
+    videos = youtube_videos() if (new or pending) and not seed else []
     for t, i, ep in new:
         if not seed:
             s, m = shows[i], info.get(i, {})
@@ -405,11 +406,22 @@ def anime(state):
             label = f" ({season_label(m)})" if season_label(m) else ""  # e.g. "Fall 2026, TV"
             # if an official channel already has this episode up with Thai subs, the card opens that video; otherwise no link
             yt = s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
-            if not yt and i in thai and thai[i][0] in YT_CHANNELS.values() and now - t < 30 * 60:
-                continue  # the channel's video can take minutes to reach its feed: retry at the next check, up to 30 minutes
+            if not yt and s["yt"]:  # the video may reach the feed later (GitHub can see a copy hours old): send a "Watch now" card then
+                pending[f"{i}:{ep}"] = t
             notify(f"New episode: {s['name']}{label}", line, line + (f"\n{yt}" if yt else ""), (m.get("coverImage") or {}).get("large"), yt and in_brave(yt))
         seen.append(f"{i}:{ep}")
-    print(f"anime: {len(shows)} watched, {len(new)} {'seeded' if seed else 'new'}")
+    for key, t in list(pending.items()):
+        i, ep = map(int, key.split(":"))
+        s = shows.get(i)
+        yt = s and videos and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
+        if yt:
+            where = next((ch for title, link, p, ch in videos if link == yt), "YouTube")
+            line = f"Episode {ep + s['offset']:02d} with Thai subs is up on {where}"
+            m = info.get(i, {})
+            notify(f"Watch now: {s['name']}", line, f"{line}\n{yt}", (m.get("coverImage") or {}).get("large"), in_brave(yt))
+        if yt or not s or now - t > 2 * 86400:  # sent, show removed, or no video within 2 days
+            del pending[key]
+    print(f"anime: {len(shows)} watched, {len(new)} {'seeded' if seed else 'new'}, {len(pending)} waiting for a Thai-sub video")
 
 
 def setup_richmenu():
