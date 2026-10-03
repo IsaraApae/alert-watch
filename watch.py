@@ -190,9 +190,23 @@ BILIBILI_SCHEDULE = "https://api.bilibili.tv/intl/gateway/web/v2/ogv/timeline?s_
 
 
 def youtube_videos():
-    """[(title, link, published timestamp, channel)] from the official channels' public feeds (latest 15 each)."""
+    """[(title, link, published timestamp, channel)] for the official channels' newest uploads. With a YOUTUBE_KEY, from
+    YouTube's data service, current within seconds; otherwise (or if that fails) from the public feeds, which GitHub
+    can get as a copy hours old."""
     out = []
+    key = os.environ.get("YOUTUBE_KEY")
     for cid in YT_CHANNELS:
+        if key:
+            try:
+                url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&maxResults=25&playlistId=UU{cid[2:]}&key={key}"
+                for it in json.loads(get(url)).get("items", []):  # UU... is the channel's uploads list
+                    sn, cd = it["snippet"], it.get("contentDetails", {})
+                    when = (cd.get("videoPublishedAt") or sn["publishedAt"]).replace("Z", "+00:00")
+                    out.append((html.unescape(sn["title"]), "https://www.youtube.com/watch?v=" + (cd.get("videoId") or sn["resourceId"]["videoId"]),
+                                datetime.fromisoformat(when).timestamp(), YT_CHANNELS[cid]))
+                continue
+            except Exception as e:  # the message never includes the key
+                print(f"FAIL youtube data service {YT_CHANNELS[cid]}: {e}; using the public feed", file=sys.stderr)
         try:
             x = get(f"https://www.youtube.com/feeds/videos.xml?channel_id={cid}")
         except Exception as e:
@@ -406,7 +420,9 @@ def anime(state):
             label = f" ({season_label(m)})" if season_label(m) else ""  # e.g. "Fall 2026, TV"
             # if an official channel already has this episode up with Thai subs, the card opens that video; otherwise no link
             yt = s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
-            if not yt and s["yt"]:  # the video may reach the feed later (GitHub can see a copy hours old): send a "Watch now" card then
+            if not yt and i in thai and thai[i][0] in YT_CHANNELS.values() and now - t < 60 * 60:
+                continue  # its channel may post a little late: wait up to an hour so the alert is one card with the link
+            if not yt and s["yt"]:  # the video may still come later: send a "Watch now" card then
                 pending[f"{i}:{ep}"] = t
             notify(f"New episode: {s['name']}{label}", line, line + (f"\n{yt}" if yt else ""), (m.get("coverImage") or {}).get("large"), yt and in_brave(yt))
         seen.append(f"{i}:{ep}")
