@@ -24,6 +24,7 @@ jobs:
         env:
           MANGA_STATE: ci-state.json
           LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
+          YOUTUBE_KEY: ${{ secrets.YOUTUBE_KEY }}
       - run: |
           git config user.name manga-watch
           git config user.email manga-watch@users.noreply.github.com
