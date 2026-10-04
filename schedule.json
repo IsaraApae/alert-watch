@@ -1,5 +1,5 @@
 {
- "updated": 1791117019,
+ "updated": 1791126059,
  "shows": [
   {
    "name": "As a Reincarnated Aristocrat Season 3",
@@ -14,7 +14,8 @@
     },
     {
      "ep": 2,
-     "at": 1791126000.0
+     "at": 1791126000.0,
+     "watch": "https://isaraapae.github.io/alert-watch/b.html?v=sxMfaBCHfRM"
     },
     {
      "ep": 3,
@@ -141,6 +142,10 @@
     {
      "ep": 9,
      "at": 1795704960.0
+    },
+    {
+     "ep": 10,
+     "at": 1796309760.0
     }
    ]
   },
