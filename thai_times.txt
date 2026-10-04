@@ -1,11 +1,12 @@
 # When the Thai-sub episode comes out on a Thai platform, for shows where that's later than the Japanese broadcast.
 # AniList id | where | weekday (Mon..Sun) | time in Thailand   ("- | -" = time unknown: keep the Japanese time, just name the platform)
 # Each episode is placed at the first such slot after its Japanese broadcast, so delayed or skipped weeks still line up.
+# An optional fifth field: days the Thai release comes BEFORE Japanese TV (Chitose on Bilibili: 7).
 202250 | Muse Thailand | Sun | 01:00
 185756 | Ani-One Thailand | Sun | 22:00
 199426 | Ani-One Thailand | Sun | 22:45
 212503 | Bilibili | Thu | 23:58
-198727 | Bilibili | Tue | 23:30
+198727 | Bilibili | Tue | 23:30 | 7
 213805 | Netflix | - | -
 209872 | Netflix | - | -
 189123 | Netflix | - | -
