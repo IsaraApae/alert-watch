@@ -107,18 +107,19 @@ WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 
 def thai_times():
-    """thai_times.txt: {AniList id: (where, weekday, "HH:MM")} for shows whose Thai-sub release is later than Japanese TV."""
+    """{AniList id: (where, weekday, "HH:MM", days earlier than Japan)} for shows whose Thai-sub release differs from Japanese TV."""
     auto = HERE / "thai_times_auto.json"  # learned by the watcher; thai_times.txt (yours) overrides it
-    out = {int(k): tuple(v) for k, v in (json.loads(auto.read_text()) if auto.exists() else {}).items()}
+    out = {int(k): tuple(v) + (0,) for k, v in (json.loads(auto.read_text()) if auto.exists() else {}).items()}
     path = HERE / "thai_times.txt"
     for line in path.read_text().splitlines() if path.exists() else []:
         r = [x.strip() for x in line.split("|")]
-        if line.startswith("#") or len(r) != 4 or not r[0].isdigit():
+        if line.startswith("#") or len(r) not in (4, 5) or not r[0].isdigit():
             continue
+        early = int(r[4]) if len(r) == 5 and r[4].isdigit() else 0  # e.g. 7: released a week before Japanese TV
         if r[2] == r[3] == "-":  # platform known, release time not: keep the Japanese time, but name where to watch
-            out[int(r[0])] = (r[1], None, None)
+            out[int(r[0])] = (r[1], None, None, 0)
         elif r[2][:3].title() in WEEKDAYS and re.fullmatch(r"\d{1,2}[:.]\d{2}", r[3]):
-            out[int(r[0])] = (r[1], r[2][:3].title(), r[3].replace(".", ":"))
+            out[int(r[0])] = (r[1], r[2][:3].title(), r[3].replace(".", ":"), early)
     return out
 
 
@@ -149,6 +150,12 @@ def learn_release_times(shows, jp, videos, cards):
             if aid not in best or delay < best[aid][0]:
                 best[aid] = (delay, slot)
     return {aid: slot for aid, (_, slot) in best.items()}
+
+
+def release_time(broadcast, entry):
+    """When an episode comes out with Thai subs, given its Japanese broadcast and the show's thai_times entry."""
+    where, day, hhmm, early = entry
+    return thai_slot(broadcast - early * 86400, day, hhmm) if day else broadcast
 
 
 def thai_slot(broadcast, day, hhmm):
@@ -285,7 +292,7 @@ def schedule():
         jp[i] = dict(eps)
         rows = []
         for ep, t in sorted(eps.items()):
-            t = thai_slot(t, *thai[i][1:]) if i in thai and thai[i][1] else t
+            t = release_time(t, thai[i]) if i in thai else t
             if now - 8 * 86400 <= t <= now + 60 * 86400:
                 yt = t <= now and s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
                 rows.append({"ep": ep + s["offset"], "at": t, **({"watch": in_brave(yt)} if yt else {})})
@@ -386,7 +393,7 @@ def anime(state):
     query = ("query($ids:[Int],$web:[Int],$a:Int,$b:Int){info:Page(perPage:50){media(id_in:$ids){id episodes season seasonYear format coverImage{large}}}"
              " web:Page(perPage:50){airingSchedules(mediaId_in:$web,airingAt_greater:$a,airingAt_lesser:$b){episode airingAt media{id}}}}")
     web_only = [i for i, s in shows.items() if not s["tid"]]
-    body = json.dumps({"query": query, "variables": {"ids": list(shows), "web": web_only or [0], "a": now - 8 * 86400, "b": now}}).encode()
+    body = json.dumps({"query": query, "variables": {"ids": list(shows), "web": web_only or [0], "a": now - 8 * 86400, "b": now + 8 * 86400}}).encode()
     req = urllib.request.Request("https://graphql.anilist.co", data=body, headers={"Content-Type": "application/json", "User-Agent": UA})
     try:
         data = json.loads(urllib.request.urlopen(req, timeout=30).read())["data"]
@@ -394,20 +401,21 @@ def anime(state):
         print(f"FAIL anilist: {e}", file=sys.stderr)
         return
     info = {m["id"]: m for m in data["info"]["media"]}
-    aired = {(a["media"]["id"], a["episode"]): a["airingAt"] for a in data["web"]["airingSchedules"] if a["airingAt"] <= now}
+    ahead = now + 8 * 86400  # a Thai release can come before Japanese TV (Chitose: a week), so look past now
+    aired = {(a["media"]["id"], a["episode"]): a["airingAt"] for a in data["web"]["airingSchedules"] if a["airingAt"] <= ahead}
     by_tid = {s["tid"]: i for i, s in shows.items() if s["tid"]}
     if by_tid:
-        span = f"{datetime.fromtimestamp(now - 8 * 86400, JST):%Y%m%d_%H%M%S}-{datetime.fromtimestamp(now, JST):%Y%m%d_%H%M%S}"
+        span = f"{datetime.fromtimestamp(now - 8 * 86400, JST):%Y%m%d_%H%M%S}-{datetime.fromtimestamp(ahead, JST):%Y%m%d_%H%M%S}"
         try:
             xml = get(f"https://cal.syoboi.jp/db.php?Command=ProgLookup&TID={','.join(map(str, by_tid))}&Range={span}")
             first = {tid: shows[i]["first"] for tid, i in by_tid.items()}
-            aired.update({(by_tid[tid], ep): t for (tid, ep), t in tv_aired(xml, first, now).items()})
+            aired.update({(by_tid[tid], ep): t for (tid, ep), t in tv_aired(xml, first, ahead).items()})
         except Exception as e:
             print(f"FAIL tv schedule: {e}", file=sys.stderr)
     seed = "anime" not in state  # first run: record the past week's episodes silently
     seen = state.setdefault("anime", [])
     thai = thai_times()  # shows released later with Thai subs: alert at that time instead of the Japanese broadcast
-    aired = {k: (thai_slot(t, *thai[k[0]][1:]) if k[0] in thai and thai[k[0]][1] else t) for k, t in aired.items()}
+    aired = {k: (release_time(t, thai[k[0]]) if k[0] in thai else t) for k, t in aired.items()}
     aired = {k: t for k, t in aired.items() if t <= now}
     new = sorted((t, i, ep) for (i, ep), t in aired.items() if f"{i}:{ep}" not in seen)
     pending = state.setdefault("watch_later", {})  # episodes alerted before their Thai-sub video showed up: {key: release}
@@ -561,6 +569,9 @@ if __name__ == "__main__":
         assert datetime.fromtimestamp(thai_slot(sun2145, "Sun", "22:00"), THAI) == datetime(2026, 10, 4, 22, 0, tzinfo=THAI)
         assert datetime.fromtimestamp(thai_slot(sun2145, "Sun", "21:00"), THAI) == datetime(2026, 10, 11, 21, 0, tzinfo=THAI)  # never before the broadcast
         assert episode_line(2, 12, sun2145, "Ani-One Thailand").endswith("\nAni-One Thailand · 04 Oct 2026 21:45")
+        tue2100 = datetime(2026, 10, 13, 21, 0, tzinfo=THAI).timestamp()  # Chitose on Japanese TV; Bilibili a week earlier
+        assert datetime.fromtimestamp(release_time(tue2100, ("Bilibili", "Tue", "23:30", 7)), THAI) == datetime(2026, 10, 6, 23, 30, tzinfo=THAI)
+        assert release_time(tue2100, ("Netflix", None, None, 0)) == tue2100
         v = [("[พากย์ไทย] ซวยเหลือหลายเกิดใหม่กลายเป็นดาบ ซีซั่น 2 ตอนที่ 1", "dub", 1790782200.0),
              ("ซวยเหลือหลายเกิดใหม่กลายเป็นดาบ ตอนที่ 1 [ซับไทย]", "season1", 1700000000.0),
              ("ซวยเหลือหลายเกิดใหม่กลายเป็นดาบ ซีซั่น 2 ตอนที่ 1 [ซับไทย]", "sub", 1790782200.0)]
