@@ -226,7 +226,8 @@ let shows = [], episodes = [], selected = null;
 
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const pad = n => String(n).padStart(2, "0");
-const epText = (ep, total) => `EP ${pad(ep)}` + (total ? `/${pad(total)}` : "");
+const epText = (ep, total) => typeof ep === "string" ? `Special · EP ${ep}`  // specials: "0", "13.5"
+  : `EP ${pad(ep)}` + (total ? `/${pad(total)}` : "");
 const on = show => show.where ? ` · ${show.where}` : "";  // where to watch: Netflix, Bilibili, Muse Thailand...
 
 function parts(ms) {
