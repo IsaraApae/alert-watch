@@ -237,6 +237,21 @@ def youtube_episode(videos, pattern, eps, aired):
     return None
 
 
+def specials(videos, shows, since):
+    """[(AniList id, episode number text, link, published, channel)] for Thai-sub uploads of tracked shows numbered 0 or
+    with a decimal ("ตอนที่ 13.5"): specials no TV or AniList schedule lists. Only uploads posted at or after `since`."""
+    out = []
+    for title, link, published, channel in videos:
+        t = title.lower()
+        n = re.search(r"(?:ตอนที่|ep\.?|episode)\s*0*(\d+(?:\.\d+)?)(?![\d.])", t)
+        if published < since or "ซับไทย" not in t or "พากย์ไทย" in t or not n or not (n[1] == "0" or "." in n[1]):
+            continue
+        aid = next((i for i, s in shows.items() if s["yt"] and re.search(s["yt"], t)), None)
+        if aid:
+            out.append((aid, n[1], link, published, channel))
+    return out
+
+
 def anime_list():
     """anime.txt: name | AniList id | TV-schedule id (0 = none) | first episode number(s) in the TV schedule, comma-separated when channels count differently
     | episodes before this AniList entry (added to the count) | YouTube title keywords."""
@@ -296,6 +311,8 @@ def schedule():
             if now - 8 * 86400 <= t <= now + 60 * 86400:
                 yt = t <= now and s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
                 rows.append({"ep": ep + s["offset"], "at": t, **({"watch": in_brave(yt)} if yt else {})})
+        rows += [{"ep": n, "at": int(p), "watch": in_brave(link)} for a, n, link, p, ch in specials(videos, {i: s}, now - 8 * 86400)]
+        rows.sort(key=lambda r: r["at"])
         total = m.get("episodes")
         out.append({"name": s["name"], "label": season_label(m), "cover": (m.get("coverImage") or {}).get("large"),
                     "total": total and total + s["offset"], "where": thai[i][0] if i in thai else None, "episodes": rows})
@@ -419,7 +436,7 @@ def anime(state):
     aired = {k: t for k, t in aired.items() if t <= now}
     new = sorted((t, i, ep) for (i, ep), t in aired.items() if f"{i}:{ep}" not in seen)
     pending = state.setdefault("watch_later", {})  # episodes alerted before their Thai-sub video showed up: {key: release}
-    videos = youtube_videos() if (new or pending) and not seed else []
+    videos = youtube_videos() if not seed else []  # every check, for the specials below
     for t, i, ep in new:
         if not seed:
             s, m = shows[i], info.get(i, {})
@@ -445,6 +462,14 @@ def anime(state):
             notify(f"Watch now: {s['name']}", line, f"{line}\n{yt}", (m.get("coverImage") or {}).get("large"), in_brave(yt))
         if yt or not s or now - t > 2 * 86400:  # sent, show removed, or no video within 2 days
             del pending[key]
+    sent = state.setdefault("specials", [])  # links of specials already alerted
+    for i, n, link, published, ch in specials(videos, shows, now - 2 * 86400):
+        if link not in sent:
+            m = info.get(i, {})
+            line = f"Special episode {n}\n{ch} · {datetime.fromtimestamp(published, THAI):%d %b %Y %H:%M}"
+            notify(f"New special: {shows[i]['name']}", line, f"{line}\n{link}", (m.get("coverImage") or {}).get("large"), in_brave(link))
+            sent.append(link)
+    del sent[:-50]
     print(f"anime: {len(shows)} watched, {len(new)} {'seeded' if seed else 'new'}, {len(pending)} waiting for a Thai-sub video")
 
 
@@ -577,6 +602,13 @@ if __name__ == "__main__":
              ("ซวยเหลือหลายเกิดใหม่กลายเป็นดาบ ซีซั่น 2 ตอนที่ 1 [ซับไทย]", "sub", 1790782200.0)]
         assert youtube_episode(v, "กลายเป็นดาบ", {1}, 1790782200) == "sub"  # Thai-sub, this season, right episode
         assert youtube_episode(v, "กลายเป็นดาบ", {2}, 1790782200) is None
+        sp = {1: {"yt": "จิโตเสะ"}}
+        vids = [("ชีวิตรสโซดาของจิโตเสะคุง ตอนที่ 13.5 [ซับไทย]", "a", 100, "Ani-One Thailand"),
+                ("ชีวิตรสโซดาของจิโตเสะคุง ตอนที่ 0 [ซับไทย]", "b", 100, "Ani-One Thailand"),
+                ("ชีวิตรสโซดาของจิโตเสะคุง ตอนที่ 14 [ซับไทย]", "c", 100, "Ani-One Thailand"),  # regular episode
+                ("ชีวิตรสโซดาของจิโตเสะคุง ตอนที่ 0.5 [พากย์ไทย]", "d", 100, "Ani-One Thailand"),  # dubbed
+                ("ชีวิตรสโซดาของจิโตเสะคุง ตอนที่ 10.5 [ซับไทย]", "e", 10, "Ani-One Thailand")]  # too old
+        assert specials(vids, sp, 50) == [(1, "13.5", "a", 100, "Ani-One Thailand"), (1, "0", "b", 100, "Ani-One Thailand")]
         assert in_brave("https://www.youtube.com/watch?v=j7zFyWX6t8M") == BRAVE + "j7zFyWX6t8M"
         T = datetime(2026, 10, 4, 21, 30, tzinfo=THAI).timestamp()
         sh = {1: {"yt": "abc", "first": [1]}, 2: {"yt": "xyz", "first": [14]}}
