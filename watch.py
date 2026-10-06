@@ -206,11 +206,17 @@ def youtube_videos():
         if key:
             try:
                 url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&maxResults=25&playlistId=UU{cid[2:]}&key={key}"
+                rows = []
                 for it in json.loads(get(url)).get("items", []):  # UU... is the channel's uploads list
                     sn, cd = it["snippet"], it.get("contentDetails", {})
-                    when = (cd.get("videoPublishedAt") or sn["publishedAt"]).replace("Z", "+00:00")
-                    out.append((html.unescape(sn["title"]), "https://www.youtube.com/watch?v=" + (cd.get("videoId") or sn["resourceId"]["videoId"]),
-                                datetime.fromisoformat(when).timestamp(), YT_CHANNELS[cid]))
+                    rows.append((html.unescape(sn["title"]), cd.get("videoId") or sn["resourceId"]["videoId"], cd.get("videoPublishedAt") or sn["publishedAt"]))
+                # a premiere is uploaded hours before it plays (Chitose's special: up at 17:36, plays at 23:30): use the start time
+                ids = ",".join(v for _, v, _ in rows)
+                live = json.loads(get(f"https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id={ids}&key={key}")).get("items", []) if ids else []
+                starts = {v["id"]: d.get("actualStartTime") or d.get("scheduledStartTime") for v in live for d in [v.get("liveStreamingDetails") or {}]}
+                for title, vid, when in rows:
+                    when = (starts.get(vid) or when).replace("Z", "+00:00")
+                    out.append((title, "https://www.youtube.com/watch?v=" + vid, datetime.fromisoformat(when).timestamp(), YT_CHANNELS[cid]))
                 continue
             except Exception as e:  # the message never includes the key
                 print(f"FAIL youtube data service {YT_CHANNELS[cid]}: {e}; using the public feed", file=sys.stderr)
@@ -464,7 +470,7 @@ def anime(state):
             del pending[key]
     sent = state.setdefault("specials", [])  # links of specials already alerted
     for i, n, link, published, ch in specials(videos, shows, now - 2 * 86400):
-        if link not in sent:
+        if link not in sent and published <= now:  # a premiere: alert once it plays
             m = info.get(i, {})
             line = f"Special episode {n}\n{ch} · {datetime.fromtimestamp(published, THAI):%d %b %Y %H:%M}"
             notify(f"New special: {shows[i]['name']}", line, f"{line}\n{link}", (m.get("coverImage") or {}).get("large"), in_brave(link))
