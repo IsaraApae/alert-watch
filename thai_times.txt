@@ -6,7 +6,7 @@
 185756 | Ani-One Thailand | Sun | 22:00
 199426 | Ani-One Thailand | Sun | 22:45
 212503 | Bilibili | Thu | 23:58
-198727 | Bilibili | Tue | 23:30 | 7
+198727 | Ani-One Thailand | - | -
 213805 | Netflix | - | -
 209872 | Netflix | - | -
 189123 | Netflix | - | -
