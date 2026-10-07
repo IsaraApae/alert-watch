@@ -67,7 +67,8 @@
 }
 
 * { box-sizing: border-box; }
-[hidden] { display: none !important; }  /* sections set display: grid, which would otherwise override hiding */
+[hidden] { display: none !important; }
+.past-head { font-size: 15px; font-weight: 650; margin: 28px 4px 4px; opacity: .75; }  /* sections set display: grid, which would otherwise override hiding */
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
@@ -309,6 +310,18 @@ function renderDays() {  // next-episode view: today and the six days after it (
     const t = Date.now() + i * 86400000, key = dayKey.format(t);
     const name = i === 0 ? "Today" : i === 1 ? "Tomorrow" : weekdayLong.format(t);
     group(box, `${name} · ${dayDate.format(t)}`, false, episodes.filter(e => dayKey.format(e.at) === key).map(episodeRow), "No episodes");
+  }
+  // the past week, newest first, to catch up on what aired (each Watch button stays for the week)
+  const past = [];
+  for (let i = 1; i <= 7; i++) {
+    const t = Date.now() - i * 86400000, key = dayKey.format(t);
+    const rows = episodes.filter(e => dayKey.format(e.at) === key).reverse().map(episodeRow);
+    if (rows.length) past.push([`${i === 1 ? "Yesterday" : weekdayLong.format(t)} · ${dayDate.format(t)}`, rows]);
+  }
+  if (past.length) {
+    const h = el("h2", "past-head", "Aired this past week");
+    box.append(h);
+    past.forEach(([title, rows]) => group(box, title, false, rows, ""));
   }
 }
 function renderTimetable() {  // timetable view: each show under the weekday it airs, Monday to Sunday
