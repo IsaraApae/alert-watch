@@ -311,9 +311,9 @@ function renderDays() {  // next-episode view: today and the six days after it (
     const name = i === 0 ? "Today" : i === 1 ? "Tomorrow" : weekdayLong.format(t);
     group(box, `${name} · ${dayDate.format(t)}`, false, episodes.filter(e => dayKey.format(e.at) === key).map(episodeRow), "No episodes");
   }
-  // the past week, newest first, to catch up on what aired (each Watch button stays for the week)
+  // the 6 days before today, newest first, to catch up on what aired (today's own weekday a week ago is left out)
   const past = [];
-  for (let i = 1; i <= 7; i++) {
+  for (let i = 1; i <= 6; i++) {
     const t = Date.now() - i * 86400000, key = dayKey.format(t);
     const rows = episodes.filter(e => dayKey.format(e.at) === key).reverse().map(episodeRow);
     if (rows.length) past.push([`${i === 1 ? "Yesterday" : weekdayLong.format(t)} · ${dayDate.format(t)}`, rows]);
