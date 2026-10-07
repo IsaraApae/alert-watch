@@ -258,6 +258,27 @@ def specials(videos, shows, since):
     return out
 
 
+GOJO = "https://animegojos.com"  # of anime-waku, animeruka and animegojo, the only one GitHub's servers can read (the others answer with Cloudflare's bot check)
+
+
+def gojo_latest(page, shows):
+    """[(AniList id, episode, direct episode link)] from animegojo's home page (its newest episodes) for tracked shows.
+    Dubbed listings (พากย์ไทย) are skipped; that the series is ซับไทย is checked on its own page by gojo_is_sub."""
+    out = []
+    for path, n, title in re.findall(r'<a href="(/list/\d+/)#ep-(\d+)" title="([^"]+)"', page):
+        t = html.unescape(title).lower()
+        aid = "พากย์ไทย" not in t and next((i for i, s in shows.items() if s["yt"] and re.search(s["yt"], t)), None)
+        if aid:
+            out.append((aid, int(n), f"{GOJO}{path}#ep-{n}"))
+    return out
+
+
+def gojo_is_sub(page, link):
+    """True when an animegojo series page is marked (ซับไทย), not dubbed, and lists the linked episode."""
+    title = re.search(r"<title>([^<]*)", page)
+    return bool(title) and "(ซับไทย)" in title[1] and "พากย์ไทย" not in title[1] and f'href="#{link.split("#")[1]}"' in page
+
+
 def anime_list():
     """anime.txt: name | AniList id | TV-schedule id (0 = none) | first episode number(s) in the TV schedule, comma-separated when channels count differently
     | episodes before this AniList entry (added to the count) | YouTube title keywords."""
@@ -287,7 +308,7 @@ def anilist(query, variables):
     return json.loads(urllib.request.urlopen(req, timeout=30).read())["data"]
 
 
-def schedule():
+def schedule(state=None):
     """Write schedule.json for the countdown page: every show's episodes from a week ago to two months ahead,
     with the same times and numbering as the alerts. Rewritten only when something changed, so it isn't committed every run."""
     shows, now = anime_list(), int(time.time())
@@ -316,7 +337,9 @@ def schedule():
             t = release_time(t, thai[i]) if i in thai else t
             if now - 8 * 86400 <= t <= now + 60 * 86400:
                 yt = t <= now and s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
-                rows.append({"ep": ep + s["offset"], "at": t, **({"watch": in_brave(yt)} if yt else {})})
+                rec = (state or {}).get("first_source", {}).get(f"{i}:{ep}", {})  # the animegojo episode page, if that's where it was found first
+                watch = in_brave(yt) if yt else (rec["url"] if rec.get("first") == "animegojo" else None)
+                rows.append({"ep": ep + s["offset"], "at": t, **({"watch": watch} if watch else {})})
         rows += [{"ep": n, "at": int(p), "watch": in_brave(link)} for a, n, link, p, ch in specials(videos, {i: s}, now - 8 * 86400)]
         rows.sort(key=lambda r: r["at"])
         total = m.get("episodes")
@@ -438,14 +461,47 @@ def anime(state):
     seed = "anime" not in state  # first run: record the past week's episodes silently
     seen = state.setdefault("anime", [])
     thai = thai_times()  # shows released later with Thai subs: alert at that time instead of the Japanese broadcast
+    gojo_only = lambda i: not (i in thai and thai[i][0] in YT_CHANNELS.values())  # not on Muse/Ani-One: wait for animegojo, no scheduled card
     aired = {k: (release_time(t, thai[k[0]]) if k[0] in thai else t) for k, t in aired.items()}
+    due = dict(aired)  # every episode due from a week ago to a week ahead: a number outside it is not trusted
     aired = {k: t for k, t in aired.items() if t <= now}
-    new = sorted((t, i, ep) for (i, ep), t in aired.items() if f"{i}:{ep}" not in seen)
     pending = state.setdefault("watch_later", {})  # episodes alerted before their Thai-sub video showed up: {key: release}
-    videos = youtube_videos() if not seed else []  # every check, for the specials below
+    videos = youtube_videos() if not seed else []  # every check, for animegojo and the specials below
+    log = state.setdefault("first_source", {})  # per episode: where it was first seen with Thai subs, link, times, alerted
+    try:
+        found = gojo_latest(get(GOJO + "/"), shows) if not seed else []
+    except Exception as e:
+        print(f"FAIL animegojo: {e}", file=sys.stderr)
+        found = []
+    for i, n, link in found:
+        s, ep = shows[i], n - shows[i]["offset"]
+        key = f"{i}:{ep}"
+        if key in seen or (i, ep) not in due or not gojo_only(i):
+            continue  # shows on Muse Thailand or Ani-One Thailand are alerted from there only
+        if s["yt"] and youtube_episode(videos, s["yt"], {ep, n, ep + max(s["first"][0], 1) - 1}, due[(i, ep)]):
+            continue  # an official channel has it too: which came first is uncertain, so its timestamped video is used below
+        try:
+            if not gojo_is_sub(get(link.split("#")[0]), link):
+                continue
+        except Exception as e:
+            print(f"FAIL animegojo {link}: {e}", file=sys.stderr)
+            continue
+        m = info.get(i, {})
+        total = m.get("episodes")
+        tot = f"{total + s['offset']:02d}" if total else "?"
+        line = f"Episode {n:02d}/{tot} ซับไทย\nanimegojo · seen {datetime.fromtimestamp(now, THAI):%d %b %Y %H:%M}"
+        label = f" ({season_label(m)})" if season_label(m) else ""
+        notify(f"New episode: {s['name']}{label}", line, f"{line}\n{link}", (m.get("coverImage") or {}).get("large"), link)
+        seen.append(key)
+        pending.pop(key, None)
+        log[key] = {"title": s["name"], "episode": n, "version": "ซับไทย", "first": "animegojo", "url": link,
+                    "detected": now, "published": None, "notified": True}  # animegojo shows no publication times
+    new = sorted((t, i, ep) for (i, ep), t in aired.items() if f"{i}:{ep}" not in seen)
     for t, i, ep in new:
         if not seed:
             s, m = shows[i], info.get(i, {})
+            if gojo_only(i):
+                continue  # wait for animegojo (handled above): no card at the scheduled time, no video link exists
             total = m.get("episodes")
             line = episode_line(ep + s["offset"], total and total + s["offset"], t, thai[i][0] if i in thai else None)
             label = f" ({season_label(m)})" if season_label(m) else ""  # e.g. "Fall 2026, TV"
@@ -456,7 +512,13 @@ def anime(state):
             if not yt and s["yt"]:  # the video may still come later: send a "Watch now" card then
                 pending[f"{i}:{ep}"] = t
             notify(f"New episode: {s['name']}{label}", line, line + (f"\n{yt}" if yt else ""), (m.get("coverImage") or {}).get("large"), yt and in_brave(yt))
+            v = next((v for v in videos if v[1] == yt), None)
+            log[f"{i}:{ep}"] = {"title": s["name"], "episode": ep + s["offset"], "version": "ซับไทย", "first": v[3] if v else (thai[i][0] if i in thai else "Japanese TV"),
+                                "url": yt or None, "detected": now, "published": v and int(v[2]), "scheduled": int(t), "notified": True,
+                                **({} if v else {"order": "uncertain"})}  # no video: the platform's time is a schedule, not a verified release
         seen.append(f"{i}:{ep}")
+    for key in list(log)[:-300]:
+        del log[key]
     for key, t in list(pending.items()):
         i, ep = map(int, key.split(":"))
         s = shows.get(i)
@@ -540,7 +602,7 @@ def main():
         print(f"FAIL completing anime: {e}", file=sys.stderr)
     anime(state)
     try:
-        schedule()
+        schedule(state)
     except Exception as e:  # the countdown page must never stop the alerts
         print(f"FAIL schedule: {e}", file=sys.stderr)
     for url in (HERE / "urls.txt").read_text().split():
@@ -614,6 +676,13 @@ if __name__ == "__main__":
                 ("ชีวิตรสโซดาของจิโตเสะคุง ตอนที่ 14 [ซับไทย]", "c", 100, "Ani-One Thailand"),  # regular episode
                 ("ชีวิตรสโซดาของจิโตเสะคุง ตอนที่ 0.5 [พากย์ไทย]", "d", 100, "Ani-One Thailand"),  # dubbed
                 ("ชีวิตรสโซดาของจิโตเสะคุง ตอนที่ 10.5 [ซับไทย]", "e", 10, "Ani-One Thailand")]  # too old
+        home = ('<a href="/list/3145/#ep-2" title="Tensei Kizoku, Kantei Skill de Nariagaru 3rd Season ภาค3 ตอนที่ 02">'
+                '<a href="/list/3162/#ep-2" title="Tensei Kizoku 3rd Season (พากย์ไทย) ตอนที่ 02">'
+                '<a href="/list/2754/#ep-1" title="Black Clover 2nd Season ตอนที่ 01">')
+        assert gojo_latest(home, {7: {"yt": "tensei kizoku"}}) == [(7, 2, GOJO + "/list/3145/#ep-2")]  # dub and other shows skipped
+        series = '<title>Tensei Kizoku 3rd Season (ซับไทย) ตอนที่ 1-2</title><a href="#ep-1">1</a><a href="#ep-2">2</a>'
+        assert gojo_is_sub(series, GOJO + "/list/3145/#ep-2") and not gojo_is_sub(series, GOJO + "/list/3145/#ep-3")
+        assert not gojo_is_sub(series.replace("ซับไทย", "พากย์ไทย"), GOJO + "/list/3145/#ep-2")
         assert specials(vids, sp, 50) == [(1, "13.5", "a", 100, "Ani-One Thailand"), (1, "0", "b", 100, "Ani-One Thailand")]
         assert in_brave("https://www.youtube.com/watch?v=j7zFyWX6t8M") == BRAVE + "j7zFyWX6t8M"
         T = datetime(2026, 10, 4, 21, 30, tzinfo=THAI).timestamp()
