@@ -1,6 +1,6 @@
 name: watch
 on:
-  # Started every 30 minutes by an external scheduler (cron-job.org) calling the dispatch API:
+  # Started every 10 minutes by an external scheduler (cron-job.org) calling the dispatch API:
   # GitHub's own `schedule` trigger never fired for this repository.
   workflow_dispatch:
     inputs:
