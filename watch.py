@@ -263,7 +263,7 @@ GOJO = "https://animegojos.com"  # of anime-waku, animeruka and animegojo, the o
 
 def gojo_latest(page, shows):
     """[(AniList id, episode, direct episode link)] from animegojo's home page (its newest episodes) for tracked shows.
-    Dubbed listings (พากย์ไทย) are skipped; that the series is ซับไทย is checked on its own page by gojo_is_sub."""
+    Dubbed listings (พากย์ไทย) are skipped; that the series is ซับไทย is checked on its own page by gojo_sub_episodes."""
     out = []
     for path, n, title in re.findall(r'<a href="(/list/\d+/)#ep-(\d+)" title="([^"]+)"', page):
         t = html.unescape(title).lower()
@@ -273,10 +273,16 @@ def gojo_latest(page, shows):
     return out
 
 
-def gojo_is_sub(page, link):
-    """True when an animegojo series page is marked (ซับไทย), not dubbed, and lists the linked episode."""
+def gojo_sub_episodes(page):
+    """The episode numbers on an animegojo series page marked (ซับไทย); none for a dubbed (พากย์ไทย) page."""
     title = re.search(r"<title>([^<]*)", page)
-    return bool(title) and "(ซับไทย)" in title[1] and "พากย์ไทย" not in title[1] and f'href="#{link.split("#")[1]}"' in page
+    if not title or "(ซับไทย)" not in title[1] or "พากย์ไทย" in title[1]:
+        return set()
+    return {int(x) for x in re.findall(r'href="#ep-(\d+)"', page)}
+
+
+# animegojo may carry a new cour on an older page: Yozakura Season 2 Cour 1 was its 1-12, so its 13 would be Cour 2's 1
+GOJO_SHIFT = {213657: 12}
 
 
 def anime_list():
@@ -316,7 +322,7 @@ def schedule(state=None):
     try:
         info = {m["id"]: m for m in anilist(q, {"ids": list(shows)})["Page"]["media"]}
         by_tid = {s["tid"]: i for i, s in shows.items() if s["tid"]}
-        span = f"{datetime.fromtimestamp(now - 8 * 86400, JST):%Y%m%d_%H%M%S}-{datetime.fromtimestamp(now + 60 * 86400, JST):%Y%m%d_%H%M%S}"
+        span = f"{datetime.fromtimestamp(now - 30 * 86400, JST):%Y%m%d_%H%M%S}-{datetime.fromtimestamp(now + 60 * 86400, JST):%Y%m%d_%H%M%S}"  # from a month back: a rerun must not pass for an episode's first broadcast
         xml = get(f"https://cal.syoboi.jp/db.php?Command=ProgLookup&TID={','.join(map(str, by_tid))}&Range={span}")
         tv = tv_aired(xml, {tid: shows[i]["first"] for tid, i in by_tid.items()}, now + 60 * 86400)
     except Exception as e:  # keep the previous file rather than publish a half-empty one
@@ -324,6 +330,13 @@ def schedule(state=None):
         return
     videos = youtube_videos()
     thai = thai_times()
+    state = {} if state is None else state
+    links = state.setdefault("watch_links", {})  # Watch links found earlier: a channel's video drops out of its newest 25 within days
+    kept = state.setdefault("special_rows", {})  # specials seen this week: {link: [AniList id, episode, published]}
+    for a, n, link, p, ch in specials(videos, shows, now - 8 * 86400):
+        kept[link] = [a, n, int(p)]
+    for link in [k for k, (a, n, p) in kept.items() if p < now - 8 * 86400]:
+        del kept[link]
     out, jp = [], {}
     for i, s in shows.items():
         m = info.get(i, {})
@@ -337,14 +350,18 @@ def schedule(state=None):
             t = release_time(t, thai[i]) if i in thai else t
             if now - 8 * 86400 <= t <= now + 60 * 86400:
                 yt = t <= now and s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
-                rec = (state or {}).get("first_source", {}).get(f"{i}:{ep}", {})  # the animegojo episode page, if that's where it was found first
-                watch = in_brave(yt) if yt else (rec["url"] if rec.get("first") == "animegojo" else None)
+                rec = state.get("first_source", {}).get(f"{i}:{ep}", {})  # the animegojo episode page, if that's where it was found first
+                watch = (in_brave(yt) if yt else None) or links.get(f"{i}:{ep}") or (rec["url"] if rec.get("first") == "animegojo" else None)
+                if watch:
+                    links[f"{i}:{ep}"] = watch
                 rows.append({"ep": ep + s["offset"], "at": t, **({"watch": watch} if watch else {})})
-        rows += [{"ep": n, "at": int(p), "watch": in_brave(link)} for a, n, link, p, ch in specials(videos, {i: s}, now - 8 * 86400)]
+        rows += [{"ep": n, "at": p, "watch": in_brave(link)} for link, (a, n, p) in kept.items() if a == i]
         rows.sort(key=lambda r: r["at"])
         total = m.get("episodes")
         out.append({"name": s["name"], "label": season_label(m), "cover": (m.get("coverImage") or {}).get("large"),
                     "total": total and total + s["offset"], "where": thai[i][0] if i in thai else None, "episodes": rows})
+    for k in list(links)[:-300]:
+        del links[k]
     try:
         week = json.loads(get(BILIBILI_SCHEDULE))["data"]["items"]
         cards = [(c.get("title") or "", int(c["pub_time_ts"]) / 1000, c.get("index_show") or "") for d in week for c in (d.get("cards") or []) if c.get("pub_time_ts")]
@@ -451,7 +468,7 @@ def anime(state):
     aired = {(a["media"]["id"], a["episode"]): a["airingAt"] for a in data["web"]["airingSchedules"] if a["airingAt"] <= ahead}
     by_tid = {s["tid"]: i for i, s in shows.items() if s["tid"]}
     if by_tid:
-        span = f"{datetime.fromtimestamp(now - 8 * 86400, JST):%Y%m%d_%H%M%S}-{datetime.fromtimestamp(ahead, JST):%Y%m%d_%H%M%S}"
+        span = f"{datetime.fromtimestamp(now - 30 * 86400, JST):%Y%m%d_%H%M%S}-{datetime.fromtimestamp(ahead, JST):%Y%m%d_%H%M%S}"  # from a month back: a rerun must not pass for an episode's first broadcast
         try:
             xml = get(f"https://cal.syoboi.jp/db.php?Command=ProgLookup&TID={','.join(map(str, by_tid))}&Range={span}")
             first = {tid: shows[i]["first"] for tid, i in by_tid.items()}
@@ -463,6 +480,7 @@ def anime(state):
     thai = thai_times()  # shows released later with Thai subs: alert at that time instead of the Japanese broadcast
     gojo_only = lambda i: not (i in thai and thai[i][0] in YT_CHANNELS.values())  # not on Muse/Ani-One: wait for animegojo, no scheduled card
     aired = {k: (release_time(t, thai[k[0]]) if k[0] in thai else t) for k, t in aired.items()}
+    aired = {k: t for k, t in aired.items() if t >= now - 8 * 86400}  # the past week only (older episodes were alerted then)
     due = dict(aired)  # every episode due from a week ago to a week ahead: a number outside it is not trusted
     aired = {k: t for k, t in aired.items() if t <= now}
     pending = state.setdefault("watch_later", {})  # episodes alerted before their Thai-sub video showed up: {key: release}
@@ -474,28 +492,36 @@ def anime(state):
         print(f"FAIL animegojo: {e}", file=sys.stderr)
         found = []
     for i, n, link in found:
-        s, ep = shows[i], n - shows[i]["offset"]
-        key = f"{i}:{ep}"
-        if key in seen or (i, ep) not in due or not gojo_only(i):
+        s = shows[i]
+        if not gojo_only(i):
             continue  # shows on Muse Thailand or Ani-One Thailand are alerted from there only
-        if s["yt"] and youtube_episode(videos, s["yt"], {ep, n, ep + max(s["first"][0], 1) - 1}, due[(i, ep)]):
-            continue  # an official channel has it too: which came first is uncertain, so its timestamped video is used below
+        # animegojo's number for episode e is e + offset, or that plus GOJO_SHIFT when it continues an older page
+        ep = next((e for e in (n - s["offset"], n - s["offset"] - GOJO_SHIFT.get(i, 0)) if (i, e) in due), None)
+        if ep is None or f"{i}:{ep}" in seen:
+            continue
+        shift = n - s["offset"] - ep
         try:
-            if not gojo_is_sub(get(link.split("#")[0]), link):
-                continue
+            on_page = gojo_sub_episodes(get(link.split("#")[0]))
         except Exception as e:
             print(f"FAIL animegojo {link}: {e}", file=sys.stderr)
             continue
+        # every not-yet-alerted episode due at the same time as this one: a whole season released at once gets one card
+        batch = [e for (j, e), t in sorted(due.items()) if j == i and t == due[(i, ep)] and f"{i}:{e}" not in seen and e + s["offset"] + shift in on_page]
+        if not batch:
+            continue
+        url = lambda e: f"{link.split('#')[0]}#ep-{e + s['offset'] + shift}"
         m = info.get(i, {})
         total = m.get("episodes")
         tot = f"{total + s['offset']:02d}" if total else "?"
-        line = f"Episode {n:02d}/{tot} ซับไทย\nanimegojo · seen {datetime.fromtimestamp(now, THAI):%d %b %Y %H:%M}"
+        a, b = batch[0] + s["offset"], batch[-1] + s["offset"]
+        line = f"Episode {a:02d}{f'-{b:02d}' if b != a else ''}/{tot} ซับไทย\nanimegojo · seen {datetime.fromtimestamp(now, THAI):%d %b %Y %H:%M}"
         label = f" ({season_label(m)})" if season_label(m) else ""
-        notify(f"New episode: {s['name']}{label}", line, f"{line}\n{link}", (m.get("coverImage") or {}).get("large"), link)
-        seen.append(key)
-        pending.pop(key, None)
-        log[key] = {"title": s["name"], "episode": n, "version": "ซับไทย", "first": "animegojo", "url": link,
-                    "detected": now, "published": None, "notified": True}  # animegojo shows no publication times
+        notify(f"New episode: {s['name']}{label}", line, f"{line}\n{url(batch[0])}", (m.get("coverImage") or {}).get("large"), url(batch[0]))
+        for e in batch:
+            seen.append(f"{i}:{e}")
+            pending.pop(f"{i}:{e}", None)
+            log[f"{i}:{e}"] = {"title": s["name"], "episode": e + s["offset"], "version": "ซับไทย", "first": "animegojo", "url": url(e),
+                               "detected": now, "published": None, "notified": True}  # animegojo shows no publication times
     new = sorted((t, i, ep) for (i, ep), t in aired.items() if f"{i}:{ep}" not in seen)
     for t, i, ep in new:
         if not seed:
@@ -681,8 +707,8 @@ if __name__ == "__main__":
                 '<a href="/list/2754/#ep-1" title="Black Clover 2nd Season ตอนที่ 01">')
         assert gojo_latest(home, {7: {"yt": "tensei kizoku"}}) == [(7, 2, GOJO + "/list/3145/#ep-2")]  # dub and other shows skipped
         series = '<title>Tensei Kizoku 3rd Season (ซับไทย) ตอนที่ 1-2</title><a href="#ep-1">1</a><a href="#ep-2">2</a>'
-        assert gojo_is_sub(series, GOJO + "/list/3145/#ep-2") and not gojo_is_sub(series, GOJO + "/list/3145/#ep-3")
-        assert not gojo_is_sub(series.replace("ซับไทย", "พากย์ไทย"), GOJO + "/list/3145/#ep-2")
+        assert gojo_sub_episodes(series) == {1, 2}
+        assert gojo_sub_episodes(series.replace("ซับไทย", "พากย์ไทย")) == set()  # dubbed page
         assert specials(vids, sp, 50) == [(1, "13.5", "a", 100, "Ani-One Thailand"), (1, "0", "b", 100, "Ani-One Thailand")]
         assert in_brave("https://www.youtube.com/watch?v=j7zFyWX6t8M") == BRAVE + "j7zFyWX6t8M"
         T = datetime(2026, 10, 4, 21, 30, tzinfo=THAI).timestamp()

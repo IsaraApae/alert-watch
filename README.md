@@ -2,7 +2,7 @@
 
 Sends a LINE message (official account **Alert Watch**) when a tracked manga chapter, Webtoon episode or anime episode comes out. It runs on GitHub Actions, so it works with your Mac off.
 
-- **Website:** https://isaraapae.github.io/alert-watch/. It has a countdown to the next episode and the next 7 days (**Next episode**), plus a Monday–Sunday **Weekly timetable** (`?v=week`). Times are Thai time.
+- **Website:** https://isaraapae.github.io/alert-watch/. It has a countdown to the next episode, the next 7 days, and the episodes that aired in the past week with their Watch buttons (**Next episode**), plus a Monday–Sunday **Weekly timetable** (`?v=week`). Times are Thai time.
 - **LINE menu:** two buttons that open the website's two views.
 
 ## What gets an alert
@@ -45,7 +45,9 @@ You can also edit the files directly:
   - Japanese TV times: [Syoboi Calendar](https://cal.syoboi.jp).
   - Online-only anime: AniList.
   - Thai-sub videos: the YouTube Data API.
-  - Thai-sub episodes on [animegojo](https://animegojos.com): used for the shows not on Muse/Ani-One (Netflix, Disney+, Bilibili, online). A series counts only if its page says (ซับไทย), never พากย์ไทย. These shows get **no card at the scheduled time** — one card (and a website Watch button) is sent only once animegojo has the episode, within ~8 days of release. anime-waku and animeruka block GitHub's servers with Cloudflare, so they aren't checked.
+  - Thai-sub episodes on [animegojo](https://animegojos.com): used for the shows not on Muse/Ani-One (Netflix, Disney+, Bilibili, online). A series counts only if its page says (ซับไทย), never พากย์ไทย. These shows get **no card at the scheduled time** — one card (and a website Watch button) is sent only once animegojo has the episode, within ~8 days of release. Episodes released together (a whole Netflix season at once) get one card, e.g. "Episode 01-10". If animegojo continues a new cour on an older page (`GOJO_SHIFT` in `watch.py`; Yozakura Cour 2 may appear as ตอนที่ 13+), the numbers are mapped back. anime-waku and animeruka block GitHub's servers with Cloudflare, so they aren't checked.
+  - Watch links are saved in `ci-state.json` (`watch_links`) once found, so website buttons stay after a video drops out of the channel's newest uploads.
+  - The TV schedule is read from a month back, so a rerun on another channel is never taken for an episode's first broadcast.
   - Each episode is alerted once, from whichever source had it first. `first_source` in `ci-state.json` records the source, link, detection time, publication time (when known), and whether the order is uncertain.
 - Repository secrets: `LINE_TOKEN` and `YOUTUBE_KEY`. Set them with `gh secret set NAME -R IsaraApae/alert-watch`.
 - Workflow inputs:
