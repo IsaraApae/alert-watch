@@ -11,7 +11,7 @@ Sends a LINE message (official account **Alert Watch**) when a tracked manga cha
 |---|---|
 | Manga ([urls.txt](urls.txt)) | The new chapter |
 | Webtoon ([urls.txt](urls.txt)) | The episode in the WEBTOON app; for Enrolling in the Transcendent Academy and Zodiac Girls, the series page |
-| Anime ([anime.txt](anime.txt)) | The Thai-sub video in Brave, for shows on Muse Thailand or Ani-One Thailand; no link for other platforms |
+| Anime ([anime.txt](anime.txt)) | Muse/Ani-One shows: the Thai-sub video in Brave. Other shows (Netflix, Disney+, Bilibili, online): the [animegojo](https://animegojos.com) episode page, once it's up with Thai subs |
 | Anime specials | The Thai-sub video in Brave. Specials are episode 0 or ".5" episodes posted by Muse Thailand or Ani-One Thailand, sent once a YouTube premiere starts. |
 
 Anime alerts use the time the **Thai-sub** episode comes out (never dubbed, never พากย์ไทย), with the platform name. If a YouTube channel posts late, the alert waits up to an hour; if the video still isn't up, a "Watch now" card follows when it is.
@@ -45,6 +45,8 @@ You can also edit the files directly:
   - Japanese TV times: [Syoboi Calendar](https://cal.syoboi.jp).
   - Online-only anime: AniList.
   - Thai-sub videos: the YouTube Data API.
+  - Thai-sub episodes on [animegojo](https://animegojos.com): used for the shows not on Muse/Ani-One (Netflix, Disney+, Bilibili, online). A series counts only if its page says (ซับไทย), never พากย์ไทย. These shows get **no card at the scheduled time** — one card (and a website Watch button) is sent only once animegojo has the episode, within ~8 days of release. anime-waku and animeruka block GitHub's servers with Cloudflare, so they aren't checked.
+  - Each episode is alerted once, from whichever source had it first. `first_source` in `ci-state.json` records the source, link, detection time, publication time (when known), and whether the order is uncertain.
 - Repository secrets: `LINE_TOKEN` and `YOUTUBE_KEY`. Set them with `gh secret set NAME -R IsaraApae/alert-watch`.
 - Workflow inputs:
   - **ping** sends a test card.
