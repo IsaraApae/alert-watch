@@ -6,11 +6,11 @@
 185756 | Ani-One Thailand | Sun | 22:00
 199426 | Ani-One Thailand | Sun | 22:45
 212503 | Bilibili | Thu | 23:58
-198727 | Ani-One Thailand | - | -
-213805 | Netflix | - | -
-209872 | Netflix | - | -
-189123 | Netflix | - | -
-178083 | Disney+ | - | -
+198727 | Ani-One Thailand | Tue | 23:30
+213805 | Netflix | Thu | 22:30
+209872 | Netflix | Sun | 00:00
+189123 | Netflix | Sun | 15:00
+178083 | Disney+ | Fri | 00:00 | 1
 195516 | Netflix | Fri | 22:00
 210482 | Netflix | - | -
 195539 | Netflix | - | -
