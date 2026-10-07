@@ -335,6 +335,18 @@ def schedule(state=None):
     kept = state.setdefault("special_rows", {})  # specials seen this week: {link: [AniList id, episode, published]}
     for a, n, link, p, ch in specials(videos, shows, now - 8 * 86400):
         kept[link] = [a, n, int(p)]
+    pages = state.setdefault("gojo_pages", {})  # {AniList id: [animegojo ซับไทย series page, number shift]}, learned from alerts
+    gojo = {}
+
+    def on_gojo(i):  # (page, shift, episode numbers on it): each page fetched at most once per run
+        if i not in gojo:
+            path, shift = pages[str(i)]
+            try:
+                gojo[i] = (path, shift, gojo_sub_episodes(get(GOJO + path)))
+            except Exception as e:
+                print(f"FAIL animegojo {path}: {e}", file=sys.stderr)
+                gojo[i] = (path, shift, set())
+        return gojo[i]
     for link in [k for k, (a, n, p) in kept.items() if p < now - 8 * 86400]:
         del kept[link]
     out, jp = [], {}
@@ -352,6 +364,10 @@ def schedule(state=None):
                 yt = t <= now and s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
                 rec = state.get("first_source", {}).get(f"{i}:{ep}", {})  # the animegojo episode page, if that's where it was found first
                 watch = (in_brave(yt) if yt else None) or links.get(f"{i}:{ep}") or (rec["url"] if rec.get("first") == "animegojo" else None)
+                if not watch and t <= now and str(i) in pages and not (i in thai and thai[i][0] in YT_CHANNELS.values()):
+                    path, shift, have = on_gojo(i)  # aired, no button yet: the episode on its animegojo page, if it's up there
+                    if ep + s["offset"] + shift in have:
+                        watch = f"{GOJO}{path}#ep-{ep + s['offset'] + shift}"
                 if watch:
                     links[f"{i}:{ep}"] = watch
                 rows.append({"ep": ep + s["offset"], "at": t, **({"watch": watch} if watch else {})})
@@ -510,6 +526,7 @@ def anime(state):
         if not batch:
             continue
         url = lambda e: f"{link.split('#')[0]}#ep-{e + s['offset'] + shift}"
+        state.setdefault("gojo_pages", {})[str(i)] = [link.split("#")[0][len(GOJO):], shift]  # for the website's Watch buttons
         m = info.get(i, {})
         total = m.get("episodes")
         tot = f"{total + s['offset']:02d}" if total else "?"
