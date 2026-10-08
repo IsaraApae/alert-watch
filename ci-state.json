@@ -2993,7 +2993,8 @@
   "199426:1",
   "176314:1",
   "152677:1",
-  "159042:2"
+  "159042:2",
+  "206401:2"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3256,7 +3257,19 @@
  "specials": [
   "https://www.youtube.com/watch?v=dbKE_wq_ElA"
  ],
- "first_source": {},
+ "first_source": {
+  "206401:2": {
+   "title": "FX Senshi Kurumi-chan",
+   "episode": 2,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=U3NHBacTiv0",
+   "detected": 1791463212,
+   "published": 1791462611,
+   "scheduled": 1791462600,
+   "notified": true
+  }
+ },
  "watch_links": {
   "202250:1": "https://isaraapae.github.io/alert-watch/b.html?v=NkPT6YPoI84",
   "206401:1": "https://isaraapae.github.io/alert-watch/b.html?v=LkuR5TFFb94",
@@ -3272,7 +3285,8 @@
   "191656:1": "https://animegojos.com/list/3211/#ep-1",
   "209872:1": "https://animegojos.com/list/3197/#ep-1",
   "189123:1": "https://animegojos.com/list/3200/#ep-1",
-  "210482:2": "https://animegojos.com/list/2831/#ep-3"
+  "210482:2": "https://animegojos.com/list/2831/#ep-3",
+  "206401:2": "https://isaraapae.github.io/alert-watch/b.html?v=U3NHBacTiv0"
  },
  "special_rows": {
   "https://www.youtube.com/watch?v=dbKE_wq_ElA": [
