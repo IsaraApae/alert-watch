@@ -507,6 +507,21 @@ def anime(state):
     except Exception as e:
         print(f"FAIL animegojo: {e}", file=sys.stderr)
         found = []
+    # the home page only lists animegojo's newest uploads and moves fast, so also check each show's own ซับไทย page
+    # (learned from alerts) from a day before an episode is due
+    for k, (path, shift) in (state.get("gojo_pages", {}) if not seed else {}).items():
+        i = int(k)
+        if i not in shows or not gojo_only(i):
+            continue
+        waiting = [e for (j, e), t in due.items() if j == i and f"{i}:{e}" not in seen and now >= t - 86400]
+        if not waiting:
+            continue
+        try:
+            have = gojo_sub_episodes(get(GOJO + path))
+        except Exception as e:
+            print(f"FAIL animegojo {path}: {e}", file=sys.stderr)
+            continue
+        found += [(i, n, f"{GOJO}{path}#ep-{n}") for n in (e + shows[i]["offset"] + shift for e in waiting) if n in have]
     for i, n, link in found:
         s = shows[i]
         if not gojo_only(i):
