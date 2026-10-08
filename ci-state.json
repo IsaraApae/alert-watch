@@ -2994,7 +2994,8 @@
   "176314:1",
   "152677:1",
   "159042:2",
-  "206401:2"
+  "206401:2",
+  "213805:2"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3269,6 +3270,16 @@
    "detected": 1791463212,
    "published": 1791462611,
    "scheduled": 1791462600,
+   "notified": true
+  },
+  "213805:2": {
+   "title": "The Ramparts of Ice Season 2",
+   "episode": 2,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/3165/#ep-2",
+   "detected": 1791475462,
+   "published": null,
    "notified": true
   }
  },
