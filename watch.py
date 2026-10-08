@@ -522,6 +522,36 @@ def anime(state):
             print(f"FAIL animegojo {path}: {e}", file=sys.stderr)
             continue
         found += [(i, n, f"{GOJO}{path}#ep-{n}") for n in (e + shows[i]["offset"] + shift for e in waiting) if n in have]
+    # a show with no known page: search animegojo for it. Pages there at the first look are older seasons (Edgerunners
+    # Season 1 already lists 1-10); a page counts once it is new or gains an episode that is due, from a day before then
+    search = state.setdefault("gojo_search", {})  # {AniList id: {page: its episodes at the first look}}
+    for i, s in shows.items():
+        if seed or not gojo_only(i) or not s["yt"] or str(i) in state.get("gojo_pages", {}):
+            search.pop(str(i), None)
+            continue
+        due_eps = [(e, t) for (j, e), t in due.items() if j == i and f"{i}:{e}" not in seen]
+        if not due_eps or (str(i) in search and not any(now >= t - 86400 for e, t in due_eps)):
+            continue
+        words = [k.replace("\\", "") for k in s["yt"].split("|")]
+        term = next((k for k in words if k.isascii() and len(k) >= 4), words[0])
+        try:
+            current = {}
+            for path in list(dict.fromkeys(re.findall(r'href="(/list/\d+/)"', get(f"{GOJO}/search?name={quote(term)}"))))[:8]:
+                page = get(GOJO + path)
+                title = re.search(r"<title>([^<]*)", page)
+                if title and re.search(s["yt"], html.unescape(title[1]).lower()):
+                    current[path] = sorted(gojo_sub_episodes(page))
+        except Exception as e:
+            print(f"FAIL animegojo search {term}: {e}", file=sys.stderr)
+            continue
+        first_look = search.setdefault(str(i), current)
+        for path, eps in current.items():
+            added = set(eps) - set(first_look.get(path, []))
+            shift = next((sh for sh in dict.fromkeys((0, GOJO_SHIFT.get(i, 0))) if any(e + s["offset"] + sh in added for e, t in due_eps)), None)
+            if shift is not None:
+                state.setdefault("gojo_pages", {})[str(i)] = [path, shift]
+                found += [(i, e + s["offset"] + shift, f"{GOJO}{path}#ep-{e + s['offset'] + shift}") for e, t in due_eps if e + s["offset"] + shift in added]
+                break
     for i, n, link in found:
         s = shows[i]
         if not gojo_only(i):
