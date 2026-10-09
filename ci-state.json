@@ -3002,7 +3002,8 @@
   "159042:2",
   "206401:2",
   "213805:2",
-  "212503:1"
+  "212503:1",
+  "207329:1"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3299,6 +3300,18 @@
    "published": 1791478810,
    "scheduled": 1791478800,
    "notified": true
+  },
+  "207329:1": {
+   "title": "The Laid-Off Cheat-Granting Mage Enjoys a Second Lease on Life",
+   "episode": 1,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": null,
+   "detected": 1791516532,
+   "published": null,
+   "scheduled": 1791300600,
+   "notified": true,
+   "order": "uncertain"
   }
  },
  "watch_links": {

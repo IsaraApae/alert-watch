@@ -1,5 +1,5 @@
 {
- "updated": 1791478832,
+ "updated": 1791516538,
  "shows": [
   {
    "name": "As a Reincarnated Aristocrat Season 3",
@@ -874,6 +874,51 @@
     {
      "ep": 10,
      "at": 1796301000.0
+    }
+   ]
+  },
+  {
+   "name": "The Laid-Off Cheat-Granting Mage Enjoys a Second Lease on Life",
+   "label": "Fall 2026, TV",
+   "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/b207329-6VPeZIDfF4Sr.png",
+   "total": null,
+   "where": "Ani-One Thailand",
+   "episodes": [
+    {
+     "ep": 1,
+     "at": 1791300600.0
+    },
+    {
+     "ep": 2,
+     "at": 1791905400.0
+    },
+    {
+     "ep": 3,
+     "at": 1792510200.0
+    },
+    {
+     "ep": 4,
+     "at": 1793115000.0
+    },
+    {
+     "ep": 5,
+     "at": 1793719800.0
+    },
+    {
+     "ep": 6,
+     "at": 1794324600.0
+    },
+    {
+     "ep": 7,
+     "at": 1794929400.0
+    },
+    {
+     "ep": 8,
+     "at": 1795534200.0
+    },
+    {
+     "ep": 9,
+     "at": 1796139000.0
     }
    ]
   }
