@@ -205,7 +205,7 @@ def youtube_videos():
     for cid in YT_CHANNELS:
         if key:
             try:
-                url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&maxResults=25&playlistId=UU{cid[2:]}&key={key}"
+                url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&maxResults=50&playlistId=UU{cid[2:]}&key={key}"
                 rows = []
                 for it in json.loads(get(url)).get("items", []):  # UU... is the channel's uploads list
                     sn, cd = it["snippet"], it.get("contentDetails", {})
@@ -331,7 +331,7 @@ def schedule(state=None):
     videos = youtube_videos()
     thai = thai_times()
     state = {} if state is None else state
-    links = state.setdefault("watch_links", {})  # Watch links found earlier: a channel's video drops out of its newest 25 within days
+    links = state.setdefault("watch_links", {})  # Watch links found earlier: a channel's video drops out of its newest 50 within days
     kept = state.setdefault("special_rows", {})  # specials seen this week: {link: [AniList id, episode, published]}
     for a, n, link, p, ch in specials(videos, shows, now - 8 * 86400):
         kept[link] = [a, n, int(p)]
