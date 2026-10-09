@@ -3003,7 +3003,8 @@
   "206401:2",
   "213805:2",
   "212503:1",
-  "207329:1"
+  "207329:1",
+  "210482:3"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3312,6 +3313,16 @@
    "scheduled": 1791300600,
    "notified": true,
    "order": "uncertain"
+  },
+  "210482:3": {
+   "title": "JoJo Part 7: Steel Ball Run 2nd-3rd Stage",
+   "episode": 4,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/2831/#ep-4",
+   "detected": 1791546611,
+   "published": null,
+   "notified": true
   }
  },
  "watch_links": {
@@ -3333,7 +3344,8 @@
   "206401:2": "https://isaraapae.github.io/alert-watch/b.html?v=U3NHBacTiv0",
   "213805:2": "https://animegojos.com/list/3165/#ep-2",
   "212503:1": "https://isaraapae.github.io/alert-watch/b.html?v=tbjuv-4yZH0",
-  "207329:1": "https://isaraapae.github.io/alert-watch/b.html?v=q4mX4PIIpzQ"
+  "207329:1": "https://isaraapae.github.io/alert-watch/b.html?v=q4mX4PIIpzQ",
+  "210482:3": "https://animegojos.com/list/2831/#ep-4"
  },
  "special_rows": {
   "https://www.youtube.com/watch?v=dbKE_wq_ElA": [
