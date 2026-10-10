@@ -3006,7 +3006,10 @@
   "207329:1",
   "210482:3",
   "195516:2",
-  "178083:2"
+  "178083:2",
+  "191656:2",
+  "209872:2",
+  "202250:2"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3346,6 +3349,37 @@
    "detected": 1791568822,
    "published": null,
    "notified": true
+  },
+  "191656:2": {
+   "title": "Even the Student Council Has Its Holes!",
+   "episode": 2,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/3211/#ep-2",
+   "detected": 1791655220,
+   "published": null,
+   "notified": true
+  },
+  "209872:2": {
+   "title": "Ranma 1/2 Season 3",
+   "episode": 2,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/3197/#ep-2",
+   "detected": 1791655220,
+   "published": null,
+   "notified": true
+  },
+  "202250:2": {
+   "title": "Magic Repo Man",
+   "episode": 2,
+   "version": "ซับไทย",
+   "first": "Muse Thailand",
+   "url": "https://www.youtube.com/watch?v=odxiIyNVIcY",
+   "detected": 1791655220,
+   "published": 1791655209,
+   "scheduled": 1791655200,
+   "notified": true
   }
  },
  "watch_links": {
@@ -3370,7 +3404,10 @@
   "207329:1": "https://isaraapae.github.io/alert-watch/b.html?v=q4mX4PIIpzQ",
   "210482:3": "https://animegojos.com/list/2831/#ep-4",
   "195516:2": "https://animegojos.com/list/3120/#ep-2",
-  "178083:2": "https://animegojos.com/list/3171/#ep-2"
+  "178083:2": "https://animegojos.com/list/3171/#ep-2",
+  "191656:2": "https://animegojos.com/list/3211/#ep-2",
+  "209872:2": "https://animegojos.com/list/3197/#ep-2",
+  "202250:2": "https://isaraapae.github.io/alert-watch/b.html?v=odxiIyNVIcY"
  },
  "special_rows": {
   "https://www.youtube.com/watch?v=dbKE_wq_ElA": [
