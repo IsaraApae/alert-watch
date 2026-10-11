@@ -3011,7 +3011,8 @@
   "209872:2",
   "202250:2",
   "189123:2",
-  "185756:3"
+  "185756:3",
+  "199426:2"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3403,6 +3404,17 @@
    "published": 1791730811,
    "scheduled": 1791730800,
    "notified": true
+  },
+  "199426:2": {
+   "title": "HOTEL INHUMANS Season 2",
+   "episode": 2,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=lIKdNzbe8Zs",
+   "detected": 1791733811,
+   "published": 1791735900,
+   "scheduled": 1791733500,
+   "notified": true
   }
  },
  "watch_links": {
@@ -3432,7 +3444,8 @@
   "209872:2": "https://animegojos.com/list/3197/#ep-2",
   "202250:2": "https://isaraapae.github.io/alert-watch/b.html?v=odxiIyNVIcY",
   "189123:2": "https://animegojos.com/list/3200/#ep-2",
-  "185756:3": "https://isaraapae.github.io/alert-watch/b.html?v=ocZG0w7HgLU"
+  "185756:3": "https://isaraapae.github.io/alert-watch/b.html?v=ocZG0w7HgLU",
+  "199426:2": "https://isaraapae.github.io/alert-watch/b.html?v=lIKdNzbe8Zs"
  },
  "special_rows": {
   "https://www.youtube.com/watch?v=dbKE_wq_ElA": [
