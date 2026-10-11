@@ -3009,7 +3009,8 @@
   "178083:2",
   "191656:2",
   "209872:2",
-  "202250:2"
+  "202250:2",
+  "189123:2"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3380,6 +3381,16 @@
    "published": 1791655209,
    "scheduled": 1791655200,
    "notified": true
+  },
+  "189123:2": {
+   "title": "Blue Box Season 2",
+   "episode": 2,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/3200/#ep-2",
+   "detected": 1791718215,
+   "published": null,
+   "notified": true
   }
  },
  "watch_links": {
@@ -3407,7 +3418,8 @@
   "178083:2": "https://animegojos.com/list/3171/#ep-2",
   "191656:2": "https://animegojos.com/list/3211/#ep-2",
   "209872:2": "https://animegojos.com/list/3197/#ep-2",
-  "202250:2": "https://isaraapae.github.io/alert-watch/b.html?v=odxiIyNVIcY"
+  "202250:2": "https://isaraapae.github.io/alert-watch/b.html?v=odxiIyNVIcY",
+  "189123:2": "https://animegojos.com/list/3200/#ep-2"
  },
  "special_rows": {
   "https://www.youtube.com/watch?v=dbKE_wq_ElA": [
