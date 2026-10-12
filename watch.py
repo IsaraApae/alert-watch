@@ -576,7 +576,9 @@ def anime(state):
         total = m.get("episodes")
         tot = f"{total + s['offset']:02d}" if total else "?"
         a, b = batch[0] + s["offset"], batch[-1] + s["offset"]
-        line = f"Episode {a:02d}{f'-{b:02d}' if b != a else ''}/{tot} ซับไทย\nanimegojo · seen {datetime.fromtimestamp(now, THAI):%d %b %Y %H:%M}"
+        # when it aired on its platform (Japanese TV if none is set): animegojo shows no upload times
+        aired_at = datetime.fromtimestamp(due[(i, batch[0])], THAI).strftime("%d %b %Y %H:%M")
+        line = f"Episode {a:02d}{f'-{b:02d}' if b != a else ''}/{tot} ซับไทย · animegojo\n{f'{thai[i][0]} · ' if i in thai else 'Aired '}{aired_at}"
         label = f" ({season_label(m)})" if season_label(m) else ""
         notify(f"New episode: {s['name']}{label}", line, f"{line}\n{url(batch[0])}", (m.get("coverImage") or {}).get("large"), url(batch[0]))
         for e in batch:
