@@ -1,9 +1,10 @@
 # Alert Watch
 
-Sends a LINE message (official account **Alert Watch**) when a tracked manga chapter, Webtoon episode or anime episode comes out. It runs on GitHub Actions, so it works with your Mac off.
+Sends a LINE message (official account **Alert Watch**) when a tracked manga chapter, Webtoon episode or anime episode comes out, and after every Formula 1 session. It runs on GitHub Actions, so it works with your Mac off.
 
 - **Website:** https://isaraapae.github.io/alert-watch/. It has a countdown to the next episode, the next 7 days, and the episodes that aired in the past week with their Watch buttons (**Next episode**), plus a Monday–Sunday **Weekly timetable** (`?v=week`). Times are Thai time.
-- **LINE menu:** two buttons that open the website's two views.
+- **F1 Live page:** https://isaraapae.github.io/alert-watch/f1.html, with free live timing and replays (see below).
+- **LINE menu:** three buttons: **Next episode**, **Timetable** and **F1 Live**. The menu image is [richmenu.png](richmenu.png).
 
 ## What gets an alert
 
@@ -26,7 +27,7 @@ Anime alerts use the time the **Thai-sub** episode comes out (never dubbed, neve
 - **Fastest sectors, race control and weather.**
 - **Team radio:** filter by driver, auto-play new messages, play the next one, see each driver's position.
 - **Replay:** any finished session since 2023, from [OpenF1](https://openf1.org). Play or pause it, skip 30 s, change speed (1×–32×), or drag to any moment.
-- **Appearance:** Light, Dark or Device.
+- **Appearance:** Light, Dark or Device, in Settings.
 
 The page is published on the `gh-pages` branch as `f1.html`. Car outlines come from MultiViewer's circuit API, and photos and logos from formula1.com.
 
@@ -91,4 +92,6 @@ You can also edit the files directly:
   - `index.html`;
   - `w.html`, which opens a link in the WEBTOON app;
   - `b.html`, which opens a link in Brave;
-  - `covers/`.
+  - `covers/`;
+  - `f1.html`, the F1 Live page;
+  - `f1-logo.png`, the official F1 logo used in the F1 LINE cards.
