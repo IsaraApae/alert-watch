@@ -28,7 +28,9 @@ A card after every session of each Grand Prix weekend: **Practice 1, 2 and 3, Sp
   - qualifying and sprint qualifying: the lap from the last part reached (Q3 for the top 10);
   - sprint and race: total time, then the gap, laps down, or DNF/DNS/DSQ.
 
-Data, photos and team colours come from the free [OpenF1](https://openf1.org) API.
+After each race, the **Drivers' and Teams' Championships** follow as two swipeable cards. Each line shows the position, the change since before the race (+1 in green, -1 in red), and the points with how many were gained (`f1_standings` in `ci-state.json`).
+
+Times on the cards are Thai time, and race lengths are written as "1h 42m 00.785s". Data, photos and team colours come from the free [OpenF1](https://openf1.org) API.
 
 ## Editing the lists
 
