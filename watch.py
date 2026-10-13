@@ -101,7 +101,7 @@ def f1_rows(results, drivers):
     rows = []
     for x in sorted(results, key=rank):
         out = next((k.upper() for k in ("dsq", "dns", "dnf") if x.get(k)), None)
-        pos = str(x["position"]) if isinstance(x.get("position"), int) else out or {"RT": "DNF"}.get(x.get("position"), x.get("position") or "NC")
+        pos = str(x["position"]) if isinstance(x.get("position"), int) else "NC"  # "DNF" doesn't fit the column; the reason is in the time
         dur, gap = x.get("duration"), x.get("gap_to_leader")
         if isinstance(dur, list):  # qualifying: Q1, Q2, Q3
             lap = next((v for v in reversed(dur) if v), None)
@@ -134,6 +134,12 @@ def f1_photo(d, px):
     # c_thumb,g_face: cropped to the face; d_: formula1.com's blank driver if the portrait is missing, never a broken image
     return (f"https://media.formula1.com/image/upload/c_thumb,g_face,z_0.6,w_{px},h_{px}/d_common:f1:{year}:fallback:driver:"
             f"{year}fallbackdriverright.webp/common/f1/{year}/{team}/{code}/{year}{team}{code}right.png")
+
+
+def f1_logo(team, year):
+    """A team's full-colour logo for the season as PNG, from formula1.com (Red Bull Racing: .../2026/redbullracing/2026redbullracinglogo)."""
+    slug = re.sub(r"[^a-z0-9]", "", (team or "").lower())
+    return f"https://media.formula1.com/image/upload/c_fit,w_96,h_96/common/f1/{year}/{slug}/{year}{slug}logo.png" if slug else None
 
 
 def f1_name(d):
@@ -198,7 +204,8 @@ def f1_standings_card(title, sub_title, rows, colour_of):
             {"type": "box", "layout": "vertical", "width": "22px", "contents": [t(str(pos), size="xs", weight="bold", align="end")]},
             {"type": "box", "layout": "vertical", "width": "26px", "contents": [{**mark, "size": "xxs", "weight": "bold", "align": "center"}]},
             {"type": "box", "layout": "vertical", "width": "3px", "height": "28px", "backgroundColor": colour, "contents": []},
-            *([{"type": "image", "url": photo, "size": "28px", "aspectMode": "cover", "aspectRatio": "1:1", "backgroundColor": colour, "flex": 0}] if photo else []),
+            *([{"type": "image", "url": photo, "size": "28px", "aspectRatio": "1:1", "flex": 0,
+                **({"aspectMode": "fit"} if "logo" in photo else {"aspectMode": "cover", "backgroundColor": colour})}] if photo else []),  # a logo whole, a face on its team colour
             {"type": "box", "layout": "vertical", "flex": 1, "contents": [t(name, size="xs", weight="bold"), *([t(team, size="xxs", color=grey)] if team else [])]},
             {"type": "box", "layout": "vertical", "flex": 0, "contents": [
                 t(f"{points:g}", size="xs", weight="bold", align="end"), t(f"+{gained:g}" if gained else "–", size="xxs", color=grey, align="end")]}]}
@@ -241,7 +248,7 @@ def f1_standings(state, token, s, meeting):
     drows = [(c["position_current"], move(c), "#" + (drivers[c["driver_number"]].get("team_colour") or "999999"),
               f1_photo(drivers[c["driver_number"]], 96), f1_name(drivers[c["driver_number"]]),
               drivers[c["driver_number"]].get("team_name") or "", c.get("points_current") or 0, gained(c)) for c in sorted(champ_d, key=rank)]
-    trows = [(c["position_current"], move(c), colour.get(c["team_name"], "#999999"), None, c["team_name"], "",
+    trows = [(c["position_current"], move(c), colour.get(c["team_name"], "#999999"), f1_logo(c["team_name"], s.get("year") or datetime.now(THAI).year), c["team_name"], "",
               c.get("points_current") or 0, gained(c)) for c in sorted(champ_t, key=rank)]
     name = meeting.get("meeting_name") or "Formula 1"
     top = lambda rows: ", ".join(f"{r[0]} {r[4]} {r[6]:g}" for r in rows[:3])
@@ -1019,7 +1026,7 @@ if __name__ == "__main__":
                 {"position": 1, "driver_number": 3, "duration": 6120.785, "gap_to_leader": 0},
                 {"position": 11, "driver_number": 10, "duration": None, "gap_to_leader": "+1 LAP"},
                 {"position": 2, "driver_number": 16, "duration": 6128.12, "gap_to_leader": 7.335}]
-        assert [(p, v) for p, d, v in f1_rows(race, drv)] == [("1", "1h 42m 00.785s"), ("2", "+7.335"), ("11", "+1 Lap"), ("DNF", "DNF")]
+        assert [(p, v) for p, d, v in f1_rows(race, drv)] == [("1", "1h 42m 00.785s"), ("2", "+7.335"), ("11", "+1 Lap"), ("NC", "DNF")]
         quali = [{"position": 1, "driver_number": 3, "duration": [93.241, 91.639, 91.373], "gap_to_leader": [0.8, 0.1, 0]},
                  {"position": 16, "driver_number": 10, "duration": [95.984, None, None], "gap_to_leader": [3.5, None, None]}]
         assert [(p, v) for p, d, v in f1_rows(quali, drv)] == [("1", "1:31.373"), ("16", "1:35.984")]
