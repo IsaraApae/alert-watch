@@ -78,6 +78,8 @@ def line_send(token, message):
 
 
 OPENF1 = "https://api.openf1.org/v1"  # free F1 timing data: every session's results, driver photos and team colours
+# the official F1 logo for card headers (a copy of formula1.com's red logo on the GitHub Pages site)
+F1_LOGO_IMAGE = {"type": "image", "url": "https://isaraapae.github.io/alert-watch/f1-logo.png", "size": "64px", "aspectRatio": "4:1", "aspectMode": "fit", "flex": 0}
 
 
 def f1_time(sec):
@@ -179,7 +181,7 @@ def f1_card(meeting, session, when, rows):
             t(val, size="xs", color=grey, align="end", flex=0)]}
 
     head = [{"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "center", "contents": [
-        t("F1", size="md", weight="bold", style="italic", color=red, flex=0),
+        F1_LOGO_IMAGE,
         t(meeting.get("meeting_name") or "Formula 1", size="xs", color="#FFFFFF", flex=1),
         *([{"type": "image", "url": meeting["country_flag"], "size": "xxs", "aspectRatio": "16:9", "flex": 0}]
           if meeting.get("country_flag", "").endswith(".png") else [])]},
@@ -213,7 +215,7 @@ def f1_standings_card(title, sub_title, rows, colour_of):
     return {"type": "bubble", "size": "mega",
             "header": {"type": "box", "layout": "vertical", "backgroundColor": dark, "spacing": "xs", "contents": [
                 {"type": "box", "layout": "horizontal", "spacing": "sm", "contents": [
-                    t("F1", size="md", weight="bold", style="italic", color=red, flex=0), t(sub_title, size="xs", color="#FFFFFF")]},
+                    F1_LOGO_IMAGE, t(sub_title, size="xs", color="#FFFFFF")]},
                 t(title, size="xl", weight="bold", color="#FFFFFF"), t("Points after the race · change since before it", size="xxs", color="#AAAAAA")]},
             "body": {"type": "box", "layout": "vertical", "spacing": "sm", "contents": [row(*r) for r in rows]}}
 

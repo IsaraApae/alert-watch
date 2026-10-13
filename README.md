@@ -16,9 +16,23 @@ Sends a LINE message (official account **Alert Watch**) when a tracked manga cha
 
 Anime alerts use the time the **Thai-sub** episode comes out (never dubbed, never พากย์ไทย), with the platform name. If a YouTube channel posts late, the alert waits up to an hour; if the video still isn't up, a "Watch now" card follows when it is.
 
+## F1 Live page
+
+[isaraapae.github.io/alert-watch/f1.html](https://isaraapae.github.io/alert-watch/f1.html) has free live timing in any browser, and the LINE menu's **F1 Live** button opens it. Your browser connects straight to Formula 1's live timing feed, so there's no server.
+
+- **Timing tower:** interval, gap, last and best lap, sectors with mini sectors, speed trap, tyre stints, pit stops and places gained. **Settings** lets you choose which columns to show.
+- **Track map:** an estimate of where each car is on the lap, from the timing loops. Exact positions are only on F1 TV.
+- **Live championship:** drivers (with photos) and teams (with logos), worked out live during sprints and races from the standings before them.
+- **Fastest sectors, race control and weather.**
+- **Team radio:** filter by driver, auto-play new messages, play the next one, see each driver's position.
+- **Replay:** any finished session since 2023, from [OpenF1](https://openf1.org). Play or pause it, skip 30 s, change speed (1×–32×), or drag to any moment.
+- **Appearance:** Light, Dark or Device.
+
+The page is published on the `gh-pages` branch as `f1.html`. Car outlines come from MultiViewer's circuit API, and photos and logos from formula1.com.
+
 ## Formula 1 results
 
-A card after every session of each Grand Prix weekend: **Practice 1, 2 and 3, Sprint Qualifying, Sprint, Qualifying and Race**, sent once each when the results come out (`f1_sessions` in `ci-state.json`).
+A card with the official F1 logo after every session of each Grand Prix weekend: **Practice 1, 2 and 3, Sprint Qualifying, Sprint, Qualifying and Race**, sent once each when the results come out (`f1_sessions` in `ci-state.json`).
 
 - Dark F1 header: the Grand Prix with its flag, the session, and the Thai start time.
 - The top 3 with their photos on their team colour.
