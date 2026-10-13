@@ -735,7 +735,9 @@ function renderChampionship() {
   const rank = rows => { rows.forEach(r => r.total = r.pts + r.add); rows.sort((a, b) => b.total - a.total || a.pos - b.pos); rows.forEach((r, i) => r.now = i + 1); return rows; };
   const drivers = rank(base.drivers.map(x => ({ ...x, add: scored(x.num) })));
   const teams = rank(base.teams.map(t => ({ ...t, add: drivers.filter(d => slug(d.team) === slug(t.name)).reduce((s, d) => s + d.add, 0) })));
-  const key = champTab + JSON.stringify((champTab === "d" ? drivers : teams).map(r => [r.code || r.name, r.total, r.now])) + document.documentElement.dataset.mode;
+  // redraw when the order or points change, or when the drivers' details (team colours, photos) arrive after the standings
+  const key = champTab + JSON.stringify((champTab === "d" ? drivers : teams).map(r => [r.code || r.name, r.total, r.now, r.num, r.team]))
+            + JSON.stringify(Object.values(S.DriverList || {}).map(d => [d.Tla, d.TeamColour, d.TeamName])) + document.documentElement.dataset.mode;
   if (key === champKey) return;   // unchanged: keep the photos as they are
   champKey = key;
   const teamColour = name => { const d = drivers.find(x => slug(x.team) === slug(name) && x.num); return d ? colour(driver(d.num)) : "#777"; };
