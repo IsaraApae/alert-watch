@@ -91,8 +91,11 @@
   small.u { color: var(--dim); font-size: 10px; }
 
   /* track map */
-  #map { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; background: var(--map); }
+  #map { display: block; width: 100%; height: auto; background: var(--map); }   /* its box follows the circuit's shape */
   .map-note { color: var(--dim); font-size: 11px; padding: 6px 12px 9px; }
+  .panel.mapfull { position: fixed; inset: 0; z-index: 30; border-radius: 0; border: 0; display: flex; flex-direction: column; }
+  .mapfull #map { flex: 1; min-height: 0; height: 100%; }
+  .mapfull .map-note { display: none; }
 
   /* fastest sectors */
   .bests { display: grid; grid-template-columns: repeat(3, 1fr); }
@@ -170,7 +173,7 @@
   .x { all: unset; cursor: pointer; color: var(--dim); font-size: 22px; line-height: 1; padding: 0 4px; }
 
   /* replay controls */
-  .rbar { position: sticky; bottom: 0; z-index: 15; background: color-mix(in srgb, var(--panel) 94%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  .rbar { position: sticky; bottom: 0; z-index: 35; background: color-mix(in srgb, var(--panel) 94%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
           border-top: 1px solid var(--line); padding: 8px 16px calc(8px + env(safe-area-inset-bottom)); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .rbar input[type=range] { flex: 1 1 200px; accent-color: var(--blue); }
   .rbar select { background: var(--input); border: 1px solid var(--line); border-radius: 8px; padding: 5px 6px; }
@@ -216,7 +219,7 @@
   </div>
   <div class="col">
     <section class="panel">
-      <h2>Track map <small id="mapKind">approximate positions</small></h2>
+      <h2><span>Track map <small id="mapKind">approximate positions</small></span><button class="btn" id="mapFull" type="button">Full screen</button></h2>
       <svg id="map" viewBox="0 0 400 300" role="img" aria-label="Circuit map with each car's position"></svg>
       <div class="map-note" id="mapNote">Cars are placed by how far through the lap they are, from the timing loops. Exact positions are only on F1 TV.</div>
     </section>
@@ -443,6 +446,7 @@ async function startReplay(key) {
 }
 function exitReplay() {
   replayToken++;
+  if ($("map").closest(".panel").classList.contains("mapfull")) setTimeout(() => mapFull(true));
   mode = "live"; R.playing = false; R.data = null; $("rbar").hidden = true; S = {}; radioSeen = null; towerHead = ""; dirty = true;
   $("mapKind").textContent = "approximate positions"; $("mapNote").textContent = "Cars are placed by how far through the lap they are, from the timing loops. Exact positions are only on F1 TV.";
   history.replaceState(null, "", location.pathname);
@@ -851,11 +855,22 @@ async function loadCircuit() {
 }
 function rotate(x, y, deg) { const a = deg * Math.PI / 180; return [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)]; }
 function drawCircuit() {
-  const rot = circuit.rotation || 0;
+  const full = $("map").closest(".panel").classList.contains("mapfull"), svgBox = $("map").getBoundingClientRect();
+  const span = rot => { const q = circuit.x.map((x, i) => rotate(x, circuit.y[i], rot)); return [Math.max(...q.map(p => p[0])) - Math.min(...q.map(p => p[0])), Math.max(...q.map(p => p[1])) - Math.min(...q.map(p => p[1]))]; };
+  let rot = circuit.rotation || 0;
+  if (full) {   // full screen: turn the circuit so its long side runs along the screen's long side
+    const [sw, sh] = span(rot), tall = svgBox.height > svgBox.width;
+    if (tall !== sh > sw) rot += 90;
+  }
   const pts = circuit.x.map((x, i) => rotate(x, circuit.y[i], rot));
   const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
   const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
-  const pad = 30, w = 400, h = 300, k = Math.min((w - 2 * pad) / (maxX - minX), (h - 2 * pad) / (maxY - minY));
+  // the box takes the circuit's own shape, so the track fills the width; on a phone, a smaller margin; full screen: the screen's shape
+  const phone = matchMedia("(max-width: 900px)").matches, pad = phone || full ? 14 : 26, w = 400;
+  const h = full ? Math.round(w * svgBox.height / svgBox.width)
+                 : Math.round(Math.min(phone ? 560 : 420, Math.max(240, (w - 2 * pad) * (maxY - minY) / (maxX - minX) + 2 * pad)));
+  const k = Math.min((w - 2 * pad) / (maxX - minX), (h - 2 * pad) / (maxY - minY));
+  $("map").setAttribute("viewBox", `0 0 ${w} ${h}`);
   const ox = (w - (maxX - minX) * k) / 2, oy = (h - (maxY - minY) * k) / 2;
   mapBox = ([x, y]) => [ox + (x - minX) * k, h - (oy + (y - minY) * k)];
   circuit.screen = pts.map(mapBox);
@@ -892,11 +907,12 @@ function renderCars() {
   if (!g || !circuit) return;
   const lines = (S.TimingData || {}).Lines || {}, dots = [];
   const over = mode === "live" && ["Finished", "Finalised", "Ends", "Inactive"].includes((S.SessionStatus || {}).Status);
+  const z = $("map").closest(".panel").classList.contains("mapfull") ? 1.35 : 1;   // bigger cars on the full-screen map
   for (const [num, l] of over ? [] : Object.entries(lines)) {
     if (l.Retired || l.Stopped || l.InPit) continue;
     const f = lapFraction(num, l); if (f == null) continue;
     const [x, y] = pointAt(f), d = driver(num);
-    dots.push([+l.Line || 99, `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)})"><circle r="7" fill="${colour(d)}" stroke="var(--bg)" stroke-width="1.5"/>
+    dots.push([+l.Line || 99, `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)}) scale(${z})"><circle r="7" fill="${colour(d)}" stroke="var(--bg)" stroke-width="1.5"/>
       <text y="2.6" font-size="6.5" font-weight="800" text-anchor="middle" fill="#000">${esc(d.RacingNumber || num)}</text>
       <text x="9" y="-6" font-size="7" font-weight="700" fill="var(--text)">${esc(d.Tla || "")}</text></g>`]);
   }
@@ -912,6 +928,17 @@ function setTheme(pick) {
   for (const b of document.querySelectorAll("#themeBtns button")) b.setAttribute("aria-pressed", String(b.dataset.t === pick));
   dirty = true;
 }
+matchMedia("(max-width: 900px)").addEventListener("change", () => circuit && drawCircuit());   // phone <-> wide: refit the map
+function mapFull(on) {
+  const panel = $("map").closest(".panel");
+  panel.classList.toggle("mapfull", on);
+  panel.style.bottom = on && !$("rbar").hidden ? $("rbar").offsetHeight + "px" : "";   // leave the replay controls showing
+  $("mapFull").textContent = on ? "Close" : "Full screen";
+  document.body.style.overflow = on ? "hidden" : "";
+  if (circuit) drawCircuit();
+}
+$("mapFull").addEventListener("click", () => mapFull(!$("map").closest(".panel").classList.contains("mapfull")));
+addEventListener("resize", () => { if ($("map").closest(".panel").classList.contains("mapfull")) mapFull(true); });
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => store.get("f1.theme", "device") === "device" && setTheme("device"));
 $("themeBtns").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setTheme(b.dataset.t); });
 $("colPicks").innerHTML = COLS.map(([k, label]) => `<label><input type="checkbox" data-k="${k}" ${hiddenCols.has(k) ? "" : "checked"}>${label}</label>`).join("");
@@ -922,7 +949,7 @@ $("colPicks").addEventListener("change", e => {
 });
 $("settingsBtn").addEventListener("click", () => { $("settings").hidden = false; });
 for (const sheet of document.querySelectorAll(".sheet")) sheet.addEventListener("click", e => { if (e.target === sheet || e.target.closest("[data-close]")) sheet.hidden = true; });
-document.addEventListener("keydown", e => { if (e.key === "Escape") for (const s of document.querySelectorAll(".sheet")) s.hidden = true; });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { for (const s of document.querySelectorAll(".sheet")) s.hidden = true; mapFull(false); } });
 
 // ---------- the replay picker and controls ----------
 async function fillPicker() {
