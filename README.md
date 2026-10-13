@@ -18,7 +18,17 @@ Anime alerts use the time the **Thai-sub** episode comes out (never dubbed, neve
 
 ## Formula 1 results
 
-After each Grand Prix and Sprint, one card lists every driver's finishing position: position, driver, team, and the gap to the winner (laps down, or DNF/DSQ). The header shows the Thai start time. Results come from the free [Jolpica F1 API](https://github.com/jolpica/jolpica-f1), the successor of Ergast, usually within a few hours of the finish. Each session is sent once (`f1` in `ci-state.json`), and only within 3 days of the race.
+A card after every session of each Grand Prix weekend: **Practice 1, 2 and 3, Sprint Qualifying, Sprint, Qualifying and Race**, sent once each when the results come out (`f1_sessions` in `ci-state.json`).
+
+- Dark F1 header: the Grand Prix with its flag, the session, and the Thai start time.
+- The top 3 with their photos on their team colour.
+- Everyone else in order: position, team-colour stripe, photo, name, team and time.
+- The time column shows:
+  - practice: best lap, then the gap to the fastest;
+  - qualifying and sprint qualifying: the lap from the last part reached (Q3 for the top 10);
+  - sprint and race: total time, then the gap, laps down, or DNF/DNS/DSQ.
+
+Data, photos and team colours come from the free [OpenF1](https://openf1.org) API.
 
 ## Editing the lists
 

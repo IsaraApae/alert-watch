@@ -76,69 +76,132 @@ def line_send(token, message):
         return False
 
 
-F1 = "https://api.jolpi.ca/ergast/f1/current"  # Jolpica: the free successor of the Ergast F1 data service, no key needed
-F1_STATUS = {"R": "DNF", "D": "DSQ", "W": "DNS", "N": "NC", "E": "EX", "F": "DNQ"}
+OPENF1 = "https://api.openf1.org/v1"  # free F1 timing data: every session's results, driver photos and team colours
 
 
-def f1_rows(results):
-    """[(position, driver, team, gap)] for a race's results: the winner's time, then gaps, laps down or DNF."""
-    lead_laps = int(results[0].get("laps") or 0)
+def f1_time(sec):
+    """92.274 -> "1:32.274", 6120.785 -> "1:42:00.785"."""
+    h, rem = divmod(sec, 3600)
+    m, sec = divmod(rem, 60)
+    return f"{int(h)}:{int(m):02d}:{sec:06.3f}" if h else f"{int(m)}:{sec:06.3f}"
+
+
+def f1_rows(results, drivers):
+    """[(position, driver, time)] in finishing order: a race's time, gaps and laps down; a qualifying's lap in the last
+    part the driver reached (Q3 for the top 10); a practice's best lap and gaps; DNF, DNS or DSQ."""
+    rank = lambda x: x["position"] if isinstance(x.get("position"), int) else 99
     rows = []
-    for x in results:
-        pos = x["positionText"] if x["positionText"].isdigit() else F1_STATUS.get(x["positionText"], x["positionText"])
-        down = lead_laps - int(x.get("laps") or 0)
-        # a lapped car's time is its gap within its own lap, not to the winner: show the laps down instead
-        gap = pos if not pos.isdigit() else f"+{down} Lap{'s' if down > 1 else ''}" if down > 0 else (x.get("Time") or {}).get("time") or x["status"]
-        rows.append((pos, f"{x['Driver']['givenName'][0]}. {x['Driver']['familyName']}", x["Constructor"]["name"].replace(" F1 Team", ""), gap))
+    for x in sorted(results, key=rank):
+        out = next((k.upper() for k in ("dsq", "dns", "dnf") if x.get(k)), None)
+        pos = str(x["position"]) if isinstance(x.get("position"), int) else out or {"RT": "DNF"}.get(x.get("position"), x.get("position") or "NC")
+        dur, gap = x.get("duration"), x.get("gap_to_leader")
+        if isinstance(dur, list):  # qualifying: Q1, Q2, Q3
+            lap = next((v for v in reversed(dur) if v), None)
+            val = f1_time(lap) if lap else out or "No time"
+        elif out:
+            val = out
+        elif not gap and dur:
+            val = f1_time(dur)
+        elif isinstance(gap, (int, float)):
+            val = f"+{gap:.3f}"
+        else:
+            val = str(gap or "").replace("LAPS", "Laps").replace("LAP", "Lap")
+        rows.append((pos, drivers.get(x["driver_number"], {}), val))
     return rows
 
 
-def f1_card(title, when, rows):
-    """A LINE card with every driver's finishing position under a red header."""
-    t = lambda text, **k: {"type": "text", "text": text, "size": "xs", **k}
-    line = lambda pos, name, team, gap: {"type": "box", "layout": "horizontal", "spacing": "sm", "contents": [
-        t(pos, flex=2, align="end", weight="bold"), t(name, flex=7, weight="bold" if pos in ("1", "2", "3") else "regular"),
-        t(team, flex=6, color="#777777"), t(gap, flex=5, align="end", color="#777777")]}
+def f1_name(d):
+    """"Andrea Kimi ANTONELLI" -> "A. Antonelli"."""
+    words = (d.get("full_name") or d.get("name_acronym") or "?").split()
+    last = [w for w in words if w.isupper() and len(w) > 1] or words[-1:]
+    first = [w for w in words if w not in last]
+    return f"{first[0][0]}. " * bool(first) + " ".join(last).title()
+
+
+def f1_card(meeting, session, when, rows):
+    """A LINE card: dark header with the Grand Prix and session, the top 3 with photos on their team colour,
+    then every other driver with a team-colour stripe, a small photo, name, team and time."""
+    dark, red, grey = "#15151E", "#E10600", "#777777"
+    t = lambda text, **k: {"type": "text", "text": text, **k}
+    colour = lambda d: "#" + (d.get("team_colour") or "999999")
+    photo = lambda d, res: (d.get("headshot_url") or "").replace("/1col/", f"/{res}/")  # 1col 93px, 3col 319px
+    face = lambda d, res, **k: ({"type": "image", "url": photo(d, res), "aspectMode": "cover", "aspectRatio": "1:1",
+                                 "backgroundColor": colour(d), **k} if photo(d, res) else
+                                 {"type": "box", "layout": "vertical", "backgroundColor": colour(d), "contents": [], **k})
+
+    def podium(pos, d, val):
+        return {"type": "box", "layout": "vertical", "flex": 1, "spacing": "xs", "contents": [
+            face(d, "3col", size="full"),
+            {"type": "box", "layout": "vertical", "height": "4px", "backgroundColor": colour(d), "contents": []},
+            t(f"P{pos}", size="sm", weight="bold", align="center", color=red if pos == "1" else dark),
+            t(f1_name(d), size="xs", weight="bold", align="center", wrap=True),
+            t(val, size="xxs", color=grey, align="center")]}
+
+    def row(pos, d, val):
+        return {"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "center", "contents": [
+            {"type": "box", "layout": "vertical", "width": "26px", "contents": [t(pos, size="xs", weight="bold", align="end")]},
+            {"type": "box", "layout": "vertical", "width": "3px", "height": "28px", "backgroundColor": colour(d), "contents": []},
+            face(d, "1col", size="28px", flex=0),
+            {"type": "box", "layout": "vertical", "flex": 1, "contents": [
+                t(f1_name(d), size="xs", weight="bold"), t(d.get("team_name") or "", size="xxs", color=grey)]},
+            t(val, size="xs", color=grey, align="end", flex=0)]}
+
+    head = [{"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "center", "contents": [
+        t("F1", size="md", weight="bold", style="italic", color=red, flex=0),
+        t(meeting.get("meeting_name") or "Formula 1", size="xs", color="#FFFFFF", flex=1),
+        *([{"type": "image", "url": meeting["country_flag"], "size": "xxs", "aspectRatio": "16:9", "flex": 0}]
+          if meeting.get("country_flag", "").endswith(".png") else [])]},
+        t(session, size="xl", weight="bold", color="#FFFFFF"), t(when, size="xxs", color="#AAAAAA")]
+    body = [{"type": "box", "layout": "horizontal", "spacing": "md", "contents": [podium(*r) for r in rows[:3]]},
+            {"type": "separator", "margin": "lg"}]
+    for r in rows[3:]:
+        body += [row(*r)]
     return {"type": "bubble", "size": "mega",
-            "header": {"type": "box", "layout": "vertical", "backgroundColor": "#E10600", "contents": [
-                {"type": "text", "text": title, "weight": "bold", "color": "#FFFFFF", "wrap": True},
-                {"type": "text", "text": when, "size": "xs", "color": "#FFFFFF"}]},
-            "body": {"type": "box", "layout": "vertical", "spacing": "xs", "contents": [line(*r) for r in rows]}}
+            "header": {"type": "box", "layout": "vertical", "backgroundColor": dark, "spacing": "xs", "contents": head},
+            "body": {"type": "box", "layout": "vertical", "spacing": "sm", "contents": body}}
 
 
 def f1(state):
-    """Send each Formula 1 race's and sprint's finishing order once, when the results come out (up to 3 days after)."""
-    token, sent = os.environ.get("LINE_TOKEN"), state.setdefault("f1", [])
-    for session, key, label in (("results", "Results", "Race"), ("sprint", "SprintResults", "Sprint")):
+    """Send every Formula 1 session's order once it is published: Practice 1-3, Sprint Qualifying, Sprint, Qualifying, Race."""
+    token, now = os.environ.get("LINE_TOKEN"), time.time()
+    state.pop("f1", None)  # the earlier race-only records
+    since = datetime.fromtimestamp(now - 3 * 86400, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    try:
+        sessions = json.loads(get(f"{OPENF1}/sessions?date_end>={since}"))
+    except Exception as e:
+        print(f"FAIL f1 sessions: {e}", file=sys.stderr)
+        return
+    end = lambda s: datetime.fromisoformat(s["date_end"]).timestamp()
+    ended = sorted((s for s in sessions if end(s) <= now), key=end)
+    if "f1_sessions" not in state:  # the first run sends only the newest session, as a sample, not the whole weekend
+        state["f1_sessions"] = [str(s["session_key"]) for s in ended[:-1]]
+    sent = state["f1_sessions"]
+    for s in ended:
+        key = str(s["session_key"])
+        if key in sent:
+            continue
         try:
-            races = json.loads(get(f"{F1}/last/{session}.json"))["MRData"]["RaceTable"]["Races"]
+            results = json.loads(get(f"{OPENF1}/session_result?session_key={key}"))
+            if not results:
+                continue  # not published yet: tried again on the next check
+            drivers = {d["driver_number"]: d for d in json.loads(get(f"{OPENF1}/drivers?session_key={key}"))}
+            meeting = (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0]
         except Exception as e:
-            print(f"FAIL f1 {session}: {e}", file=sys.stderr)
+            print(f"FAIL f1 {s['session_name']}: {e}", file=sys.stderr)
             continue
-        if not races or not races[0].get(key):
-            continue  # the last round had no sprint
-        race = races[0]
-        tag = f"{race['season']}-{race['round']}-{session}"
-        start = datetime.fromisoformat(f"{race['date']}T{race.get('time', '00:00:00Z')}".replace("Z", "+00:00"))
-        if tag in sent or time.time() - start.timestamp() > 3 * 86400:
-            continue
-        if session == "sprint":  # the results leave out the sprint's own start: the season calendar has it
-            try:
-                cal = next(r for r in json.loads(get(f"{F1}.json"))["MRData"]["RaceTable"]["Races"] if r["round"] == race["round"])
-                start = datetime.fromisoformat(f"{cal['Sprint']['date']}T{cal['Sprint'].get('time', '00:00:00Z')}".replace("Z", "+00:00"))
-            except Exception as e:
-                print(f"FAIL f1 calendar: {e}", file=sys.stderr)
-        rows = f1_rows(race[key])
-        title = f"F1 {label}: {race['raceName']}"
-        when = f"Round {race['round']} · {start.astimezone(THAI):%a %d %b %Y %H:%M}"
-        top = ", ".join(f"{p} {n.split('. ')[-1]}" for p, n, _, _ in rows[:3])
+        rows = f1_rows(results, drivers)
+        name, session = meeting.get("meeting_name") or s.get("country_name") or "Formula 1", s["session_name"]
+        when = datetime.fromisoformat(s["date_start"]).astimezone(THAI).strftime("%a %d %b %Y %H:%M")
+        top = ", ".join(f"{p} {d.get('name_acronym', '?')}" for p, d, _ in rows[:3])
         if not token:  # on the Mac: show what would be sent
-            print(title, "|", when, "|", top)
-            sent.append(tag)
+            print(f"F1 {session} · {name} · {when} | {top}")
+            sent.append(key)
             continue
-        plain = {"type": "text", "text": f"{title}\n{when}\n" + "\n".join(f"{p} {n} ({tm}) {g}" for p, n, tm, g in rows)}
-        if line_send(token, {"type": "flex", "altText": f"{title}: {top}"[:400], "contents": f1_card(title, when, rows)}) or line_send(token, plain):
-            sent.append(tag)
+        plain = {"type": "text", "text": f"F1 {session} · {name}\n{when}\n" + "\n".join(f"{p} {f1_name(d)} ({d.get('team_name', '')}) {v}" for p, d, v in rows)}
+        card = {"type": "flex", "altText": f"F1 {session} · {name}: {top}"[:400], "contents": f1_card(meeting, session, when, rows)}
+        if line_send(token, card) or line_send(token, plain):
+            sent.append(key)
+    del sent[:-100]
 
 
 COVER_OVERRIDES = {  # series whose own cover LINE can't show (AVIF): a JPEG copy on the GitHub Pages site
@@ -836,13 +899,17 @@ if __name__ == "__main__":
              ("ซวยเหลือหลายเกิดใหม่กลายเป็นดาบ ซีซั่น 2 ตอนที่ 1 [ซับไทย]", "sub", 1790782200.0)]
         assert youtube_episode(v, "กลายเป็นดาบ", {1}, 1790782200) == "sub"  # Thai-sub, this season, right episode
         assert youtube_episode(v, "กลายเป็นดาบ", {2}, 1790782200) is None
-        drv = lambda f, l: {"givenName": f, "familyName": l}
-        res = [{"positionText": "1", "laps": "62", "status": "Finished", "Time": {"time": "1:42:00.785"}, "Driver": drv("Max", "Verstappen"), "Constructor": {"name": "Red Bull"}},
-               {"positionText": "2", "laps": "62", "status": "Finished", "Time": {"time": "+7.335"}, "Driver": drv("Charles", "Leclerc"), "Constructor": {"name": "Ferrari"}},
-               {"positionText": "15", "laps": "60", "status": "Lapped", "Time": {"time": "+2.171"}, "Driver": drv("Lance", "Stroll"), "Constructor": {"name": "Aston Martin"}},
-               {"positionText": "R", "laps": "30", "status": "Retired", "Driver": drv("George", "Russell"), "Constructor": {"name": "Mercedes"}}]
-        assert f1_rows(res) == [("1", "M. Verstappen", "Red Bull", "1:42:00.785"), ("2", "C. Leclerc", "Ferrari", "+7.335"),
-                                ("15", "L. Stroll", "Aston Martin", "+2 Laps"), ("DNF", "G. Russell", "Mercedes", "DNF")]
+        assert f1_time(92.274) == "1:32.274" and f1_time(6120.785) == "1:42:00.785" and f1_time(61.05) == "1:01.050"
+        assert f1_name({"full_name": "Andrea Kimi ANTONELLI"}) == "A. Antonelli" and f1_name({"full_name": "Nico HÜLKENBERG"}) == "N. Hülkenberg"
+        drv = {3: {"full_name": "Max VERSTAPPEN"}, 16: {"full_name": "Charles LECLERC"}, 10: {"full_name": "Pierre GASLY"}, 18: {"full_name": "Lance STROLL"}}
+        race = [{"position": None, "driver_number": 18, "dnf": True, "duration": None, "gap_to_leader": None},
+                {"position": 1, "driver_number": 3, "duration": 6120.785, "gap_to_leader": 0},
+                {"position": 11, "driver_number": 10, "duration": None, "gap_to_leader": "+1 LAP"},
+                {"position": 2, "driver_number": 16, "duration": 6128.12, "gap_to_leader": 7.335}]
+        assert [(p, v) for p, d, v in f1_rows(race, drv)] == [("1", "1:42:00.785"), ("2", "+7.335"), ("11", "+1 Lap"), ("DNF", "DNF")]
+        quali = [{"position": 1, "driver_number": 3, "duration": [93.241, 91.639, 91.373], "gap_to_leader": [0.8, 0.1, 0]},
+                 {"position": 16, "driver_number": 10, "duration": [95.984, None, None], "gap_to_leader": [3.5, None, None]}]
+        assert [(p, v) for p, d, v in f1_rows(quali, drv)] == [("1", "1:31.373"), ("16", "1:35.984")]
         sp = {1: {"yt": "จิโตเสะ"}}
         vids = [("ชีวิตรสโซดาของจิโตเสะคุง ตอนที่ 13.5 [ซับไทย]", "a", 100, "Ani-One Thailand"),
                 ("ชีวิตรสโซดาของจิโตเสะคุง ตอนที่ 0 [ซับไทย]", "b", 100, "Ani-One Thailand"),
