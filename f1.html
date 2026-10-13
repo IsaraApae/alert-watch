@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>F1 Live Timing</title>
+<meta name="description" content="Free live Formula 1 timing: timing tower, sectors, tyres, track map, race control, weather and team radio.">
+<meta name="theme-color" content="#0b0b10">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2315151e'/%3E%3Ctext x='32' y='42' font-family='Arial' font-weight='900' font-style='italic' font-size='30' fill='%23e10600' text-anchor='middle'%3EF1%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #0b0b10; --panel: #15151e; --panel2: #1b1b26; --line: #262633; --text: #f2f2f6; --dim: #8d8d9c;
+    --purple: #a855f7; --green: #22c55e; --yellow: #facc15; --red: #e10600; --blue: #3b82f6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body { font: 13px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif; font-variant-numeric: tabular-nums; }
+  [hidden] { display: none !important; }
+
+  .top { position: sticky; top: 0; z-index: 5; background: rgba(11, 11, 16, .92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+         border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; }
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 260px; }
+  .f1 { color: var(--red); font-weight: 900; font-style: italic; font-size: 20px; letter-spacing: -.5px; }
+  .event { font-weight: 700; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .facts { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; color: var(--dim); }
+  .facts b { color: var(--text); font-weight: 700; }
+  .chip { padding: 3px 9px; border-radius: 999px; font-weight: 800; font-size: 12px; color: #000; background: var(--green); white-space: nowrap; }
+  .chip.yellow { background: var(--yellow); } .chip.red { background: var(--red); color: #fff; } .chip.sc { background: #f59e0b; } .chip.off { background: #3a3a48; color: var(--dim); }
+  .live { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 12px; letter-spacing: .5px; }
+  .live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--dim); }
+  .live.on { color: var(--red); } .live.on::before { background: var(--red); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+
+  main { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr); gap: 12px; padding: 12px 16px 24px; max-width: 1600px; margin: 0 auto; }
+  .side { display: grid; gap: 12px; align-content: start; min-width: 0; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; min-width: 0; }
+  .panel h2 { margin: 0; padding: 10px 12px; font-size: 13px; font-weight: 700; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 8px; }
+  .panel h2 small { color: var(--dim); font-weight: 500; }
+
+  /* timing tower */
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; width: 100%; white-space: nowrap; }
+  th { position: sticky; top: 0; background: var(--panel2); color: var(--dim); font-weight: 600; font-size: 11px; text-align: right; padding: 7px 8px; }
+  td { padding: 5px 8px; border-top: 1px solid var(--line); text-align: right; }
+  th:nth-child(-n+2), td:nth-child(-n+2) { text-align: left; position: sticky; z-index: 1; background: var(--panel); }
+  th:nth-child(-n+2) { z-index: 2; background: var(--panel2); }
+  th:first-child, td:first-child { left: 0; width: 34px; } th:nth-child(2), td:nth-child(2) { left: 34px; box-shadow: 6px 0 8px -6px rgba(0, 0, 0, .7); }
+  tr.out td { opacity: .45; }
+  .pos { font-weight: 800; text-align: center !important; }
+  .drv { display: inline-flex; align-items: center; gap: 7px; font-weight: 800; }
+  .drv i { width: 4px; height: 18px; border-radius: 2px; }
+  .drv img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: #2a2a36; }
+  .tag { font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
+  .tag.pit { background: var(--blue); } .tag.outlap { background: #3a3a48; } .tag.ko { background: #3a3a48; color: var(--dim); }
+  .t-purple { color: var(--purple); font-weight: 700; } .t-green { color: var(--green); font-weight: 700; } .t-yellow { color: var(--yellow); }
+  .best.t-purple { background: rgba(168, 85, 247, .18); border-radius: 4px; padding: 1px 4px; }
+  .catch { color: var(--green); }
+  .sector { display: inline-grid; gap: 2px; justify-items: end; }
+  .segs { display: flex; gap: 2px; } .segs b { width: 5px; height: 3px; border-radius: 1px; background: #34343f; }
+  .segs b.y { background: var(--yellow); } .segs b.g { background: var(--green); } .segs b.p { background: var(--purple); } .segs b.pit { background: var(--blue); }
+  .tyre { display: inline-flex; align-items: center; gap: 5px; justify-content: flex-end; }
+  .tyre span { width: 20px; height: 20px; border-radius: 50%; border: 3px solid; display: inline-grid; place-items: center; font-size: 10px; font-weight: 900; }
+  .up { color: var(--green); } .down { color: var(--red); } .same { color: var(--dim); }
+
+  /* track map */
+  #map { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; background: radial-gradient(circle at 50% 40%, #191925, #12121a); }
+  .map-note { color: var(--dim); font-size: 11px; padding: 6px 12px 9px; }
+
+  /* fastest sectors */
+  .bests { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .bests > div { padding: 8px 10px; border-right: 1px solid var(--line); min-width: 0; }
+  .bests > div:last-child { border-right: 0; }
+  .bests h3 { margin: 0 0 6px; font-size: 11px; color: var(--dim); font-weight: 600; }
+  .bests p { margin: 3px 0; display: flex; justify-content: space-between; gap: 6px; }
+  .bests p:first-of-type span:last-child { color: var(--purple); font-weight: 700; }
+
+  /* lists */
+  ol.feed { list-style: none; margin: 0; padding: 0; max-height: 330px; overflow-y: auto; }
+  ol.feed li { padding: 8px 12px; border-top: 1px solid var(--line); display: flex; gap: 10px; align-items: flex-start; }
+  ol.feed li:first-child { border-top: 0; }
+  .when { color: var(--dim); font-size: 11px; white-space: nowrap; }
+  .flag { width: 6px; align-self: stretch; border-radius: 3px; background: #3a3a48; flex: 0 0 6px; }
+  .flag.GREEN, .flag.CLEAR { background: var(--green); } .flag.YELLOW, .flag.DOUBLE { background: var(--yellow); } .flag.RED { background: var(--red); }
+  .flag.BLUE { background: var(--blue); } .flag.CHEQUERED { background: repeating-linear-gradient(45deg, #fff 0 4px, #000 4px 8px); } .flag.SC { background: #f59e0b; }
+  .radio img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex: 0 0 40px; }
+  .radio .who { font-weight: 700; } .radio audio { width: 100%; height: 32px; margin-top: 4px; }
+  .empty { color: var(--dim); padding: 14px 12px; }
+
+  footer { color: var(--dim); font-size: 11px; text-align: center; padding: 0 16px 28px; }
+  footer a { color: var(--dim); }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; padding: 10px 10px 20px; }
+    .top { padding: 8px 12px; }
+    td, th { padding: 5px 6px; }
+    .col-best, .col-s { display: none; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="f1">F1</span><span class="event" id="event">Connecting to live timing…</span></div>
+  <div class="facts">
+    <span class="live" id="live">OFFLINE</span>
+    <span id="lap"></span>
+    <span id="clock"></span>
+    <span class="chip off" id="track">–</span>
+    <span id="weather"></span>
+  </div>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>Timing <small id="part"></small></h2>
+    <div class="scroll"><table id="tower"></table></div>
+  </section>
+  <div class="side">
+    <section class="panel">
+      <h2>Track map <small>approximate positions</small></h2>
+      <svg id="map" viewBox="0 0 400 300" role="img" aria-label="Circuit map with each car's approximate position"></svg>
+      <div class="map-note">Cars are placed by how far through the lap they are, from the timing loops. Exact positions are only on F1 TV.</div>
+    </section>
+    <section class="panel"><h2>Fastest sectors</h2><div class="bests" id="bests"></div></section>
+    <section class="panel"><h2>Race control</h2><ol class="feed" id="rc"></ol></section>
+    <section class="panel"><h2>Team radio</h2><ol class="feed radio" id="radio"></ol></section>
+  </div>
+</main>
+
+<footer>
+  Unofficial fan page, not associated with Formula 1. Timing from Formula 1's live timing feed, circuits from
+  <a href="https://multiviewer.app" target="_blank" rel="noopener">MultiViewer</a>, photos from formula1.com.
+  · <a href="./">Alert Watch</a>
+</footer>
+
+<script>
+"use strict";
+const FEED = "wss://livetiming.formula1.com/signalrcore";
+const STATIC = "https://livetiming.formula1.com/static/";
+const TOPICS = ["Heartbeat", "SessionInfo", "SessionStatus", "TrackStatus", "LapCount", "ExtrapolatedClock", "TimingData",
+                "TimingAppData", "TimingStats", "DriverList", "WeatherData", "RaceControlMessages", "TeamRadio"];
+const RS = "\u001e";
+const params = new URLSearchParams(location.search);
+const REPLAY = params.get("replay");   // test mode: play a recorded session from files next to this page
+
+const S = {};                          // live state, one object per topic
+const prog = {};                       // per car: mini-sectors passed this lap, when, and when each was passed
+const segFrac = [];                    // learned from clean laps: how far through a lap (in time) each mini-sector ends
+let clockShift = 0;                    // replay: recorded time minus real time
+const now = () => Date.now() + clockShift;
+let dirty = true;
+
+// ---------- data ----------
+function merge(target, delta) {        // F1 sends changes only; lists change by index ({"3": {...}})
+  if (delta === null || typeof delta !== "object") return delta;
+  if (Array.isArray(delta)) return delta;
+  if (target === null || typeof target !== "object") target = {};
+  for (const [k, v] of Object.entries(delta)) {
+    if (k === "_kf") continue;
+    target[k] = merge(target[k], v);
+  }
+  return target;
+}
+const list = x => Array.isArray(x) ? x : x && typeof x === "object" ? Object.keys(x).sort((a, b) => a - b).map(k => x[k]) : [];
+
+function apply(topic, data, ts) {
+  S[topic] = merge(S[topic], data);
+  if (topic === "TimingData") track(ts);
+  dirty = true;
+}
+
+function segmentsPassed(line) {
+  let n = 0, total = 0;
+  for (const sec of list(line && line.Sectors)) for (const seg of list(sec.Segments)) { total++; if (seg && seg.Status) n++; }
+  return [n, total];
+}
+function track(ts) {
+  for (const [num, line] of Object.entries((S.TimingData || {}).Lines || {})) {
+    const [n, total] = segmentsPassed(line);
+    const p = prog[num] || (prog[num] = { n: -1, at: ts, marks: [] });
+    if (n === p.n) continue;
+    if (n < p.n) {                       // the marks reset: a new lap began at the previous lap's last mark
+      const end = p.marks[p.total - 1], lap = seconds((line.LastLapTime || {}).Value) * 1000;
+      if (p.start && end && p.marks.filter(Boolean).length === p.total && Math.abs(end - p.start - lap) < 2000) {
+        for (let k = 0; k < p.total; k++) {   // a clean lap seen whole: learn where each mini-sector ends
+          const f = (p.marks[k] - p.start) / (end - p.start);
+          segFrac[k] = segFrac[k] == null ? f : segFrac[k] * 0.8 + f * 0.2;
+        }
+      }
+      p.start = end || null; p.marks = []; p.n = 0;
+    }
+    for (let k = Math.max(0, p.n); k < n; k++) p.marks[k] = ts;
+    p.n = n; p.at = ts; p.total = total;
+  }
+}
+
+// ---------- connection ----------
+let ws, pingTimer, retry = 0;
+function connect() {
+  setLive("connecting");
+  ws = new WebSocket(FEED);
+  let subscribed = false, buffer = "";
+  ws.onopen = () => ws.send(JSON.stringify({ protocol: "json", version: 1 }) + RS);
+  ws.onmessage = e => {
+    buffer += e.data;
+    const parts = buffer.split(RS); buffer = parts.pop();
+    for (const part of parts) {
+      if (!part) continue;
+      let m; try { m = JSON.parse(part); } catch (err) { continue; }
+      if (!subscribed) {           // handshake answered: ask for every topic
+        subscribed = true; retry = 0;
+        ws.send(JSON.stringify({ type: 1, invocationId: "1", target: "Subscribe", arguments: [TOPICS] }) + RS);
+        clearInterval(pingTimer); pingTimer = setInterval(() => ws.readyState === 1 && ws.send(JSON.stringify({ type: 6 }) + RS), 15000);
+        continue;
+      }
+      if (m.type === 3 && m.result) {  // the full state, then changes as they happen
+        for (const [topic, data] of Object.entries(m.result)) { S[topic] = undefined; apply(topic, data, now()); }
+        loadCircuit();
+      } else if (m.type === 1 && Array.isArray(m.arguments)) {
+        const [topic, data, ts] = m.arguments;
+        if (typeof topic === "string") apply(topic, data, utc(ts) || now());
+      } else if (m.type === 7) ws.close();
+    }
+  };
+  ws.onclose = () => {
+    clearInterval(pingTimer);
+    setLive("offline");
+    setTimeout(connect, Math.min(30000, 2000 * 2 ** retry++));
+  };
+}
+
+// ---------- replay (testing with a recorded session) ----------
+async function replay(base) {
+  setLive("replay");
+  const speed = +params.get("speed") || 1, from = (+params.get("from") || 0) * 60000;
+  const events = [];
+  await Promise.all(TOPICS.map(async topic => {
+    const r = await fetch(base + topic + ".jsonStream"); if (!r.ok) return;
+    for (const line of (await r.text()).replace(/^﻿/, "").split("\n")) {
+      const m = /^(\d+):(\d+):(\d+\.\d+)(.*)$/.exec(line.trim()); if (!m) continue;
+      events.push([((+m[1] * 60 + +m[2]) * 60 + +m[3]) * 1000, topic, JSON.parse(m[4])]);
+    }
+  }));
+  events.sort((a, b) => a[0] - b[0]);
+  const beat = events.find(e => e[1] === "Heartbeat" && e[2].Utc);
+  const zero = beat ? utc(beat[2].Utc) - beat[0] : Date.now();   // recorded offsets -> UTC
+  let i = 0, t = from;
+  const step = () => { while (i < events.length && events[i][0] <= t) { const e = events[i++]; apply(e[1], e[2], zero + e[0]); } clockShift = zero + t - Date.now(); };
+  step(); loadCircuit();
+  setInterval(() => { t += 250 * speed; step(); }, 250);
+}
+
+// ---------- helpers ----------
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const driver = n => ((S.DriverList || {})[n]) || {};
+const colour = d => "#" + (d.TeamColour || "777777");
+const year = () => (S.SessionInfo && S.SessionInfo.StartDate || "").slice(0, 4) || new Date().getFullYear();
+const utc = t => Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(t || "") ? t : t + "Z");   // F1 often leaves off the "Z" of UTC
+const timeOf = t => new Date(utc(t)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+function seconds(t) { if (!t) return null; const p = String(t).split(":").map(Number); return p.reduce((a, b) => a * 60 + b, 0); }
+function photo(d, px) {   // formula1.com's portrait for the season, in the current team's suit
+  const m = /\/([A-Z]{6}\d{2})_/.exec(d.HeadshotUrl || "");
+  const plain = s => (s || "").normalize("NFKD").replace(/[^A-Za-z]/g, "");
+  const code = m ? m[1].toLowerCase() : (plain(d.FirstName).slice(0, 3) + plain(d.LastName).slice(0, 3) + "01").toLowerCase();
+  const team = (d.TeamName || "").toLowerCase().replace(/[^a-z0-9]/g, ""), y = year();
+  return `https://media.formula1.com/image/upload/c_thumb,g_face,z_0.6,w_${px},h_${px}/d_common:f1:${y}:fallback:driver:${y}fallbackdriverright.webp/common/f1/${y}/${team}/${code}/${y}${team}${code}right.webp`;
+}
+const TYRES = { SOFT: ["S", "#e10600"], MEDIUM: ["M", "#facc15"], HARD: ["H", "#f2f2f6"], INTERMEDIATE: ["I", "#22c55e"], WET: ["W", "#3b82f6"] };
+const segClass = s => ({ 2048: "y", 2049: "g", 2051: "p", 2064: "pit" })[s] || "";
+const timeClass = x => x && x.OverallFastest ? "t-purple" : x && x.PersonalFastest ? "t-green" : "";
+
+function setLive(state) {
+  const el = document.getElementById("live");
+  el.className = "live" + (state === "live" ? " on" : "");
+  el.textContent = { live: "LIVE", replay: "REPLAY", connecting: "CONNECTING", offline: "OFFLINE", ended: "ENDED", waiting: "NOT STARTED" }[state] || state;
+}
+
+// ---------- header ----------
+function renderHeader() {
+  const info = S.SessionInfo || {}, meeting = info.Meeting || {};
+  document.getElementById("event").textContent = meeting.Name ? `${meeting.Name.replace("Grand Prix", "GP")}: ${info.Name || ""}` : "Waiting for live timing…";
+  document.title = meeting.Name ? `${info.Name} · ${meeting.Name} · F1 Live Timing` : "F1 Live Timing";
+  const status = (S.SessionStatus || {}).Status;
+  if (!REPLAY && ws && ws.readyState === 1) setLive(status === "Started" ? "live" : ["Finished", "Finalised", "Ends"].includes(status) ? "ended" : status === "Inactive" ? "waiting" : "live");
+  const lap = S.LapCount;
+  document.getElementById("lap").innerHTML = lap && lap.TotalLaps ? `Lap <b>${lap.CurrentLap}/${lap.TotalLaps}</b>` : "";
+  const ts = S.TrackStatus || {}, chip = document.getElementById("track");
+  const kinds = { "1": ["Track clear", ""], "2": ["Yellow flag", "yellow"], "4": ["Safety car", "sc"], "5": ["Red flag", "red"], "6": ["VSC", "sc"], "7": ["VSC ending", "sc"] };
+  const [label, cls] = kinds[ts.Status] || [ts.Message || "–", "off"];
+  chip.textContent = label; chip.className = "chip " + cls;
+  const w = S.WeatherData;
+  document.getElementById("weather").innerHTML = w ? `Air <b>${w.AirTemp}°</b> · Track <b>${w.TrackTemp}°</b> · Wind <b>${(+w.WindSpeed * 3.6).toFixed(0)} km/h</b>${w.Rainfall === "1" ? " · <b>Rain</b>" : ""}` : "";
+}
+function renderClock() {
+  const c = S.ExtrapolatedClock, el = document.getElementById("clock");
+  if (!c || !c.Remaining) { el.textContent = ""; return; }
+  let left = seconds(c.Remaining) * 1000;
+  if (c.Extrapolating && c.Utc) left -= now() - utc(c.Utc);
+  left = Math.max(0, left / 1000);
+  const h = Math.floor(left / 3600), m = Math.floor(left / 60) % 60, s = Math.floor(left % 60);
+  el.innerHTML = `<b>${h ? h + ":" + String(m).padStart(2, "0") : m}:${String(s).padStart(2, "0")}</b> left`;
+}
+
+// ---------- timing tower ----------
+function renderTower() {
+  const td = S.TimingData, lines = td && td.Lines;
+  const table = document.getElementById("tower");
+  if (!lines) { table.innerHTML = `<tr><td class="empty">Waiting for timing data…</td></tr>`; return; }
+  const race = (S.SessionInfo || {}).Type === "Race";   // the race or the sprint
+  const part = td.SessionPart;   // qualifying: 1, 2, 3
+  document.getElementById("part").textContent = part ? `Q${part}` : "";
+  const app = (S.TimingAppData || {}).Lines || {};
+  const rows = Object.entries(lines).sort((a, b) => (+a[1].Line || 99) - (+b[1].Line || 99));
+  let html = `<tr><th>Pos</th><th>Driver</th><th>${race ? "Interval" : "Gap"}</th><th>${race ? "Gap" : "Int"}</th><th>Last lap</th>
+              <th class="col-best">Best lap</th><th class="col-s">Sector 1</th><th class="col-s">Sector 2</th><th class="col-s">Sector 3</th><th>Tyre</th><th>Pit</th>${race ? "<th>+/-</th>" : ""}</tr>`;
+  for (const [num, l] of rows) {
+    const d = driver(num), stats = list(l.Stats)[part ? part - 1 : 0] || {};
+    let gap = l.GapToLeader != null ? l.GapToLeader : l.TimeDiffToFastest != null ? l.TimeDiffToFastest : stats.TimeDiffToFastest;
+    if (/^LAP/i.test(gap || "")) gap = "—";   // the leader's row shows the lap number in F1's feed
+    let intv = l.IntervalToPositionAhead ? l.IntervalToPositionAhead.Value : l.TimeDiffToPositionAhead != null ? l.TimeDiffToPositionAhead : stats.TimeDifftoPositionAhead;
+    if (/^LAP/i.test(intv || "")) intv = "—";
+    const catching = l.IntervalToPositionAhead && l.IntervalToPositionAhead.Catching;
+    const best = (l.BestLapTime && l.BestLapTime.Value) || (list(l.BestLapTimes)[part ? part - 1 : 0] || {}).Value || "";
+    const out = l.Retired || l.Stopped || l.KnockedOut;
+    const tags = (l.InPit ? `<span class="tag pit">PIT</span>` : l.PitOut ? `<span class="tag outlap">OUT</span>` : "")
+               + (l.Retired ? `<span class="tag ko">OUT</span>` : l.KnockedOut ? `<span class="tag ko">KO</span>` : "");
+    const sectors = list(l.Sectors).map(sec => `<td class="col-s"><span class="sector"><span class="${timeClass(sec)}">${esc(sec.Value || "")}</span>
+        <span class="segs">${list(sec.Segments).map(g => `<b class="${segClass(g && g.Status)}"></b>`).join("")}</span></span></td>`).join("");
+    const a = app[num] || {}, stints = list(a.Stints), stint = stints[stints.length - 1] || {};
+    const [letter, ring] = TYRES[stint.Compound] || ["?", "#777"];
+    const moved = race && a.GridPos && l.Position ? (+a.GridPos - +l.Position) : 0;
+    html += `<tr class="${out ? "out" : ""}">
+      <td class="pos">${esc(l.ShowPosition === false ? "" : l.Position)}</td>
+      <td><span class="drv"><i style="background:${colour(d)}"></i><img src="${photo(d, 64)}" alt="" loading="lazy">${esc(d.Tla || num)}${tags}</span></td>
+      <td class="${race && catching ? "catch" : ""}">${esc(race ? intv : gap) || "–"}</td>
+      <td>${esc(race ? gap : intv) || ""}</td>
+      <td class="${timeClass(l.LastLapTime)}">${esc((l.LastLapTime || {}).Value || "")}</td>
+      <td class="col-best"><span class="best ${l.BestLapTime && l.BestLapTime.Position === 1 ? "t-purple" : ""}">${esc(best)}</span></td>
+      ${sectors || `<td class="col-s"></td><td class="col-s"></td><td class="col-s"></td>`}
+      <td>${stint.Compound ? `<span class="tyre">${esc(stint.TotalLaps != null ? stint.TotalLaps : "")}<span style="border-color:${ring};color:${ring}">${letter}</span></span>` : ""}</td>
+      <td>${esc(l.NumberOfPitStops != null ? l.NumberOfPitStops : Math.max(0, stints.length - 1))}</td>
+      ${race ? `<td class="${moved > 0 ? "up" : moved < 0 ? "down" : "same"}">${moved > 0 ? "▲" + moved : moved < 0 ? "▼" + -moved : "–"}</td>` : ""}
+    </tr>`;
+  }
+  table.innerHTML = html;
+}
+
+// ---------- fastest sectors ----------
+function renderBests() {
+  const lines = (S.TimingStats || {}).Lines || {}, out = [];
+  for (let i = 0; i < 3; i++) {
+    const top = Object.entries(lines).map(([n, l]) => [n, list(l.BestSectors)[i] || {}]).filter(([, b]) => b.Value && b.Position)
+                      .sort((a, b) => a[1].Position - b[1].Position).slice(0, 3);
+    out.push(`<div><h3>Sector ${i + 1}</h3>${top.map(([n, b]) => `<p><span class="drv"><i style="background:${colour(driver(n))}"></i>${esc(driver(n).Tla || n)}</span><span>${esc(b.Value)}</span></p>`).join("") || `<p class="when">–</p>`}</div>`);
+  }
+  document.getElementById("bests").innerHTML = out.join("");
+}
+
+// ---------- race control & radio ----------
+function renderRaceControl() {
+  const msgs = list((S.RaceControlMessages || {}).Messages).slice(-40).reverse();
+  document.getElementById("rc").innerHTML = msgs.length ? msgs.map(m => {
+    const flag = (m.Flag || (m.Category === "SafetyCar" ? "SC" : "")).split(" ")[0];
+    return `<li><span class="flag ${esc(flag)}"></span><div><div>${esc(m.Message)}</div><div class="when">${m.Lap ? "Lap " + esc(m.Lap) + " · " : ""}${timeOf(m.Utc)}</div></div></li>`;
+  }).join("") : `<li class="empty">No messages yet</li>`;
+}
+let radioKey = "";
+function renderRadio() {
+  const caps = list((S.TeamRadio || {}).Captures).slice(-25).reverse(), path = (S.SessionInfo || {}).Path || "";
+  const key = caps.length + ":" + (caps[0] && caps[0].Utc);
+  if (key === radioKey) return;          // don't rebuild while something is playing
+  radioKey = key;
+  document.getElementById("radio").innerHTML = caps.length ? caps.map(c => {
+    const d = driver(c.RacingNumber);
+    return `<li><img src="${photo(d, 96)}" alt="" loading="lazy" style="background:${colour(d)}"><div style="flex:1;min-width:0">
+      <div><span class="who">${esc(d.FirstName ? d.FirstName + " " + d.LastName : d.Tla || c.RacingNumber)}</span> <span class="when">${timeOf(c.Utc)}</span></div>
+      <audio controls preload="none" src="${STATIC + esc(path) + esc(c.Path)}"></audio></div></li>`;
+  }).join("") : `<li class="empty">No team radio yet</li>`;
+}
+
+// ---------- track map ----------
+let circuit = null, circuitKey = null, trackLen = [], mapBox = null;
+async function loadCircuit() {
+  const key = (((S.SessionInfo || {}).Meeting || {}).Circuit || {}).Key;
+  if (!key || key === circuitKey) return;
+  circuitKey = key;
+  for (const y of [year(), year() - 1, year() - 2]) {
+    try { const r = await fetch(`https://api.multiviewer.app/api/v1/circuits/${key}/${y}`); if (r.ok) { circuit = await r.json(); break; } } catch (e) {}
+  }
+  if (circuit) drawCircuit();
+}
+function rotate(x, y, deg) { const a = deg * Math.PI / 180; return [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)]; }
+function drawCircuit() {
+  const rot = circuit.rotation || 0;
+  const pts = circuit.x.map((x, i) => rotate(x, circuit.y[i], rot));
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const pad = 30, w = 400, h = 300, k = Math.min((w - 2 * pad) / (maxX - minX), (h - 2 * pad) / (maxY - minY));
+  const ox = (w - (maxX - minX) * k) / 2, oy = (h - (maxY - minY) * k) / 2;
+  mapBox = ([x, y]) => [ox + (x - minX) * k, h - (oy + (y - minY) * k)];   // y up
+  circuit.screen = pts.map(mapBox);
+  // place by time through the lap: the outline's points come with when a real car reached them
+  const times = circuit.trackPositionTime || [];
+  const t0 = times[0] || 0, t1 = times[times.length - 1] || 1;
+  trackLen = times.length === pts.length ? times.map(t => (t - t0) / (t1 - t0 || 1)) : pts.map((_, i) => i / (pts.length - 1));
+  const d = "M" + circuit.screen.map(p => p.map(v => v.toFixed(1)).join(",")).join("L") + "Z";
+  const corners = (circuit.corners || []).map(c => {
+    const [x, y] = mapBox(rotate(c.trackPosition.x, c.trackPosition.y, rot));
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="#6b6b7a" font-size="8" text-anchor="middle" dy="-6">${c.number}</text>`;
+  }).join("");
+  const [sx, sy] = circuit.screen[0];
+  document.getElementById("map").innerHTML = `<path d="${d}" fill="none" stroke="#3a3a4a" stroke-width="9" stroke-linejoin="round"/>
+    <path d="${d}" fill="none" stroke="#e8e8ee" stroke-width="2.4" stroke-linejoin="round"/>${corners}
+    <rect x="${(sx - 1.5).toFixed(1)}" y="${(sy - 6).toFixed(1)}" width="3" height="12" fill="#fff"/><g id="cars"></g>`;
+}
+function pointAt(f) {   // a fraction of the lap -> a point on the outline
+  f = ((f % 1) + 1) % 1;
+  let i = 1;
+  while (i < trackLen.length - 1 && trackLen[i] < f) i++;
+  const a = trackLen[i - 1], b = trackLen[i], u = b > a ? (f - a) / (b - a) : 0, p = circuit.screen[i - 1], q = circuit.screen[i];
+  return [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u];
+}
+function renderCars() {
+  const g = document.getElementById("cars");
+  if (!g || !circuit) return;
+  const lines = (S.TimingData || {}).Lines || {}, t = now(), dots = [];
+  for (const [num, l] of Object.entries(lines)) {
+    const p = prog[num];
+    if (!p || !p.total || l.Retired || l.Stopped || l.InPit) continue;
+    const lap = (seconds((l.LastLapTime || {}).Value) || seconds((l.BestLapTime || {}).Value) || 100) * 1000;
+    const end = k => segFrac[k] != null ? segFrac[k] : (k + 1) / p.total;   // learned, or evenly spaced until a lap is seen
+    const a = p.n ? end(p.n - 1) : 0, b = p.n < p.total ? end(p.n) : 1 + end(0);
+    const f = a + (b - a) * Math.min(0.95, Math.max(0, (t - p.at) / ((b - a) * lap)));   // moving on toward the next mark
+    const [x, y] = pointAt(f), d = driver(num);
+    dots.push([+l.Line || 99, `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)})"><circle r="7" fill="${colour(d)}" stroke="#0b0b10" stroke-width="1.5"/>
+      <text y="2.6" font-size="6.5" font-weight="800" text-anchor="middle" fill="#000">${esc(d.RacingNumber || num)}</text>
+      <text x="9" y="-6" font-size="7" font-weight="700" fill="#fff">${esc(d.Tla || "")}</text></g>`]);
+  }
+  g.innerHTML = dots.sort((a, b) => b[0] - a[0]).map(d => d[1]).join("");   // the leader on top
+}
+
+// ---------- loop ----------
+function frame() {
+  if (dirty) { dirty = false; renderHeader(); renderTower(); renderBests(); renderRaceControl(); renderRadio(); }
+  renderClock(); renderCars();
+}
+setInterval(frame, 250);
+if (REPLAY) replay(REPLAY); else connect();
+</script>
+</body>
+</html>
