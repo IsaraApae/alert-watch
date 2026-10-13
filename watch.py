@@ -66,7 +66,8 @@ def notify(title, msg, links, image=None, uri=None):
 
 def line_send(token, message):
     """Broadcast one message to the Alert Watch LINE account; False if LINE refused it."""
-    req = urllib.request.Request("https://api.line.me/v2/bot/message/broadcast", data=json.dumps({"messages": [message]}).encode(),
+    # compact: LINE limits each card to 30 KB, and the F1 standings with 22 photos come close
+    req = urllib.request.Request("https://api.line.me/v2/bot/message/broadcast", data=json.dumps({"messages": [message]}, separators=(",", ":")).encode(),
                                  headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
     try:
         urllib.request.urlopen(req, timeout=30)
@@ -117,6 +118,26 @@ def f1_rows(results, drivers):
     return rows
 
 
+def f1_photo(d, px):
+    """A driver's face as PNG, from formula1.com's portraits for the current season (OpenF1's own photo links are last
+    season's, in old team suits, and rookies have none). Drivers off this season's grid keep their latest photo."""
+    if d.get("old_photo"):
+        return d["old_photo"].replace("/1col/", "/3col/" if px > 100 else "/1col/")
+    code = re.search(r"/([A-Z]{6}\d{2})_", d.get("headshot_url") or "")
+    if code:
+        code = code[1].lower()
+    else:  # formula1.com's code: 3 letters of the first name, 3 of the last, 01 (Isack HADJAR: isahad01)
+        words = unicodedata.normalize("NFKD", d.get("full_name") or "").encode("ascii", "ignore").decode().split()
+        code = f"{words[0][:3]}{words[-1][:3]}01".lower() if len(words) > 1 else ""
+    team = re.sub(r"[^a-z0-9]", "", (d.get("team_name") or "").lower())
+    if not code or not team:
+        return None
+    year = d.get("year") or datetime.now(THAI).year
+    # c_thumb,g_face: cropped to the face; d_: formula1.com's blank driver if the portrait is missing, never a broken image
+    return (f"https://media.formula1.com/image/upload/c_thumb,g_face,z_0.6,w_{px},h_{px}/d_common:f1:{year}:fallback:driver:"
+            f"{year}fallbackdriverright.webp/common/f1/{year}/{team}/{code}/{year}{team}{code}right.png")
+
+
 def f1_name(d):
     """"Andrea Kimi ANTONELLI" -> "A. Antonelli"."""
     words = (d.get("full_name") or d.get("name_acronym") or "?").split()
@@ -131,7 +152,7 @@ def f1_card(meeting, session, when, rows):
     dark, red, grey = "#15151E", "#E10600", "#777777"
     t = lambda text, **k: {"type": "text", "text": text, **k}
     colour = lambda d: "#" + (d.get("team_colour") or "999999")
-    photo = lambda d, res: (d.get("headshot_url") or "").replace("/1col/", f"/{res}/")  # 1col 93px, 3col 319px
+    photo = lambda d, res: f1_photo(d, 300 if res == "3col" else 96)
     face = lambda d, res, **k: ({"type": "image", "url": photo(d, res), "aspectMode": "cover", "aspectRatio": "1:1",
                                  "backgroundColor": colour(d), **k} if photo(d, res) else
                                  {"type": "box", "layout": "vertical", "backgroundColor": colour(d), "contents": [], **k})
@@ -203,13 +224,14 @@ def f1_standings(state, token, s, meeting):
         champ_t = json.loads(get(f"{OPENF1}/championship_teams?session_key={key}"))
         if not champ_d or not champ_t:
             return  # not published yet: tried again on the next check
-        drivers = {d["driver_number"]: d for d in json.loads(get(f"{OPENF1}/drivers?session_key={key}"))}
+        drivers = {d["driver_number"]: {**d, "year": s.get("year")} for d in json.loads(get(f"{OPENF1}/drivers?session_key={key}"))}
     except Exception as e:
         print(f"FAIL f1 standings: {e}", file=sys.stderr)
         return
     for n in {c["driver_number"] for c in champ_d} - set(drivers):  # scored earlier in the season, not in this race
         try:
-            drivers[n] = (json.loads(get(f"{OPENF1}/drivers?driver_number={n}")) or [{}])[-1]  # their latest entry
+            entries = json.loads(get(f"{OPENF1}/drivers?driver_number={n}")) or [{}]
+            drivers[n] = {**entries[-1], "old_photo": next((x["headshot_url"] for x in reversed(entries) if x.get("headshot_url")), None)}
         except Exception as e:
             print(f"FAIL f1 driver {n}: {e}", file=sys.stderr)
             drivers[n] = {"full_name": f"#{n}"}
@@ -218,7 +240,7 @@ def f1_standings(state, token, s, meeting):
     move = lambda c: (c.get("position_start") or c.get("position_current") or 0) - (c.get("position_current") or 0)
     gained = lambda c: (c.get("points_current") or 0) - (c.get("points_start") or 0)
     drows = [(c["position_current"], move(c), "#" + (drivers[c["driver_number"]].get("team_colour") or "999999"),
-              drivers[c["driver_number"]].get("headshot_url"), f1_name(drivers[c["driver_number"]]),
+              f1_photo(drivers[c["driver_number"]], 96), f1_name(drivers[c["driver_number"]]),
               drivers[c["driver_number"]].get("team_name") or "", c.get("points_current") or 0, gained(c)) for c in sorted(champ_d, key=rank)]
     trows = [(c["position_current"], move(c), colour.get(c["team_name"], "#999999"), None, c["team_name"], "",
               c.get("points_current") or 0, gained(c)) for c in sorted(champ_t, key=rank)]
@@ -270,7 +292,7 @@ def f1(state):
             results = json.loads(get(f"{OPENF1}/session_result?session_key={key}"))
             if not results:
                 continue  # not published yet: tried again on the next check
-            drivers = {d["driver_number"]: d for d in json.loads(get(f"{OPENF1}/drivers?session_key={key}"))}
+            drivers = {d["driver_number"]: {**d, "year": s.get("year")} for d in json.loads(get(f"{OPENF1}/drivers?session_key={key}"))}
             meeting = (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0]
         except Exception as e:
             print(f"FAIL f1 {s['session_name']}: {e}", file=sys.stderr)
@@ -988,6 +1010,10 @@ if __name__ == "__main__":
         assert youtube_episode(v, "กลายเป็นดาบ", {1}, 1790782200) == "sub"  # Thai-sub, this season, right episode
         assert youtube_episode(v, "กลายเป็นดาบ", {2}, 1790782200) is None
         assert f1_time(92.274) == "1:32.274" and f1_time(6120.785) == "1:42:00.785" and f1_time(61.05) == "1:01.050"
+        hadjar = {"full_name": "Isack HADJAR", "team_name": "Red Bull Racing", "year": 2026,
+                  "headshot_url": "https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/I/ISAHAD01_Isack_Hadjar/isahad01.png.transform/1col/image.png"}
+        assert f1_photo(hadjar, 96).endswith("/common/f1/2026/redbullracing/isahad01/2026redbullracingisahad01right.png")
+        assert "/2026/audi/nichul01/" in f1_photo({"full_name": "Nico HÜLKENBERG", "team_name": "Audi", "year": 2026}, 96)  # no link: from the name
         assert f1_name({"full_name": "Andrea Kimi ANTONELLI"}) == "A. Antonelli" and f1_name({"full_name": "Nico HÜLKENBERG"}) == "N. Hülkenberg"
         drv = {3: {"full_name": "Max VERSTAPPEN"}, 16: {"full_name": "Charles LECLERC"}, 10: {"full_name": "Pierre GASLY"}, 18: {"full_name": "Lance STROLL"}}
         race = [{"position": None, "driver_number": 18, "dnf": True, "duration": None, "gap_to_leader": None},
