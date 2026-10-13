@@ -22,8 +22,8 @@ Anime alerts use the time the **Thai-sub** episode comes out (never dubbed, neve
 [isaraapae.github.io/alert-watch/f1.html](https://isaraapae.github.io/alert-watch/f1.html) has free live timing in any browser, and the LINE menu's **F1 Live** button opens it. Your browser connects straight to Formula 1's live timing feed, so there's no server.
 
 - **Timing tower:** interval, gap, last and best lap, sectors with mini sectors, speed trap, tyre stints, pit stops and places gained. **Settings** lets you choose which columns to show.
-- **Track map:** an estimate of where each car is on the lap, from the timing loops. Exact positions are only on F1 TV.
-- **Live championship:** drivers (with photos) and teams (with logos), worked out live during sprints and races from the standings before them.
+- **Track map:** an estimate of where each car is on the lap, from the timing loops. Exact positions are only on F1 TV. The map takes each circuit's own shape so the track fills the width. **Full screen** fills the whole screen; on an upright phone a wide circuit is turned so its long side runs down the screen, and replay controls stay visible.
+- **Live championship:** drivers (with photos and team colours) and teams (with logos), worked out live during sprints and races from the standings before them.
 - **Fastest sectors, race control and weather.**
 - **Team radio:** filter by driver, auto-play new messages, play the next one, see each driver's position.
 - **Replay:** any finished session since 2023, from [OpenF1](https://openf1.org). Play or pause it, skip 30 s, change speed (1×–32×), or drag to any moment.
