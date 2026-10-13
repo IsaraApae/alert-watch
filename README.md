@@ -26,9 +26,9 @@ A card after every session of each Grand Prix weekend: **Practice 1, 2 and 3, Sp
 - The time column shows:
   - practice: best lap, then the gap to the fastest;
   - qualifying and sprint qualifying: the lap from the last part reached (Q3 for the top 10);
-  - sprint and race: total time, then the gap, laps down, or DNF/DNS/DSQ.
+  - sprint and race: total time, then the gap, laps down, or DNF/DNS/DSQ. An unclassified driver is shown as NC in the position column.
 
-After each race, the **Drivers' and Teams' Championships** follow as two swipeable cards. Each line shows the position, the change since before the race (+1 in green, -1 in red), and the points with how many were gained (`f1_standings` in `ci-state.json`).
+After each race, the **Drivers' and Teams' Championships** follow as two swipeable cards, with driver photos and team logos. Each line shows the position, the change since before the race (+1 in green, -1 in red), and the points with how many were gained (`f1_standings` in `ci-state.json`).
 
 Times on the cards are Thai time, and race lengths are written as "1h 42m 00.785s". Results, standings and team colours come from the free [OpenF1](https://openf1.org) API. Driver photos are formula1.com's portraits for the current season, cropped to the face. OpenF1's own photo links are last season's, in old team suits, and rookies have none.
 
