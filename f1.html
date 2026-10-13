@@ -82,9 +82,59 @@
   .flag { width: 6px; align-self: stretch; border-radius: 3px; background: #3a3a48; flex: 0 0 6px; }
   .flag.GREEN, .flag.CLEAR { background: var(--green); } .flag.YELLOW, .flag.DOUBLE { background: var(--yellow); } .flag.RED { background: var(--red); }
   .flag.BLUE { background: var(--blue); } .flag.CHEQUERED { background: repeating-linear-gradient(45deg, #fff 0 4px, #000 4px 8px); } .flag.SC { background: #f59e0b; }
-  .radio img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex: 0 0 40px; }
-  .radio .who { font-weight: 700; } .radio audio { width: 100%; height: 32px; margin-top: 4px; }
+  .radio img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: 0 0 44px; }
   .empty { color: var(--dim); padding: 14px 12px; }
+
+  .col { display: grid; gap: 12px; align-content: start; min-width: 0; }
+  .stints { display: inline-flex; gap: 3px; align-items: center; justify-content: flex-end; }
+  .stint { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; color: var(--dim); }
+  .stint span { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid; display: inline-grid; place-items: center; font-size: 8px; font-weight: 900; }
+  .stint.now { color: var(--text); font-weight: 700; } .stint.now span { width: 20px; height: 20px; border-width: 3px; font-size: 10px; }
+
+  /* tabs */
+  .tabs { display: inline-flex; background: #0e0e14; border-radius: 8px; padding: 2px; gap: 2px; }
+  .tabs button { all: unset; cursor: pointer; padding: 3px 10px; border-radius: 6px; font-size: 12px; color: var(--dim); font-weight: 600; }
+  .tabs button[aria-pressed="true"] { background: #2a2a38; color: var(--text); }
+
+  /* championship */
+  .champ { list-style: none; margin: 0; padding: 0; max-height: 420px; overflow-y: auto; }
+  .champ li { display: grid; grid-template-columns: 26px 30px 4px 1fr auto; gap: 8px; align-items: center; padding: 6px 12px; border-top: 1px solid var(--line); }
+  .champ li:first-child { border-top: 0; }
+  .champ .p { font-weight: 800; text-align: right; } .champ .mv { font-size: 11px; font-weight: 800; text-align: center; }
+  .champ .bar { width: 4px; height: 22px; border-radius: 2px; }
+  .champ .pts { text-align: right; font-weight: 800; } .champ .pts small { display: block; color: var(--dim); font-weight: 600; font-size: 10px; }
+  .champ .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .champ .nm small { color: var(--dim); }
+  .note { color: var(--dim); font-size: 11px; padding: 8px 12px; border-top: 1px solid var(--line); }
+
+  /* benchmarks */
+  .bench-sum { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--line); }
+  .bench-sum div { padding: 9px 12px; border-right: 1px solid var(--line); }
+  .bench-sum div:last-child { border-right: 0; }
+  .bench-sum small { display: block; color: var(--dim); font-size: 11px; }
+  .bench-sum b { font-size: 15px; }
+  .lost { color: var(--yellow); }
+
+  /* telemetry */
+  .tele-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .tele-bar select { background: #0e0e14; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: inherit; }
+  .tele-bar .vs { color: var(--dim); }
+  .tele-bar button { background: var(--red); color: #fff; border: 0; border-radius: 8px; padding: 7px 12px; font: inherit; font-weight: 700; cursor: pointer; }
+  .tele-bar button:disabled { opacity: .5; cursor: default; }
+  #tele svg { display: block; width: 100%; height: auto; }
+  .legend { display: flex; gap: 14px; padding: 8px 12px 0; font-size: 12px; } .legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+
+  /* team radio */
+  .radio li { border-left: 3px solid var(--team, #3a3a48); }
+  .radio .who { font-weight: 700; } .radio .tla { color: var(--dim); font-size: 11px; font-weight: 700; }
+  .radio .new { background: var(--red); color: #fff; font-size: 9px; font-weight: 800; border-radius: 4px; padding: 1px 5px; margin-left: 6px; }
+  .player { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .play { all: unset; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: var(--team, #3a3a48); display: grid; place-items: center; flex: 0 0 32px; color: #fff; }
+  .play svg { width: 13px; height: 13px; fill: currentColor; }
+  .track { flex: 1; height: 6px; border-radius: 3px; background: #2a2a36; overflow: hidden; cursor: pointer; }
+  .track i { display: block; height: 100%; width: 0; background: var(--team, #fff); }
+  .dur { color: var(--dim); font-size: 11px; min-width: 32px; text-align: right; }
+  li.playing { background: rgba(255, 255, 255, .04); }
 
   footer { color: var(--dim); font-size: 11px; text-align: center; padding: 0 16px 28px; }
   footer a { color: var(--dim); }
@@ -93,7 +143,7 @@
     main { grid-template-columns: 1fr; padding: 10px 10px 20px; }
     .top { padding: 8px 12px; }
     td, th { padding: 5px 6px; }
-    .col-best, .col-s { display: none; }
+    .bench-sum b { font-size: 13px; }
   }
 </style>
 </head>
@@ -110,15 +160,35 @@
 </header>
 
 <main>
-  <section class="panel">
-    <h2>Timing <small id="part"></small></h2>
-    <div class="scroll"><table id="tower"></table></div>
-  </section>
+  <div class="col">
+    <section class="panel">
+      <h2>Timing <small id="part"></small></h2>
+      <div class="scroll"><table id="tower"></table></div>
+    </section>
+    <section class="panel">
+      <h2>Best lap benchmarks <small>ideal lap = a driver's best three sectors added up</small></h2>
+      <div class="bench-sum" id="benchSum"></div>
+      <div class="scroll"><table id="bench"></table></div>
+    </section>
+    <section class="panel">
+      <h2>Telemetry <small>fastest laps, after the session</small></h2>
+      <div class="tele-bar">
+        <select id="teleA" aria-label="First driver"></select><span class="vs">vs</span><select id="teleB" aria-label="Second driver"></select>
+        <button id="teleGo" type="button">Compare</button>
+      </div>
+      <div id="tele"><p class="empty">Speed, throttle, brake and the time gap around each driver's fastest lap.</p></div>
+    </section>
+  </div>
   <div class="side">
     <section class="panel">
       <h2>Track map <small>approximate positions</small></h2>
       <svg id="map" viewBox="0 0 400 300" role="img" aria-label="Circuit map with each car's approximate position"></svg>
       <div class="map-note">Cars are placed by how far through the lap they are, from the timing loops. Exact positions are only on F1 TV.</div>
+    </section>
+    <section class="panel">
+      <h2><span>Live championship</span><span class="tabs" id="champTabs"><button type="button" data-k="d" aria-pressed="true">Drivers</button><button type="button" data-k="t" aria-pressed="false">Teams</button></span></h2>
+      <ol class="champ" id="champ"></ol>
+      <div class="note" id="champNote"></div>
     </section>
     <section class="panel"><h2>Fastest sectors</h2><div class="bests" id="bests"></div></section>
     <section class="panel"><h2>Race control</h2><ol class="feed" id="rc"></ol></section>
@@ -301,17 +371,20 @@ function renderClock() {
 }
 
 // ---------- timing tower ----------
+let towerRows = {}, towerHead = "";
 function renderTower() {
   const td = S.TimingData, lines = td && td.Lines;
   const table = document.getElementById("tower");
-  if (!lines) { table.innerHTML = `<tr><td class="empty">Waiting for timing data…</td></tr>`; return; }
+  if (!lines) { table.innerHTML = `<tr><td class="empty">Waiting for timing data…</td></tr>`; towerRows = {}; towerHead = ""; return; }
   const race = (S.SessionInfo || {}).Type === "Race";   // the race or the sprint
   const part = td.SessionPart;   // qualifying: 1, 2, 3
   document.getElementById("part").textContent = part ? `Q${part}` : "";
   const app = (S.TimingAppData || {}).Lines || {};
   const rows = Object.entries(lines).sort((a, b) => (+a[1].Line || 99) - (+b[1].Line || 99));
-  let html = `<tr><th>Pos</th><th>Driver</th><th>${race ? "Interval" : "Gap"}</th><th>${race ? "Gap" : "Int"}</th><th>Last lap</th>
-              <th class="col-best">Best lap</th><th class="col-s">Sector 1</th><th class="col-s">Sector 2</th><th class="col-s">Sector 3</th><th>Tyre</th><th>Pit</th>${race ? "<th>+/-</th>" : ""}</tr>`;
+  const head = `<tr><th>Pos</th><th>Driver</th><th>${race ? "Interval" : "Gap"}</th><th>${race ? "Gap" : "Int"}</th><th>Last lap</th>
+              <th class="col-best">Best lap</th><th class="col-s">Sector 1</th><th class="col-s">Sector 2</th><th class="col-s">Sector 3</th><th>Speed trap</th><th>Tyres (laps)</th><th>Pit</th>${race ? "<th>+/-</th>" : ""}</tr>`;
+  if (head !== towerHead) { table.innerHTML = head; towerHead = head; towerRows = {}; }   // a different session: start over
+  const body = table.tBodies[0] || table;
   for (const [num, l] of rows) {
     const d = driver(num), stats = list(l.Stats)[part ? part - 1 : 0] || {};
     let gap = l.GapToLeader != null ? l.GapToLeader : l.TimeDiffToFastest != null ? l.TimeDiffToFastest : stats.TimeDiffToFastest;
@@ -323,25 +396,40 @@ function renderTower() {
     const out = l.Retired || l.Stopped || l.KnockedOut;
     const tags = (l.InPit ? `<span class="tag pit">PIT</span>` : l.PitOut ? `<span class="tag outlap">OUT</span>` : "")
                + (l.Retired ? `<span class="tag ko">OUT</span>` : l.KnockedOut ? `<span class="tag ko">KO</span>` : "");
-    const sectors = list(l.Sectors).map(sec => `<td class="col-s"><span class="sector"><span class="${timeClass(sec)}">${esc(sec.Value || "")}</span>
-        <span class="segs">${list(sec.Segments).map(g => `<b class="${segClass(g && g.Status)}"></b>`).join("")}</span></span></td>`).join("");
     const a = app[num] || {}, stints = list(a.Stints), stint = stints[stints.length - 1] || {};
-    const [letter, ring] = TYRES[stint.Compound] || ["?", "#777"];
+    const stintHtml = stints.map((st, i) => {
+      const [ltr, ring] = TYRES[st.Compound] || ["?", "#777"];
+      return `<span class="stint${i === stints.length - 1 ? " now" : ""}" title="${esc(st.Compound || "")}, ${esc(st.TotalLaps)} laps${st.New === "false" ? ", used" : ""}"><span style="border-color:${ring};color:${ring}">${ltr}</span>${esc(st.TotalLaps != null ? st.TotalLaps : "")}</span>`;
+    }).join("");
+    const trap = (l.Speeds || {}).ST || {};
     const moved = race && a.GridPos && l.Position ? (+a.GridPos - +l.Position) : 0;
-    html += `<tr class="${out ? "out" : ""}">
-      <td class="pos">${esc(l.ShowPosition === false ? "" : l.Position)}</td>
-      <td><span class="drv"><i style="background:${colour(d)}"></i><img src="${photo(d, 64)}" alt="" loading="lazy">${esc(d.Tla || num)}${tags}</span></td>
-      <td class="${race && catching ? "catch" : ""}">${esc(race ? intv : gap) || "–"}</td>
-      <td>${esc(race ? gap : intv) || ""}</td>
-      <td class="${timeClass(l.LastLapTime)}">${esc((l.LastLapTime || {}).Value || "")}</td>
-      <td class="col-best"><span class="best ${l.BestLapTime && l.BestLapTime.Position === 1 ? "t-purple" : ""}">${esc(best)}</span></td>
-      ${sectors || `<td class="col-s"></td><td class="col-s"></td><td class="col-s"></td>`}
-      <td>${stint.Compound ? `<span class="tyre">${esc(stint.TotalLaps != null ? stint.TotalLaps : "")}<span style="border-color:${ring};color:${ring}">${letter}</span></span>` : ""}</td>
-      <td>${esc(l.NumberOfPitStops != null ? l.NumberOfPitStops : Math.max(0, stints.length - 1))}</td>
-      ${race ? `<td class="${moved > 0 ? "up" : moved < 0 ? "down" : "same"}">${moved > 0 ? "▲" + moved : moved < 0 ? "▼" + -moved : "–"}</td>` : ""}
-    </tr>`;
+    const secCells = list(l.Sectors).map(sec => ["col-s", `<span class="sector"><span class="${timeClass(sec)}">${esc(sec.Value || "")}</span>
+        <span class="segs">${list(sec.Segments).map(g => `<b class="${segClass(g && g.Status)}"></b>`).join("")}</span></span>`]);
+    while (secCells.length < 3) secCells.push(["col-s", ""]);
+    const cells = [
+      ["pos", esc(l.ShowPosition === false ? "" : l.Position)],
+      ["", `<span class="drv"><i style="background:${colour(d)}"></i><img src="${photo(d, 64)}" alt="">${esc(d.Tla || num)}${tags}</span>`],
+      [race && catching ? "catch" : "", esc(race ? intv : gap) || "–"],
+      ["", esc(race ? gap : intv) || ""],
+      [timeClass(l.LastLapTime), esc((l.LastLapTime || {}).Value || "")],
+      ["col-best", `<span class="best ${l.BestLapTime && l.BestLapTime.Position === 1 ? "t-purple" : ""}">${esc(best)}</span>`],
+      ...secCells,
+      [timeClass(trap), trap.Value ? esc(trap.Value) + " <small>km/h</small>" : ""],
+      ["", `<span class="stints">${stintHtml}</span>`],
+      ["", esc(l.NumberOfPitStops != null ? l.NumberOfPitStops : Math.max(0, stints.length - 1))],
+      ...(race ? [[moved > 0 ? "up" : moved < 0 ? "down" : "same", moved > 0 ? "▲" + moved : moved < 0 ? "▼" + -moved : "–"]] : [])
+    ];
+    let tr = towerRows[num];
+    if (!tr) { tr = towerRows[num] = document.createElement("tr"); cells.forEach(() => tr.appendChild(document.createElement("td"))); }
+    tr.className = out ? "out" : "";
+    cells.forEach(([cls, html], i) => {   // rewrite a cell only when it changed: the photo isn't reloaded each update
+      const cell = tr.cells[i];
+      if (cell.className !== cls) cell.className = cls;
+      if (cell._html !== html) { cell.innerHTML = html; cell._html = html; }
+    });
+    body.appendChild(tr);   // in running order; moving a row keeps its photo
   }
-  table.innerHTML = html;
+  for (const [num, tr] of Object.entries(towerRows)) if (!lines[num]) { tr.remove(); delete towerRows[num]; }
 }
 
 // ---------- fastest sectors ----------
@@ -371,11 +459,180 @@ function renderRadio() {
   radioKey = key;
   document.getElementById("radio").innerHTML = caps.length ? caps.map(c => {
     const d = driver(c.RacingNumber);
-    return `<li><img src="${photo(d, 96)}" alt="" loading="lazy" style="background:${colour(d)}"><div style="flex:1;min-width:0">
-      <div><span class="who">${esc(d.FirstName ? d.FirstName + " " + d.LastName : d.Tla || c.RacingNumber)}</span> <span class="when">${timeOf(c.Utc)}</span></div>
-      <audio controls preload="none" src="${STATIC + esc(path) + esc(c.Path)}"></audio></div></li>`;
+    const fresh = now() - utc(c.Utc) < 5 * 60000;   // within the last 5 minutes
+    return `<li data-src="${STATIC + esc(path) + esc(c.Path)}" style="--team:${colour(d)}"><img src="${photo(d, 96)}" alt="" loading="lazy" style="background:${colour(d)}">
+      <div style="flex:1;min-width:0">
+        <div><span class="who">${esc(d.FirstName ? d.FirstName + " " + d.LastName : d.Tla || c.RacingNumber)}</span> <span class="tla">${esc(d.TeamName || "")}</span>${fresh ? `<span class="new">NEW</span>` : ""}</div>
+        <div class="player"><button class="play" type="button" aria-label="Play radio">${ICON_PLAY}</button><span class="track"><i></i></span><span class="dur">${timeOf(c.Utc)}</span></div>
+      </div></li>`;
   }).join("") : `<li class="empty">No team radio yet</li>`;
+  syncRadio();
 }
+
+// ---------- live championship ----------
+const POINTS = { Race: [25, 18, 15, 12, 10, 8, 6, 4, 2, 1], Sprint: [8, 7, 6, 5, 4, 3, 2, 1] };
+let standings = null, champTab = "d";
+async function loadStandings() {   // the championship before this session, from Jolpica (Ergast's successor)
+  try {
+    const J = "https://api.jolpi.ca/ergast/f1/current";
+    const [d, c, last] = await Promise.all(["/driverStandings.json", "/constructorStandings.json", "/last/results.json"].map(u => fetch(J + u).then(r => r.json())));
+    const dl = d.MRData.StandingsTable.StandingsLists[0] || {}, cl = c.MRData.StandingsTable.StandingsLists[0] || {};
+    standings = {
+      round: +dl.round || 0, raceRound: +((last.MRData.RaceTable.Races[0] || {}).round || 0),
+      drivers: (dl.DriverStandings || []).map(x => ({ code: x.Driver.code, name: `${x.Driver.givenName} ${x.Driver.familyName}`,
+                 cid: (x.Constructors.slice(-1)[0] || {}).constructorId, pts: +x.points, pos: +x.position })),
+      teams: (cl.ConstructorStandings || []).map(x => ({ cid: x.Constructor.constructorId, name: x.Constructor.name, pts: +x.points, pos: +x.position }))
+    };
+  } catch (e) { standings = { error: true }; }
+  dirty = true;
+}
+function renderChampionship() {
+  const el = document.getElementById("champ"), note = document.getElementById("champNote");
+  if (!standings || standings.error) { el.innerHTML = `<li class="empty">${standings ? "Standings unavailable right now" : "Loading standings…"}</li>`; note.textContent = ""; return; }
+  const info = S.SessionInfo || {}, round = +((info.Meeting || {}).Number || 0);
+  const kind = info.Type === "Race" ? (/sprint/i.test(info.Name || "") ? "Sprint" : "Race") : null;
+  const counted = kind === "Race" ? standings.raceRound >= round : standings.round >= round;   // already in the standings
+  const live = !!kind && !counted;
+  const lines = (S.TimingData || {}).Lines || {}, codeToNum = {};
+  for (const [n, d] of Object.entries(S.DriverList || {})) if (d.Tla) codeToNum[d.Tla] = n;
+  const scored = code => {
+    const l = live && lines[codeToNum[code]];
+    return l && !l.Retired && !l.Stopped ? POINTS[kind][(+l.Position || 99) - 1] || 0 : 0;
+  };
+  const drivers = standings.drivers.map(x => ({ ...x, add: scored(x.code) }));
+  for (const d of Object.values(S.DriverList || {}))   // a driver without points so far
+    if (d.Tla && !drivers.some(x => x.code === d.Tla)) drivers.push({ code: d.Tla, name: `${d.FirstName} ${d.LastName}`, pts: 0, pos: 99, add: scored(d.Tla) });
+  const rank = rows => { rows.forEach(r => r.total = r.pts + r.add); rows.sort((a, b) => b.total - a.total || a.pos - b.pos); rows.forEach((r, i) => r.now = i + 1); return rows; };
+  rank(drivers);
+  const teams = rank(standings.teams.map(t => ({ ...t, add: drivers.filter(d => d.cid === t.cid).reduce((s, d) => s + d.add, 0) })));
+  const colourOf = code => colour(driver(codeToNum[code]));
+  const teamColour = cid => { const d = drivers.find(x => x.cid === cid && codeToNum[x.code]); return d ? colourOf(d.code) : "#777"; };
+  const teamName = t => { const d = drivers.find(x => x.cid === t.cid && codeToNum[x.code]); return (d && driver(codeToNum[d.code]).TeamName) || t.name; };   // the name used on track
+  const move = r => { const m = r.pos - r.now; return r.pos === 99 || !m ? `<span class="mv same">–</span>` : `<span class="mv ${m > 0 ? "up" : "down"}">${m > 0 ? "+" + m : m}</span>`; };
+  el.innerHTML = (champTab === "d" ? drivers : teams).map(r => `<li><span class="p">${r.now}</span>${move(r)}
+      <span class="bar" style="background:${champTab === "d" ? colourOf(r.code) : teamColour(r.cid)}"></span>
+      <span class="nm">${champTab === "d" ? `<b>${esc(r.code)}</b> <small>${esc(r.name)}</small>` : `<b>${esc(teamName(r))}</b>`}</span>
+      <span class="pts">${r.total}${live ? `<small>${r.add ? "+" + r.add : "–"}</small>` : ""}</span></li>`).join("");
+  note.textContent = live ? `Live: the standings if the ${kind.toLowerCase()} ended now (${POINTS[kind][0]} points for the win). +/- is the change since before the ${kind.toLowerCase()}.`
+                          : `Standings after round ${standings.round}. During a sprint or race they update live.`;
+}
+
+// ---------- best lap benchmarks ----------
+const lapText = t => { if (!t) return ""; const m = Math.floor(t / 60), s = (t - m * 60).toFixed(3); return m ? `${m}:${s.padStart(6, "0")}` : s; };
+function renderBench() {
+  const stats = (S.TimingStats || {}).Lines || {}, rows = [];
+  for (const [n, l] of Object.entries(stats)) {
+    const best = seconds((l.PersonalBestLapTime || {}).Value); if (!best) continue;
+    const secs = list(l.BestSectors).map(b => seconds(b && b.Value));
+    rows.push({ n, best, lap: (l.PersonalBestLapTime || {}).Lap, ideal: secs.length === 3 && secs.every(Boolean) ? secs[0] + secs[1] + secs[2] : null,
+                top: +(((l.BestSpeeds || {}).ST || {}).Value) || null });
+  }
+  rows.sort((a, b) => a.best - b.best);
+  const sumEl = document.getElementById("benchSum"), table = document.getElementById("bench");
+  if (!rows.length) { sumEl.innerHTML = ""; table.innerHTML = `<tr><td class="empty">No laps yet</td></tr>`; return; }
+  const overall = [0, 1, 2].map(i => Math.min(...Object.values(stats).map(l => seconds((list(l.BestSectors)[i] || {}).Value) || Infinity)));
+  const ideal = overall.every(isFinite) ? overall[0] + overall[1] + overall[2] : null, fast = rows[0];
+  const topSpeed = rows.filter(r => r.top).sort((a, b) => b.top - a.top)[0];
+  sumEl.innerHTML = `<div><small>Fastest lap</small><b class="t-purple">${lapText(fast.best)}</b> ${esc(driver(fast.n).Tla)}</div>
+    <div><small>Ideal lap (best sectors of anyone)</small><b>${lapText(ideal)}</b></div>
+    <div><small>Top speed</small><b>${topSpeed ? topSpeed.top + " km/h" : "–"}</b> ${topSpeed ? esc(driver(topSpeed.n).Tla) : ""}</div>`;
+  table.innerHTML = `<tr><th>Pos</th><th>Driver</th><th>Best lap</th><th>Gap</th><th>Ideal lap</th><th>Left on the table</th><th>Top speed</th></tr>` + rows.map((r, i) => {
+    const d = driver(r.n);
+    return `<tr><td class="pos">${i + 1}</td><td><span class="drv"><i style="background:${colour(d)}"></i>${esc(d.Tla || r.n)}</span></td>
+      <td class="${i === 0 ? "t-purple" : ""}">${lapText(r.best)} <small class="when">lap ${esc(r.lap)}</small></td>
+      <td>${i ? "+" + (r.best - fast.best).toFixed(3) : "—"}</td><td>${lapText(r.ideal)}</td>
+      <td class="lost">${r.ideal ? "+" + Math.max(0, r.best - r.ideal).toFixed(3) : ""}</td><td>${r.top ? r.top + " km/h" : ""}</td></tr>`;
+  }).join("");
+}
+
+// ---------- telemetry (after the session, from OpenF1) ----------
+const OPENF1 = "https://api.openf1.org/v1";
+function fillDriverPickers() {
+  const order = Object.entries((S.TimingData || {}).Lines || {}).sort((a, b) => (+a[1].Line || 99) - (+b[1].Line || 99)).map(e => e[0]);
+  const opts = order.map(n => `<option value="${esc(n)}">${esc(driver(n).Tla || n)} · ${esc(driver(n).LastName || "")}</option>`).join("");
+  for (const [id, pick] of [["teleA", 0], ["teleB", 1]]) {
+    const sel = document.getElementById(id);
+    if (sel.options.length !== order.length) { const keep = sel.value; sel.innerHTML = opts; sel.value = keep && order.includes(keep) ? keep : order[pick] || ""; }
+  }
+  const liveNow = (S.SessionStatus || {}).Status === "Started" && !REPLAY;
+  const btn = document.getElementById("teleGo");
+  btn.disabled = liveNow; btn.title = liveNow ? "Telemetry appears after the session ends" : "";
+}
+async function fastestLap(key, num) {
+  const laps = await (await fetch(`${OPENF1}/laps?session_key=${key}&driver_number=${num}`)).json();
+  const lap = (Array.isArray(laps) ? laps : []).filter(l => l.lap_duration && !l.is_pit_out_lap && l.date_start).sort((a, b) => a.lap_duration - b.lap_duration)[0];
+  if (!lap) return null;
+  const end = new Date(Date.parse(lap.date_start) + lap.lap_duration * 1000).toISOString();
+  const car = await (await fetch(`${OPENF1}/car_data?session_key=${key}&driver_number=${num}&date>=${encodeURIComponent(lap.date_start)}&date<=${encodeURIComponent(end)}`)).json();
+  if (!Array.isArray(car) || car.length < 10) return null;
+  const t0 = Date.parse(car[0].date), pts = [];
+  let dist = 0;
+  car.forEach((c, i) => {
+    const t = (Date.parse(c.date) - t0) / 1000;
+    if (i) dist += ((c.speed + car[i - 1].speed) / 2 / 3.6) * (t - pts[i - 1].t);
+    pts.push({ t, d: dist, speed: c.speed, throttle: c.throttle, brake: c.brake ? 100 : 0, gear: c.n_gear });
+  });
+  return { lap, pts, length: dist };
+}
+async function loadTelemetry() {
+  const key = (S.SessionInfo || {}).Key, a = document.getElementById("teleA").value, b = document.getElementById("teleB").value, box = document.getElementById("tele");
+  if (!key || !a || !b) return;
+  box.innerHTML = `<p class="empty">Loading telemetry…</p>`;
+  try {
+    const [A, B] = [await fastestLap(key, a), await fastestLap(key, b)];   // one after the other: OpenF1 allows 3 requests a second
+    if (!A || !B) { box.innerHTML = `<p class="empty">No telemetry for this session yet. OpenF1 adds it shortly after a session ends.</p>`; return; }
+    drawTelemetry(box, [[a, A], [b, B]]);
+  } catch (e) { box.innerHTML = `<p class="empty">Couldn't load telemetry (OpenF1 didn't answer). Try again in a minute.</p>`; }
+}
+function drawTelemetry(box, runs) {
+  const W = 800, L = 44, R = 10, len = Math.min(...runs.map(r => r[1].length)), x = d => L + (W - L - R) * d / len;
+  const cols = runs.map(([n], i) => { const c = colour(driver(n)); return i && c === colour(driver(runs[0][0])) ? "#ffffff" : c; });
+  const panel = (top, h, key, max, label) => {
+    const y = v => top + h - h * v / max;
+    const lines = runs.map(([, r], i) => `<polyline fill="none" stroke="${cols[i]}" stroke-width="1.6" ${i ? 'stroke-dasharray="5 3"' : ""} points="${r.pts.filter(p => p.d <= len).map(p => x(p.d).toFixed(1) + "," + y(p[key]).toFixed(1)).join(" ")}"/>`).join("");
+    return `<text x="4" y="${top + 12}" fill="#8d8d9c" font-size="11">${label}</text><line x1="${L}" x2="${W - R}" y1="${top + h}" y2="${top + h}" stroke="#262633"/>${lines}`;
+  };
+  // the time gap along the lap: where the second driver gains (below 0) or loses (above 0)
+  const timeAt = (r, d) => { const p = r.pts; let i = 1; while (i < p.length - 1 && p[i].d < d) i++; const a = p[i - 1], b = p[i], u = b.d > a.d ? (d - a.d) / (b.d - a.d) : 0; return a.t + (b.t - a.t) * u; };
+  const steps = 200, delta = [];
+  for (let k = 0; k <= steps; k++) { const d = len * k / steps; delta.push([d, timeAt(runs[1][1], d) - timeAt(runs[0][1], d)]); }
+  const span = Math.max(0.2, ...delta.map(v => Math.abs(v[1]))), dTop = 330, dH = 70, dy = v => dTop + dH / 2 - (dH / 2) * v / span;
+  const svg = `<svg viewBox="0 0 ${W} 410" role="img" aria-label="Telemetry comparison">
+    ${panel(8, 170, "speed", 360, "Speed")}${panel(190, 60, "throttle", 100, "Throttle")}${panel(262, 50, "brake", 100, "Brake")}
+    <text x="4" y="${dTop + 12}" fill="#8d8d9c" font-size="11">Gap (s)</text><line x1="${L}" x2="${W - R}" y1="${dy(0)}" y2="${dy(0)}" stroke="#3a3a48"/>
+    <polyline fill="none" stroke="#facc15" stroke-width="1.6" points="${delta.map(([d, v]) => x(d).toFixed(1) + "," + dy(v).toFixed(1)).join(" ")}"/>
+    <text x="${W - R}" y="${dTop + 10}" fill="#8d8d9c" font-size="10" text-anchor="end">+${span.toFixed(2)} s ${esc(driver(runs[1][0]).Tla)} behind</text>
+    <text x="${W - R}" y="${dTop + dH}" fill="#8d8d9c" font-size="10" text-anchor="end">−${span.toFixed(2)} s ${esc(driver(runs[1][0]).Tla)} ahead</text></svg>`;
+  box.innerHTML = `<div class="legend">${runs.map(([n, r], i) => `<span><i style="background:${cols[i]}"></i>${esc(driver(n).Tla)} ${lapText(r.lap.lap_duration)} (lap ${r.lap.lap_number})</span>`).join("")}</div>${svg}`;
+}
+
+// ---------- team radio player ----------
+const audio = new Audio();
+let playingSrc = null;
+const ICON_PLAY = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`, ICON_PAUSE = `<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>`;
+const mmss = s => isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}` : "";
+function radioItem() { return playingSrc && [...document.querySelectorAll("#radio li[data-src]")].find(li => li.dataset.src === playingSrc); }
+function syncRadio() {
+  for (const li of document.querySelectorAll("#radio li[data-src]")) {
+    const on = li.dataset.src === playingSrc;
+    li.classList.toggle("playing", on && !audio.paused);
+    li.querySelector(".play").innerHTML = on && !audio.paused ? ICON_PAUSE : ICON_PLAY;
+    li.querySelector(".track i").style.width = on && audio.duration ? (100 * audio.currentTime / audio.duration) + "%" : "0";
+    if (on && audio.duration) li.querySelector(".dur").textContent = mmss(audio.duration - audio.currentTime);
+  }
+}
+for (const ev of ["play", "pause", "timeupdate", "ended", "loadedmetadata"]) audio.addEventListener(ev, syncRadio);
+document.getElementById("radio").addEventListener("click", e => {
+  const li = e.target.closest("li[data-src]"); if (!li) return;
+  if (e.target.closest(".track") && li.dataset.src === playingSrc && audio.duration) {   // tap the bar to jump
+    const r = e.target.closest(".track").getBoundingClientRect();
+    audio.currentTime = audio.duration * Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)); return;
+  }
+  if (!e.target.closest(".play")) return;
+  if (li.dataset.src === playingSrc && !audio.paused) { audio.pause(); return; }
+  if (li.dataset.src !== playingSrc) { playingSrc = li.dataset.src; audio.src = playingSrc; }
+  audio.play().catch(() => {});
+});
 
 // ---------- track map ----------
 let circuit = null, circuitKey = null, trackLen = [], mapBox = null;
@@ -440,10 +697,18 @@ function renderCars() {
 
 // ---------- loop ----------
 function frame() {
-  if (dirty) { dirty = false; renderHeader(); renderTower(); renderBests(); renderRaceControl(); renderRadio(); }
+  if (dirty) { dirty = false; renderHeader(); renderTower(); renderBests(); renderRaceControl(); renderRadio(); renderChampionship(); renderBench(); fillDriverPickers(); }
   renderClock(); renderCars();
 }
 setInterval(frame, 250);
+document.getElementById("champTabs").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  champTab = b.dataset.k;
+  for (const x of document.querySelectorAll("#champTabs button")) x.setAttribute("aria-pressed", String(x === b));
+  dirty = true;
+});
+document.getElementById("teleGo").addEventListener("click", loadTelemetry);
+loadStandings(); setInterval(loadStandings, 15 * 60000);
 if (REPLAY) replay(REPLAY); else connect();
 </script>
 </body>
