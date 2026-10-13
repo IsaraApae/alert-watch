@@ -58,15 +58,87 @@ def notify(title, msg, links, image=None, uri=None):
     tries = ([{"type": "flex", "altText": f"{title} {msg}"[:400], "contents": card(title, msg, image, uri)}]
              if image and re.search(r"\.(jpe?g|png)$", urlparse(image).path, re.I) else [])  # LINE cards show JPEG/PNG only + [plain]
     for message in tries:  # the card first when there is a cover; plain text if LINE refuses it, so the alert is never lost
-        req = urllib.request.Request("https://api.line.me/v2/bot/message/broadcast", data=json.dumps({"messages": [message]}).encode(),
-                                     headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
-        try:
-            urllib.request.urlopen(req, timeout=30)
+        if line_send(token, message):
             return
-        except Exception as e:
-            print(f"FAIL line ({message['type']}): {e} {getattr(e, 'read', lambda: b'')()[:300]}", file=sys.stderr)
     if "ping" in sys.argv:
         sys.exit(1)
+
+
+def line_send(token, message):
+    """Broadcast one message to the Alert Watch LINE account; False if LINE refused it."""
+    req = urllib.request.Request("https://api.line.me/v2/bot/message/broadcast", data=json.dumps({"messages": [message]}).encode(),
+                                 headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req, timeout=30)
+        return True
+    except Exception as e:
+        print(f"FAIL line ({message['type']}): {e} {getattr(e, 'read', lambda: b'')()[:300]}", file=sys.stderr)
+        return False
+
+
+F1 = "https://api.jolpi.ca/ergast/f1/current"  # Jolpica: the free successor of the Ergast F1 data service, no key needed
+F1_STATUS = {"R": "DNF", "D": "DSQ", "W": "DNS", "N": "NC", "E": "EX", "F": "DNQ"}
+
+
+def f1_rows(results):
+    """[(position, driver, team, gap)] for a race's results: the winner's time, then gaps, laps down or DNF."""
+    lead_laps = int(results[0].get("laps") or 0)
+    rows = []
+    for x in results:
+        pos = x["positionText"] if x["positionText"].isdigit() else F1_STATUS.get(x["positionText"], x["positionText"])
+        down = lead_laps - int(x.get("laps") or 0)
+        # a lapped car's time is its gap within its own lap, not to the winner: show the laps down instead
+        gap = pos if not pos.isdigit() else f"+{down} Lap{'s' if down > 1 else ''}" if down > 0 else (x.get("Time") or {}).get("time") or x["status"]
+        rows.append((pos, f"{x['Driver']['givenName'][0]}. {x['Driver']['familyName']}", x["Constructor"]["name"].replace(" F1 Team", ""), gap))
+    return rows
+
+
+def f1_card(title, when, rows):
+    """A LINE card with every driver's finishing position under a red header."""
+    t = lambda text, **k: {"type": "text", "text": text, "size": "xs", **k}
+    line = lambda pos, name, team, gap: {"type": "box", "layout": "horizontal", "spacing": "sm", "contents": [
+        t(pos, flex=2, align="end", weight="bold"), t(name, flex=7, weight="bold" if pos in ("1", "2", "3") else "regular"),
+        t(team, flex=6, color="#777777"), t(gap, flex=5, align="end", color="#777777")]}
+    return {"type": "bubble", "size": "mega",
+            "header": {"type": "box", "layout": "vertical", "backgroundColor": "#E10600", "contents": [
+                {"type": "text", "text": title, "weight": "bold", "color": "#FFFFFF", "wrap": True},
+                {"type": "text", "text": when, "size": "xs", "color": "#FFFFFF"}]},
+            "body": {"type": "box", "layout": "vertical", "spacing": "xs", "contents": [line(*r) for r in rows]}}
+
+
+def f1(state):
+    """Send each Formula 1 race's and sprint's finishing order once, when the results come out (up to 3 days after)."""
+    token, sent = os.environ.get("LINE_TOKEN"), state.setdefault("f1", [])
+    for session, key, label in (("results", "Results", "Race"), ("sprint", "SprintResults", "Sprint")):
+        try:
+            races = json.loads(get(f"{F1}/last/{session}.json"))["MRData"]["RaceTable"]["Races"]
+        except Exception as e:
+            print(f"FAIL f1 {session}: {e}", file=sys.stderr)
+            continue
+        if not races or not races[0].get(key):
+            continue  # the last round had no sprint
+        race = races[0]
+        tag = f"{race['season']}-{race['round']}-{session}"
+        start = datetime.fromisoformat(f"{race['date']}T{race.get('time', '00:00:00Z')}".replace("Z", "+00:00"))
+        if tag in sent or time.time() - start.timestamp() > 3 * 86400:
+            continue
+        if session == "sprint":  # the results leave out the sprint's own start: the season calendar has it
+            try:
+                cal = next(r for r in json.loads(get(f"{F1}.json"))["MRData"]["RaceTable"]["Races"] if r["round"] == race["round"])
+                start = datetime.fromisoformat(f"{cal['Sprint']['date']}T{cal['Sprint'].get('time', '00:00:00Z')}".replace("Z", "+00:00"))
+            except Exception as e:
+                print(f"FAIL f1 calendar: {e}", file=sys.stderr)
+        rows = f1_rows(race[key])
+        title = f"F1 {label}: {race['raceName']}"
+        when = f"Round {race['round']} · {start.astimezone(THAI):%a %d %b %Y %H:%M}"
+        top = ", ".join(f"{p} {n.split('. ')[-1]}" for p, n, _, _ in rows[:3])
+        if not token:  # on the Mac: show what would be sent
+            print(title, "|", when, "|", top)
+            sent.append(tag)
+            continue
+        plain = {"type": "text", "text": f"{title}\n{when}\n" + "\n".join(f"{p} {n} ({tm}) {g}" for p, n, tm, g in rows)}
+        if line_send(token, {"type": "flex", "altText": f"{title}: {top}"[:400], "contents": f1_card(title, when, rows)}) or line_send(token, plain):
+            sent.append(tag)
 
 
 COVER_OVERRIDES = {  # series whose own cover LINE can't show (AVIF): a JPEG copy on the GitHub Pages site
@@ -692,6 +764,10 @@ def main():
         print(f"FAIL completing anime: {e}", file=sys.stderr)
     anime(state)
     try:
+        f1(state)
+    except Exception as e:  # F1 results must never stop the other alerts
+        print(f"FAIL f1: {e}", file=sys.stderr)
+    try:
         schedule(state)
     except Exception as e:  # the countdown page must never stop the alerts
         print(f"FAIL schedule: {e}", file=sys.stderr)
@@ -760,6 +836,13 @@ if __name__ == "__main__":
              ("ซวยเหลือหลายเกิดใหม่กลายเป็นดาบ ซีซั่น 2 ตอนที่ 1 [ซับไทย]", "sub", 1790782200.0)]
         assert youtube_episode(v, "กลายเป็นดาบ", {1}, 1790782200) == "sub"  # Thai-sub, this season, right episode
         assert youtube_episode(v, "กลายเป็นดาบ", {2}, 1790782200) is None
+        drv = lambda f, l: {"givenName": f, "familyName": l}
+        res = [{"positionText": "1", "laps": "62", "status": "Finished", "Time": {"time": "1:42:00.785"}, "Driver": drv("Max", "Verstappen"), "Constructor": {"name": "Red Bull"}},
+               {"positionText": "2", "laps": "62", "status": "Finished", "Time": {"time": "+7.335"}, "Driver": drv("Charles", "Leclerc"), "Constructor": {"name": "Ferrari"}},
+               {"positionText": "15", "laps": "60", "status": "Lapped", "Time": {"time": "+2.171"}, "Driver": drv("Lance", "Stroll"), "Constructor": {"name": "Aston Martin"}},
+               {"positionText": "R", "laps": "30", "status": "Retired", "Driver": drv("George", "Russell"), "Constructor": {"name": "Mercedes"}}]
+        assert f1_rows(res) == [("1", "M. Verstappen", "Red Bull", "1:42:00.785"), ("2", "C. Leclerc", "Ferrari", "+7.335"),
+                                ("15", "L. Stroll", "Aston Martin", "+2 Laps"), ("DNF", "G. Russell", "Mercedes", "DNF")]
         sp = {1: {"yt": "จิโตเสะ"}}
         vids = [("ชีวิตรสโซดาของจิโตเสะคุง ตอนที่ 13.5 [ซับไทย]", "a", 100, "Ani-One Thailand"),
                 ("ชีวิตรสโซดาของจิโตเสะคุง ตอนที่ 0 [ซับไทย]", "b", 100, "Ani-One Thailand"),

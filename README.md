@@ -16,6 +16,10 @@ Sends a LINE message (official account **Alert Watch**) when a tracked manga cha
 
 Anime alerts use the time the **Thai-sub** episode comes out (never dubbed, never พากย์ไทย), with the platform name. If a YouTube channel posts late, the alert waits up to an hour; if the video still isn't up, a "Watch now" card follows when it is.
 
+## Formula 1 results
+
+After each Grand Prix and Sprint, one card lists every driver's finishing position: position, driver, team, and the gap to the winner (laps down, or DNF/DSQ). The header shows the Thai start time. Results come from the free [Jolpica F1 API](https://github.com/jolpica/jolpica-f1), the successor of Ergast, usually within a few hours of the finish. Each session is sent once (`f1` in `ci-state.json`), and only within 3 days of the race.
+
 ## Editing the lists
 
 You can manage the lists by messaging Alert Watch on LINE:
