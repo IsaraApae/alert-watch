@@ -883,7 +883,7 @@ def anime(state):
 
 
 def setup_richmenu():
-    """Install the Alert Watch menu at the bottom of the LINE chat: two buttons opening the countdown site.
+    """Install the Alert Watch menu at the bottom of the LINE chat: three buttons, the anime countdown, its timetable and F1 Live.
     Run once (workflow input richmenu); replaces any earlier menu this created."""
     auth = {"Authorization": f"Bearer {os.environ['LINE_TOKEN']}"}
 
@@ -896,9 +896,10 @@ def setup_richmenu():
             raise
 
     site = "https://isaraapae.github.io/alert-watch/"
-    menu = {"size": {"width": 2500, "height": 843}, "selected": True, "name": "Alert Watch", "chatBarText": "Anime schedule",
-            "areas": [{"bounds": {"x": 0, "y": 0, "width": 1250, "height": 843}, "action": {"type": "uri", "label": "Next episode", "uri": site}},
-                      {"bounds": {"x": 1250, "y": 0, "width": 1250, "height": 843}, "action": {"type": "uri", "label": "Timetable", "uri": site + "?v=week"}}]}
+    menu = {"size": {"width": 2500, "height": 843}, "selected": True, "name": "Alert Watch", "chatBarText": "Menu",
+            "areas": [{"bounds": {"x": 0, "y": 0, "width": 833, "height": 843}, "action": {"type": "uri", "label": "Next episode", "uri": site}},
+                      {"bounds": {"x": 833, "y": 0, "width": 834, "height": 843}, "action": {"type": "uri", "label": "Timetable", "uri": site + "?v=week"}},
+                      {"bounds": {"x": 1667, "y": 0, "width": 833, "height": 843}, "action": {"type": "uri", "label": "F1 Live", "uri": site + "f1.html"}}]}
     old = [m["richMenuId"] for m in call("GET", "https://api.line.me/v2/bot/richmenu/list")["richmenus"] if m["name"] == "Alert Watch"]
     rid = call("POST", "https://api.line.me/v2/bot/richmenu", json.dumps(menu).encode())["richMenuId"]
     call("POST", f"https://api-data.line.me/v2/bot/richmenu/{rid}/content", (HERE / "richmenu.png").read_bytes(), "image/png")
