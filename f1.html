@@ -66,7 +66,9 @@
   td { padding: 5px 8px; border-top: 1px solid var(--line); text-align: right; }
   th:nth-child(-n+2), td:nth-child(-n+2) { text-align: left; position: sticky; z-index: 1; background: var(--panel); }
   th:nth-child(-n+2) { z-index: 2; background: var(--panel2); }
-  th:first-child, td:first-child { left: 0; width: 34px; } th:nth-child(2), td:nth-child(2) { left: 34px; box-shadow: 6px 0 8px -6px var(--shadow); }
+  th:first-child, td:first-child { left: 0; width: 34px; box-shadow: 4px 0 0 var(--panel); }   /* covers the strip before the pinned Driver column */
+  th:first-child { box-shadow: 4px 0 0 var(--panel2); }
+  th:nth-child(2), td:nth-child(2) { left: 34px; box-shadow: 6px 0 8px -6px var(--shadow); }
   tr.out td { opacity: .45; }
   .pos { font-weight: 800; text-align: center !important; }
   .drv { display: inline-flex; align-items: center; gap: 7px; font-weight: 800; }
