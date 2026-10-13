@@ -119,10 +119,8 @@ def f1_rows(results, drivers):
 
 
 def f1_photo(d, px):
-    """A driver's face as PNG, from formula1.com's portraits for the current season (OpenF1's own photo links are last
-    season's, in old team suits, and rookies have none). Drivers off this season's grid keep their latest photo."""
-    if d.get("old_photo"):
-        return d["old_photo"].replace("/1col/", "/3col/" if px > 100 else "/1col/")
+    """A driver's face as PNG, from formula1.com's portraits for the current season in their current team's suit
+    (OpenF1's own photo links are last season's, in old team suits, and rookies have none)."""
     code = re.search(r"/([A-Z]{6}\d{2})_", d.get("headshot_url") or "")
     if code:
         code = code[1].lower()
@@ -230,8 +228,9 @@ def f1_standings(state, token, s, meeting):
         return
     for n in {c["driver_number"] for c in champ_d} - set(drivers):  # scored earlier in the season, not in this race
         try:
-            entries = json.loads(get(f"{OPENF1}/drivers?driver_number={n}")) or [{}]
-            drivers[n] = {**entries[-1], "old_photo": next((x["headshot_url"] for x in reversed(entries) if x.get("headshot_url")), None)}
+            entries = json.loads(get(f"{OPENF1}/drivers?driver_number={n}")) or [{}]  # latest team; an older entry has the photo code
+            drivers[n] = {**entries[-1], "year": s.get("year"),
+                          "headshot_url": next((x["headshot_url"] for x in reversed(entries) if x.get("headshot_url")), None)}
         except Exception as e:
             print(f"FAIL f1 driver {n}: {e}", file=sys.stderr)
             drivers[n] = {"full_name": f"#{n}"}
@@ -299,7 +298,7 @@ def f1(state):
             continue
         rows = f1_rows(results, drivers)
         name, session = meeting.get("meeting_name") or s.get("country_name") or "Formula 1", s["session_name"]
-        when = datetime.fromisoformat(s["date_start"]).astimezone(THAI).strftime("%a %d %b %Y · %H:%M Thai time")
+        when = datetime.fromisoformat(s["date_start"]).astimezone(THAI).strftime("%a %d %b %Y · %H:%M")
         top = ", ".join(f"{p} {d.get('name_acronym', '?')}" for p, d, _ in rows[:3])
         if not token:  # on the Mac: show what would be sent
             print(f"F1 {session} · {name} · {when} | {top}")
