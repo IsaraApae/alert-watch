@@ -69,7 +69,8 @@
   th:first-child, td:first-child { left: 0; width: 34px; box-shadow: 4px 0 0 var(--panel); }   /* covers the strip before the pinned Driver column */
   th:first-child { box-shadow: 4px 0 0 var(--panel2); }
   th:nth-child(2), td:nth-child(2) { left: 34px; box-shadow: 6px 0 8px -6px var(--shadow); }
-  tr.out td { opacity: .45; }
+  tr.out td { color: var(--dim); }   /* out of the session: fade what's in the cells, not the cells, so pinned columns stay solid */
+  tr.out td > * { opacity: .5; }
   .pos { font-weight: 800; text-align: center !important; }
   .drv { display: inline-flex; align-items: center; gap: 7px; font-weight: 800; }
   .drv i { width: 4px; height: 18px; border-radius: 2px; }
