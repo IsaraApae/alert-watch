@@ -171,6 +171,7 @@
   .tl-time { color: var(--dim); font-weight: 700; font-size: 11.5px; }
   .tl-who { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .tl-who .nm { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tl-face { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex: 0 0 34px; background: var(--tc); box-shadow: 0 0 0 2px var(--tc); }
   .tl-who .nm small { color: var(--dim); font-weight: 600; margin-left: 4px; }
   .tl-play { display: flex; align-items: center; gap: 8px; }
   .tl-item .play { width: 30px; height: 30px; flex: 0 0 30px; }
@@ -263,7 +264,7 @@
     .tiles button { padding: 12px 6px; }
     .event b { white-space: normal; font-size: 15px; line-height: 1.2; }
     .flagimg { width: 28px; height: 18px; }
-    .tl-item { grid-template-columns: 38px minmax(0, 1fr) auto; } .tl-item .tl-who .nm { display: none; } .tl-item .wave { width: 80px; flex-basis: 80px; }
+    .tl-item { grid-template-columns: 38px minmax(0, 1fr) auto; } .tl-face { width: 30px; height: 30px; flex-basis: 30px; } .tl-item .tl-who .nm { display: none; } .tl-item .wave { width: 80px; flex-basis: 80px; }
     .bests > div { padding: 9px 7px; } .bests .dtag .n { display: none; } .bests p { font-size: 12px; }
   }
 </style>
@@ -962,7 +963,7 @@ function renderRadio() {
     if (g !== group) { group = g; html += `<li class="tl-lap">${esc(g)}</li>`; }
     html += `<li class="tl-item" data-src="${esc(src)}" style="${tagVars(tc)}">
       <span class="tl-time">${hhmm(at)}</span>
-      <span class="tl-who">${dtag(c.RacingNumber, true)}<span class="nm">${esc(d.FirstName ? d.FirstName + " " + d.LastName : "")}${fresh ? ` <span class="new">NEW</span>` : ""}</span></span>
+      <span class="tl-who"><img class="tl-face" src="${photo(d, 96)}" alt="" loading="lazy">${dtag(c.RacingNumber, true)}<span class="nm">${esc(d.FirstName ? d.FirstName + " " + d.LastName : "")}${fresh ? ` <span class="new">NEW</span>` : ""}</span></span>
       <span class="tl-play"><span class="wave">${waveOf(src).map(h => `<b style="height:${h.toFixed(0)}%"></b>`).join("")}</span><span class="dur"></span>
         <button class="play" type="button" aria-label="Play radio from ${esc(d.LastName || "")}">${ICON_PLAY}</button></span></li>`;
   }
