@@ -1463,11 +1463,70 @@ let circuit = null, circuitKey = null, trackLen = [], mapBox = null, sectorIdx =
 async function loadCircuit() {
   const key = (((S.SessionInfo || {}).Meeting || {}).Circuit || {}).Key;
   if (!key || key === circuitKey) return;
-  circuitKey = key; circuit = null; $("map").innerHTML = ""; resetCars();
+  circuitKey = key; circuit = null; pitLane = null; $("map").innerHTML = ""; resetCars();
   for (const y of [year(), year() - 1, year() - 2]) {
     try { const r = await fetch(`https://api.multiviewer.app/api/v1/circuits/${key}/${y}`); if (r.ok) { circuit = await r.json(); break; } } catch (e) {}
   }
+  let sk = null;   // an OpenF1 session at this circuit, for what MultiViewer doesn't have
+  try { sk = await trackSession(key); } catch (e) {}
+  if (!circuit && sk) try { circuit = await outlineFromLap(sk); } catch (e) {}   // a circuit MultiViewer doesn't have (2026: Madrid, Kuala Lumpur)
+  if (key !== circuitKey) return;
   if (circuit) drawCircuit();
+  if (circuit && sk) try { pitLane = await pitLaneFrom(sk); if (key === circuitKey) drawPit(); } catch (e) {}
+}
+let pitLane = null;   // the pit lane as a car drove it: raw x/y and how far through (in time) each point is
+const isoAt = t => new Date(t).toISOString();
+async function trackSession(key) {   // replay: this session; live: the latest finished session at this circuit (this weekend's, else last year's)
+  if (mode === "replay" && R.data) return R.data.sess.session_key;
+  for (const y of [year(), year() - 1]) {
+    const ss = (await of1(`sessions?circuit_key=${key}&year=${y}`)).filter(s => Date.parse(s.date_end) < Date.now() - 3600000);
+    if (ss.length) return ss.sort((a, b) => Date.parse(b.date_start) - Date.parse(a.date_start))[0].session_key;
+  }
+  return null;
+}
+async function outlineFromLap(sk) {   // the track from one ordinary lap's car positions (same units as MultiViewer's outlines)
+  const laps = (await of1(`laps?session_key=${sk}`)).filter(l => l.lap_duration && !l.is_pit_out_lap && l.date_start);
+  if (!laps.length) return null;
+  const mid = laps.map(l => l.lap_duration).sort((a, b) => a - b)[laps.length >> 1];
+  const lap = laps.find(l => Math.abs(l.lap_duration - mid) < mid * 0.02) || laps[0], a = Date.parse(lap.date_start), b = a + lap.lap_duration * 1000;
+  const pts = (await of1(`location?session_key=${sk}&driver_number=${lap.driver_number}&date>=${isoAt(a)}&date<=${isoAt(b)}`)).filter(p => p.x || p.y);
+  if (pts.length < 50) return null;
+  return { x: pts.map(p => p.x), y: pts.map(p => p.y), trackPositionTime: pts.map(p => Date.parse(p.date)), rotation: 0, corners: [], marshalSectors: [], fromLap: true };
+}
+async function pitLaneFrom(sk) {   // one ordinary pit stop's path: the stretch where the car is off the racing line
+  const stops = (await of1(`pit?session_key=${sk}`)).filter(p => p.lane_duration > 12 && p.lane_duration < 45);
+  if (!stops.length) return null;
+  const p = stops[0], a = Date.parse(p.date) - 12000, b = Date.parse(p.date) + (p.lane_duration + 12) * 1000;
+  const pts = (await of1(`location?session_key=${sk}&driver_number=${p.driver_number}&date>=${isoAt(a)}&date<=${isoAt(b)}`)).filter(q => q.x || q.y);
+  const off = pts.map(q => { let m = Infinity; for (let i = 0; i < circuit.x.length; i += 2) m = Math.min(m, (circuit.x[i] - q.x) ** 2 + (circuit.y[i] - q.y) ** 2); return Math.sqrt(m) > 45; });
+  let best = [0, -1], run = null;   // the longest stretch off the track
+  off.forEach((o, i) => { if (o) { run = run || [i, i]; run[1] = i; if (run[1] - run[0] > best[1] - best[0]) best = run.slice(); } else run = null; });
+  if (best[1] - best[0] < 20) return null;
+  const seg = pts.slice(Math.max(0, best[0] - 3), best[1] + 4), t0 = Date.parse(seg[0].date), t1 = Date.parse(seg[seg.length - 1].date);
+  return { raw: seg.map(q => [q.x, q.y]), tf: seg.map(q => (Date.parse(q.date) - t0) / (t1 - t0 || 1)) };
+}
+function drawPit() {   // the pit lane, under the track, labelled PIT
+  const g = $("pit"); if (!g || !circuit || !pitLane) return;
+  const rot = circuit.rotation || 0;
+  const real = pitLane.raw.map(([x, y]) => mapBox(rotate(x, y, rot)));
+  // the pit lane is only ~20 m beside the track, a couple of pixels on the map: push it out (keeping its shape) so it shows
+  const near = real.map(([x, y]) => { let b = null, bd = Infinity; for (const q of circuit.screen) { const d = (q[0] - x) ** 2 + (q[1] - y) ** 2; if (d < bd) { bd = d; b = q; } } return [b, Math.sqrt(bd)]; });
+  const far = Math.max(...near.map(n => n[1])) || 1;
+  pitLane.screen = real.map(([x, y], i) => {   // 11 px out along the lane, tapering in at the entry and exit
+    const [q, d] = near[i]; if (d < 0.01) return [x, y];
+    const want = 11 * Math.min(1, d / (0.35 * far));
+    return [q[0] + (x - q[0]) * want / d, q[1] + (y - q[1]) * want / d];
+  });
+  const d = pathOf(pitLane.screen), [mx, my] = pitLane.screen[pitLane.screen.length >> 1];
+  g.innerHTML = `<path d="${d}" fill="none" stroke="var(--track-edge)" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="${d}" fill="none" stroke="var(--corner-text)" stroke-width="1.8" stroke-dasharray="3 3" stroke-linejoin="round"/>
+    <text x="${mx.toFixed(1)}" y="${(my - 7).toFixed(1)}" font-size="7.5" font-weight="900" text-anchor="middle" fill="var(--dim)" letter-spacing=".6">PIT</text>`;
+}
+function pitPointAt(f) {   // a fraction of the way through the pit lane (in time, as the recorded car drove it) -> a point
+  const L = pitLane.tf, P = pitLane.screen; f = Math.max(0, Math.min(1, f));
+  let i = 1; while (i < L.length - 1 && L[i] < f) i++;
+  const u = L[i] > L[i - 1] ? (f - L[i - 1]) / (L[i] - L[i - 1]) : 0;
+  return [P[i - 1][0] + (P[i][0] - P[i - 1][0]) * u, P[i - 1][1] + (P[i][1] - P[i - 1][1]) * u];
 }
 function rotate(x, y, deg) { const a = deg * Math.PI / 180; return [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)]; }
 const pathOf = pts => "M" + pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join("L");
@@ -1497,12 +1556,12 @@ function drawCircuit() {
     return `<g transform="translate(${(x + ox2).toFixed(1)},${(y + oy2).toFixed(1)})"><circle r="6" fill="var(--corner)"/><text y="2.4" font-size="6.8" font-weight="800" text-anchor="middle" fill="var(--corner-text)">${c.number}</text></g>`;
   }).join("");
   const [sx, sy] = circuit.screen[0], [nx, ny] = circuit.screen[3], ang = Math.atan2(ny - sy, nx - sx) * 180 / Math.PI;
-  $("map").innerHTML = `<path d="${d}" fill="none" stroke="var(--track-edge)" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/>
+  $("map").innerHTML = `<g id="pit"></g><path d="${d}" fill="none" stroke="var(--track-edge)" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/>
     <g id="secs"></g><g id="flags"></g>${corners}
     <g transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${(ang + 90).toFixed(1)})"><rect x="-7" y="-2" width="14" height="4" fill="#fff"/>
       ${[0, 1, 2, 3, 4, 5, 6].map(i => `<rect x="${-7 + i * 2}" y="${i % 2 ? 0 : -2}" width="2" height="2" fill="#000"/>`).join("")}</g>
     <g id="bats"></g><g id="cars"></g>`;
-  flagKey = ""; secKey = ""; resetCars();
+  flagKey = ""; secKey = ""; resetCars(); drawPit();
 }
 const SECTOR_COLOURS = ["#ff3b5c", "#3b9eff", "#ffd60a"];
 let secKey = "";
@@ -1558,6 +1617,12 @@ const cars = {};   // one drawn tag per car, moved smoothly every frame
 function resetCars() { for (const k in cars) delete cars[k]; const g = $("cars"); if (g) g.innerHTML = ""; }
 let lastFrame = 0;
 const SVGNS = "http://www.w3.org/2000/svg";
+const pitSince = {};   // live: when each car was first seen in the pit lane
+function pitProgress(num, at) {   // how far through the pit lane a pitting car is (0..1)
+  if (mode === "replay") { const p = R.data.pits.find(x => x.n === num && x.at <= at && at <= x.at + x.dur * 1000); return p ? (at - p.at) / (p.dur * 1000) : 0.5; }
+  const since = pitSince[num] = pitSince[num] || at, lanes = Object.values(pitLog).map(s => s.dur * 1000).sort((a, b) => a - b);
+  return Math.min(0.97, (at - since) / (lanes.length ? lanes[lanes.length >> 1] : 22000));   // waits near the exit if it takes longer
+}
 function animateCars(ts) {   // each car: a dot on the racing line, with its tag just above it
   requestAnimationFrame(animateCars);
   const g = $("cars"), dt = Math.min(0.1, lastFrame ? (ts - lastFrame) / 1000 : 0); lastFrame = ts;
@@ -1565,10 +1630,19 @@ function animateCars(ts) {   // each car: a dot on the racing line, with its tag
   const at = mode === "replay" && R.playing && R.last ? Math.min(R.end, R.t + (performance.now() - R.last) * R.speed) : now();   // replay: the moment this frame shows
   const lines = (S.TimingData || {}).Lines || {};
   const over = mode === "live" && ["Finished", "Finalised", "Ends", "Inactive"].includes((S.SessionStatus || {}).Status);
-  const seen = new Set();
+  const seen = new Set(), red = (S.TrackStatus || {}).Status === "5";
+  const running = Object.entries(lines).filter(([, l]) => !l.Retired && !l.Stopped).sort((a, b) => (+a[1].Line || 99) - (+b[1].Line || 99)).map(([n]) => n);
   for (const [num, l] of over ? [] : Object.entries(lines)) {
-    if (l.Retired || l.Stopped || l.InPit) continue;
-    const target = lapFraction(num, l, at); if (target == null) continue;
+    if (l.Retired || l.Stopped) continue;
+    // in the pit lane: pitting, or everyone under a red flag (parked in running order, the leader nearest the exit)
+    let pf = null;
+    if (pitLane && pitLane.screen) {
+      if (red) pf = 0.9 - 0.8 * running.indexOf(num) / Math.max(1, running.length - 1);
+      else if (l.InPit) pf = pitProgress(num, at);
+    }
+    if (l.InPit && pf == null) { delete pitSince[num]; continue; }
+    if (!l.InPit) delete pitSince[num];
+    const target = pf != null ? null : lapFraction(num, l, at); if (pf == null && target == null) continue;
     let c = cars[num];
     if (!c) {
       const d = driver(num), tc = colour(d), no = String(d.RacingNumber || num), nw = no.length > 1 ? 15 : 11, tw = 23;
@@ -1576,13 +1650,22 @@ function animateCars(ts) {   // each car: a dot on the racing line, with its tag
       el.innerHTML = `<line class="lead" stroke="${tc}"/><circle class="dot" r="4.4" fill="${tc}"/>
         <g class="tag"><rect class="tbg" width="${nw + tw}" height="12" rx="3"/><rect width="${nw}" height="12" rx="3" fill="${tc}"/><rect x="${nw - 3}" width="3" height="12" fill="${tc}"/>
         <text class="tn" x="${nw / 2}" y="8.7" fill="${ink(tc)}">${esc(no)}</text><text class="tt" x="${nw + tw / 2}" y="8.8">${esc(d.Tla || num)}</text></g>`;
-      g.appendChild(el); c = cars[num] = { el, f: target, w: nw + tw, lead: el.firstChild, dot: el.children[1], tag: el.children[2] };
+      g.appendChild(el); c = cars[num] = { el, f: target || 0, w: nw + tw, lead: el.firstChild, dot: el.children[1], tag: el.children[2] };
     }
-    // replay: exactly where its lap timing puts it. Live: ease toward the estimate, so a timing mark that comes early or late isn't a jump
-    let diff = target - c.f; diff -= Math.round(diff);
-    c.f += mode === "replay" || Math.abs(diff) > 0.25 ? diff : diff * Math.min(1, dt * 4);
-    const [x, y] = pointAt(c.f);
-    c.x = x; c.y = y;
+    if (pf != null) {   // in the pit lane: glide there, then follow the lane
+      const [px, py] = pitPointAt(pf);
+      if (c.x == null || !c.inPit) { c.x = c.x == null ? px : c.x; c.y = c.y == null ? py : c.y; }
+      const k = c.inPit ? 1 : Math.min(1, dt * 3); c.x += (px - c.x) * k; c.y += (py - c.y) * k;
+      if (Math.hypot(px - c.x, py - c.y) < 0.5) c.inPit = true;
+    } else {
+      c.inPit = false;
+      // replay: exactly where its lap timing puts it. Live: ease toward the estimate, so a timing mark that comes early or late isn't a jump
+      let diff = target - c.f; diff -= Math.round(diff);
+      c.f += mode === "replay" || Math.abs(diff) > 0.25 ? diff : diff * Math.min(1, dt * 4);
+      if (red && !(pitLane && pitLane.screen)) c.f -= diff * (mode === "replay" ? 1 : 0);   // red flag, no pit lane known: hold still
+      const [x, y] = pointAt(c.f);
+      c.x = x; c.y = y;
+    }
     c.line = +l.Line || 99; seen.add(num);
   }
   for (const [num, c] of Object.entries(cars)) if (!seen.has(num)) { c.el.remove(); delete cars[num]; }
