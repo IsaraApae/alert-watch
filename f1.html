@@ -5,188 +5,219 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>F1 Live Timing</title>
 <meta name="description" content="Free live Formula 1 timing: timing tower, sectors, tyres, track map, live championship, race control, weather and team radio, plus replays of past sessions.">
-<meta name="theme-color" content="#0b0b10">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2315151e'/%3E%3Cg transform='translate(5 25) scale(0.168)'%3E%3Cpath fill='%23e10600' d='M45.2583 80L80.7417 45.575H80.7333C94.7167 32.0167 100.392 29.9583 127.058 29.9583H233.408L264.008 0H123.025C87.3333 0 77.2417 3.4 56.3083 24.1167L0 80H45.2583ZM127.7 34.7417H228.842L200.792 62.7917H128.225C114.925 62.7917 111.983 63.4167 105.383 70.0167L95.4 80H53.4333L84.4583 48.975C96.6417 36.8 100.842 34.7417 127.7 34.7417ZM320 0L239.783 80H190.175L270.175 0H320Z'/%3E%3C/g%3E%3C/svg%3E">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23000'/%3E%3Cg transform='translate(5 25) scale(0.168)'%3E%3Cpath fill='%23e10600' d='M45.2583 80L80.7417 45.575H80.7333C94.7167 32.0167 100.392 29.9583 127.058 29.9583H233.408L264.008 0H123.025C87.3333 0 77.2417 3.4 56.3083 24.1167L0 80H45.2583ZM127.7 34.7417H228.842L200.792 62.7917H128.225C114.925 62.7917 111.983 63.4167 105.383 70.0167L95.4 80H53.4333L84.4583 48.975C96.6417 36.8 100.842 34.7417 127.7 34.7417ZM320 0L239.783 80H190.175L270.175 0H320Z'/%3E%3C/g%3E%3C/svg%3E">
 <script>
   // appearance before the page draws, so it never flashes the wrong colours
   (function () {
-    var pick = "device"; try { pick = JSON.parse(localStorage.getItem("f1.theme")) || "device"; } catch (e) {}
+    var pick = "dark"; try { pick = JSON.parse(localStorage.getItem("f1.theme")) || "dark"; } catch (e) {}
     var dark = pick === "dark" || (pick === "device" && matchMedia("(prefers-color-scheme: dark)").matches);
     document.documentElement.dataset.mode = dark ? "dark" : "light";
   })();
 </script>
 <style>
   :root, [data-mode="dark"] {
-    --bg: #0b0b10; --panel: #15151e; --panel2: #1b1b26; --line: #262633; --text: #f2f2f6; --dim: #8d8d9c; --seg: #34343f;
-    --chip: #2a2a38; --input: #0e0e14; --map: #12121a; --track: #e8e8ee; --track-edge: #3a3a4a; --corner: #6b6b7a; --hover: rgba(255, 255, 255, .04);
-    --purple: #a855f7; --green: #22c55e; --red: #e10600; --blue: #3b82f6; --shadow: rgba(0, 0, 0, .7);
-    color-scheme: dark;
+    --bg: #000; --panel: #0b0b0f; --panel2: #121218; --row: #0f0f14; --line: #1d1d26; --text: #fff; --dim: #8b8b99; --seg: #2c2c36;
+    --chip: #1f1f29; --input: #15151c; --map: #07070a; --track: #f2f2f5; --track-edge: #2a2a34; --corner: #23232c; --corner-text: #a0a0ae;
+    --purple: #b14cf0; --green: #22c55e; --yellow: #facc15; --red: #e10600; --blue: #3b82f6; --amber: #f59e0b; --shadow: rgba(0, 0, 0, .8);
+    --tag-bg: #fff; color-scheme: dark;
   }
   [data-mode="light"] {
-    --bg: #f3f3f7; --panel: #ffffff; --panel2: #f4f4f8; --line: #e4e4ec; --text: #15151e; --dim: #6b6b78; --seg: #dcdce4;
-    --chip: #e9e9f0; --input: #f4f4f8; --map: #f6f6fa; --track: #2b2b36; --track-edge: #d8d8e2; --corner: #9a9aa8; --hover: rgba(0, 0, 0, .03);
-    --purple: #9333ea; --green: #16a34a; --red: #e10600; --blue: #2563eb; --shadow: rgba(0, 0, 0, .12);
-    color-scheme: light;
+    --bg: #eef0f4; --panel: #fff; --panel2: #f5f6f9; --row: #fafbfc; --line: #e4e6ec; --text: #111118; --dim: #6b6f7c; --seg: #dfe1e8;
+    --chip: #eceef3; --input: #f3f4f7; --map: #f7f8fa; --track: #22232b; --track-edge: #d5d8e0; --corner: #e9ebf0; --corner-text: #6b6f7c;
+    --purple: #9333ea; --green: #16a34a; --yellow: #ca8a04; --red: #e10600; --blue: #2563eb; --amber: #d97706; --shadow: rgba(0, 0, 0, .12);
+    --tag-bg: #fff; color-scheme: light;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--text); }
-  body { font: 13px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif; font-variant-numeric: tabular-nums; }
+  body { font: 13px/1.35 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif; font-variant-numeric: tabular-nums; }
   [hidden] { display: none !important; }
   button, select { font: inherit; color: inherit; }
 
-  .top { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-         border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
-  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 260px; }
-  .logo { height: 16px; width: auto; flex: 0 0 auto; }
-  .event { font-weight: 700; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .facts { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; color: var(--dim); }
-  .facts b { color: var(--text); font-weight: 700; }
+  /* header */
+  .top { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+         border-bottom: 1px solid var(--line); padding: 10px 16px; display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; align-items: center; }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .logo { height: 18px; width: auto; flex: 0 0 auto; }
+  .flagimg { width: 34px; height: 22px; border-radius: 4px; object-fit: cover; flex: 0 0 auto; box-shadow: 0 0 0 1px var(--line); }
+  .event { min-width: 0; }
+  .event b { display: block; font-size: 17px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -.2px; }
+  .event span { color: var(--dim); font-size: 12px; }
   .tools { display: flex; gap: 6px; }
-  .btn { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; background: var(--chip); font-weight: 600; font-size: 12px; }
+  .btn { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; border-radius: 9px; background: var(--chip); font-weight: 700; font-size: 12px; }
   .btn svg { width: 15px; height: 15px; fill: currentColor; }
   .btn.red { background: var(--red); color: #fff; }
-  .chip { padding: 3px 9px; border-radius: 999px; font-weight: 800; font-size: 12px; color: #000; background: var(--green); white-space: nowrap; }
-  .chip.yellow { background: #facc15; } .chip.red { background: var(--red); color: #fff; } .chip.sc { background: #f59e0b; } .chip.off { background: var(--chip); color: var(--dim); }
-  .live { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 12px; letter-spacing: .5px; }
-  .live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--dim); }
-  .live.on { color: var(--red); } .live.on::before { background: var(--red); animation: pulse 1.4s infinite; }
-  .live.replay { color: var(--blue); } .live.replay::before { background: var(--blue); }
-  @keyframes pulse { 50% { opacity: .3; } }
+  .facts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+  .fact { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 5px 10px; display: grid; align-content: center; min-width: 74px; }
+  .fact small { color: var(--dim); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+  .fact b { font-size: 15px; font-weight: 800; }
+  .status { border-radius: 10px; padding: 5px 14px; display: grid; place-items: center; font-weight: 900; font-size: 15px; color: #000; background: var(--green); }
+  .status.yellow { background: #facc15; } .status.red { background: var(--red); color: #fff; } .status.sc { background: var(--amber); } .status.off { background: var(--chip); color: var(--dim); }
+  .live { display: inline-flex; align-items: center; gap: 6px; font-weight: 900; font-size: 11px; letter-spacing: .6px; padding: 3px 8px; border-radius: 6px; background: var(--chip); color: var(--dim); }
+  .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .live.on { background: var(--red); color: #fff; } .live.on::before { animation: pulse 1.4s infinite; }
+  .live.replay { background: var(--blue); color: #fff; }
+  @keyframes pulse { 50% { opacity: .25; } }
 
-  main { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr); gap: 12px; padding: 12px 16px 24px; max-width: 1600px; margin: 0 auto; }
+  main { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(330px, 1fr); gap: 12px; padding: 12px 16px 24px; max-width: 1640px; margin: 0 auto; }
   .col { display: grid; gap: 12px; align-content: start; min-width: 0; }
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; min-width: 0; }
-  .panel h2 { margin: 0; padding: 10px 12px; font-size: 13px; font-weight: 700; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .panel h2 small { color: var(--dim); font-weight: 500; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; min-width: 0; }
+  .panel h2 { margin: 0; padding: 10px 14px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; border-bottom: 1px solid var(--line);
+              display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .panel h2 small { color: var(--dim); font-weight: 600; text-transform: none; letter-spacing: 0; }
+
+  /* driver tag: team-colour position box + name box, like the broadcast graphics */
+  .dtag { display: inline-flex; align-items: stretch; height: 24px; border-radius: 5px; overflow: hidden; font-weight: 900; box-shadow: 0 0 0 1.5px var(--tc) inset; }
+  .dtag .n { background: var(--tc); color: var(--tcf, #fff); min-width: 24px; display: grid; place-items: center; font-size: 12px; padding: 0 4px; }
+  .dtag .t { background: var(--tag-bg); color: var(--tct, var(--tc)); display: grid; place-items: center; padding: 0 7px; font-size: 12.5px; letter-spacing: .4px; }
+  .dtag.small { height: 20px; } .dtag.small .n { min-width: 20px; font-size: 11px; } .dtag.small .t { font-size: 11px; padding: 0 5px; }
 
   /* timing tower */
   .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table { border-collapse: collapse; width: 100%; white-space: nowrap; }
-  th { background: var(--panel2); color: var(--dim); font-weight: 600; font-size: 11px; text-align: right; padding: 7px 8px; }
-  td { padding: 5px 8px; border-top: 1px solid var(--line); text-align: right; }
-  th:nth-child(-n+2), td:nth-child(-n+2) { text-align: left; position: sticky; z-index: 1; background: var(--panel); }
-  th:nth-child(-n+2) { z-index: 2; background: var(--panel2); }
-  th:first-child, td:first-child { left: 0; width: 34px; box-shadow: 4px 0 0 var(--panel); }   /* covers the strip before the pinned Driver column */
-  th:first-child { box-shadow: 4px 0 0 var(--panel2); }
-  th:nth-child(2), td:nth-child(2) { left: 34px; box-shadow: 6px 0 8px -6px var(--shadow); }
-  tr.out td { color: var(--dim); }   /* out of the session: fade what's in the cells, not the cells, so pinned columns stay solid */
-  tr.out td > * { opacity: .5; }
-  .pos { font-weight: 800; text-align: center !important; }
-  .drv { display: inline-flex; align-items: center; gap: 7px; font-weight: 800; }
-  .drv i { width: 4px; height: 18px; border-radius: 2px; }
-  .drv img, .face { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: var(--chip); }
-  .tag { font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 4px; margin-left: 4px; color: #fff; }
+  th { background: var(--panel2); color: var(--dim); font-weight: 700; font-size: 10.5px; text-transform: uppercase; letter-spacing: .4px; text-align: right; padding: 8px; }
+  td { padding: 6px 8px; border-top: 1px solid var(--line); text-align: right; font-weight: 600; }
+  tbody tr:nth-child(even) td, tr:nth-child(even) td { background: var(--row); }
+  th:first-child, td:first-child { text-align: left; position: sticky; left: 0; z-index: 1; background: var(--panel); box-shadow: 6px 0 8px -6px var(--shadow); }
+  tr:nth-child(even) td:first-child { background: var(--row); }
+  th:first-child { z-index: 2; background: var(--panel2); }
+  tr.out td { color: var(--dim); } tr.out td > * { opacity: .45; }
+  .tags { display: inline-flex; gap: 4px; margin-left: 6px; vertical-align: middle; }
+  .tag { font-size: 9.5px; font-weight: 900; padding: 2px 5px; border-radius: 4px; color: #fff; letter-spacing: .3px; }
   .tag.pit { background: var(--blue); } .tag.outlap { background: #6b6b78; } .tag.ko { background: var(--chip); color: var(--dim); }
-  .t-purple { color: var(--purple); font-weight: 700; } .t-green { color: var(--green); font-weight: 700; }
-  .best.t-purple { background: color-mix(in srgb, var(--purple) 18%, transparent); border-radius: 4px; padding: 1px 4px; }
-  .catch { color: var(--green); }
-  .sector { display: inline-grid; gap: 2px; justify-items: end; }
-  .segs { display: flex; gap: 2px; } .segs b { width: 5px; height: 3px; border-radius: 1px; background: var(--seg); }
+  .t-purple { color: var(--purple); font-weight: 800; } .t-green { color: var(--green); font-weight: 800; }
+  .pill { display: inline-block; padding: 2px 7px; border-radius: 6px; font-weight: 800; }
+  .pill.purple { background: var(--purple); color: #fff; } .pill.green { background: var(--green); color: #000; } .pill.ring { box-shadow: 0 0 0 1.5px var(--green) inset; color: var(--green); }
+  .sector { display: inline-grid; gap: 3px; justify-items: end; min-width: 64px; }
+  .segs { display: flex; gap: 2px; } .segs b { width: 6px; height: 4px; border-radius: 1px; background: var(--seg); }
   .segs b.y { background: #facc15; } .segs b.g { background: var(--green); } .segs b.p { background: var(--purple); } .segs b.pit { background: var(--blue); }
-  .stints { display: inline-flex; gap: 3px; align-items: center; justify-content: flex-end; }
-  .stint { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; color: var(--dim); }
-  .stint span { width: 19px; height: 19px; border-radius: 50%; border: 2.5px solid; display: inline-grid; place-items: center; font-size: 9px; font-weight: 900; line-height: 1; }
-  .stint { opacity: .5; } .stint.now { opacity: 1; color: var(--text); font-weight: 700; }   /* every tyre the same size; the one fitted now stays bright */
+  .stints { display: inline-flex; gap: 4px; align-items: center; justify-content: flex-end; }
+  .stint { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--dim); opacity: .5; }
+  .stint span { width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid; display: inline-grid; place-items: center; font-size: 9px; font-weight: 900; line-height: 1; background: #0b0b0f; }
+  [data-mode="light"] .stint span { background: #fff; }
+  .stint.now { opacity: 1; color: var(--text); font-weight: 800; }
   .up { color: var(--green); } .down { color: var(--red); } .same { color: var(--dim); }
   small.u { color: var(--dim); font-size: 10px; }
 
   /* track map */
-  #map { display: block; width: 100%; height: auto; background: var(--map); }   /* its box follows the circuit's shape */
-  .map-note { color: var(--dim); font-size: 11px; padding: 6px 12px 9px; }
-  .panel.mapfull { position: fixed; inset: 0; z-index: 30; border-radius: 0; border: 0; display: flex; flex-direction: column; }
-  .mapfull #map { flex: 1; min-height: 0; height: 100%; }
-  .mapfull .map-note { display: none; }
+  .mapwrap { position: relative; background: var(--map); }
+  #map { display: block; width: 100%; height: auto; }
+  .car { transition: none; }
+  .car rect { stroke: var(--map); stroke-width: 1.2; }
+  .legend { position: absolute; left: 10px; bottom: 8px; display: flex; gap: 10px; font-size: 10.5px; color: var(--dim); }
+  .legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
 
   /* fastest sectors */
   .bests { display: grid; grid-template-columns: repeat(3, 1fr); }
-  .bests > div { padding: 8px 10px; border-right: 1px solid var(--line); min-width: 0; }
+  .bests > div { padding: 10px; border-right: 1px solid var(--line); min-width: 0; }
   .bests > div:last-child { border-right: 0; }
-  .bests h3 { margin: 0 0 6px; font-size: 11px; color: var(--dim); font-weight: 600; }
-  .bests p { margin: 3px 0; display: flex; justify-content: space-between; gap: 6px; }
-  .bests p:first-of-type span:last-child { color: var(--purple); font-weight: 700; }
+  .bests h3 { margin: 0 0 8px; font-size: 10.5px; color: var(--dim); font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+  .bests p { margin: 5px 0; display: flex; justify-content: space-between; align-items: center; gap: 6px; font-weight: 800; }
+  .bests p:first-of-type > span:last-child { color: var(--purple); }
 
   /* tabs */
-  .tabs { display: inline-flex; background: var(--input); border-radius: 8px; padding: 2px; gap: 2px; }
-  .tabs button { all: unset; cursor: pointer; padding: 3px 10px; border-radius: 6px; font-size: 12px; color: var(--dim); font-weight: 600; }
+  .tabs { display: inline-flex; background: var(--input); border-radius: 9px; padding: 3px; gap: 2px; }
+  .tabs button { all: unset; cursor: pointer; padding: 4px 11px; border-radius: 7px; font-size: 11.5px; color: var(--dim); font-weight: 800; text-transform: none; letter-spacing: 0; }
   .tabs button[aria-pressed="true"] { background: var(--chip); color: var(--text); }
 
   /* championship */
-  .champ { list-style: none; margin: 0; padding: 0; max-height: 460px; overflow-y: auto; }
-  .champ li { display: grid; grid-template-columns: 24px 28px 4px 30px 1fr auto; gap: 8px; align-items: center; padding: 6px 12px; border-top: 1px solid var(--line); }
-  .champ li:first-child { border-top: 0; }
-  .champ .p { font-weight: 800; text-align: right; } .champ .mv { font-size: 11px; font-weight: 800; text-align: center; }
-  .champ .bar { width: 4px; height: 26px; border-radius: 2px; }
-  .champ .face { width: 30px; height: 30px; }
-  .champ .tl { width: 30px; height: 30px; object-fit: contain; display: block; }
+  .champ { list-style: none; margin: 0; padding: 0; max-height: 480px; overflow-y: auto; }
+  .champ li { display: grid; grid-template-columns: 22px 28px 32px 1fr auto; gap: 9px; align-items: center; padding: 7px 14px; border-top: 1px solid var(--line); }
+  .champ li:first-child { border-top: 0; } .champ li:nth-child(even) { background: var(--row); }
+  .champ .p { font-weight: 900; text-align: right; } .champ .mv { font-size: 11px; font-weight: 900; text-align: center; }
+  .champ .face { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px var(--tc, var(--chip)); }
+  .champ .tl { width: 32px; height: 32px; object-fit: contain; display: block; }
   .lg-dark { display: none !important; } [data-mode="dark"] .lg-dark { display: block !important; } [data-mode="dark"] .lg-light { display: none !important; }
-  .champ .pts { text-align: right; font-weight: 800; } .champ .pts small { display: block; color: var(--dim); font-weight: 600; font-size: 10px; }
-  .champ .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .champ .nm small { color: var(--dim); }
-  .note { color: var(--dim); font-size: 11px; padding: 8px 12px; border-top: 1px solid var(--line); }
-  .note:empty { display: none; }
+  .champ .pts { text-align: right; font-weight: 900; font-size: 14px; } .champ .pts small { display: block; color: var(--green); font-weight: 800; font-size: 10.5px; }
+  .champ .pts small.none { color: var(--dim); }
+  .champ .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+  .champ .nm small { color: var(--dim); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 
-  /* lists */
-  ol.feed { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow-y: auto; }
-  ol.feed li { padding: 8px 12px; border-top: 1px solid var(--line); display: flex; gap: 10px; align-items: flex-start; }
-  ol.feed li:first-child { border-top: 0; }
-  .when { color: var(--dim); font-size: 11px; white-space: nowrap; }
-  .flag { width: 6px; align-self: stretch; border-radius: 3px; background: var(--chip); flex: 0 0 6px; }
+  /* race control */
+  ol.feed { list-style: none; margin: 0; padding: 0; max-height: 380px; overflow-y: auto; }
+  ol.feed > li { padding: 9px 14px; border-top: 1px solid var(--line); display: flex; gap: 10px; align-items: flex-start; }
+  ol.feed > li:first-child { border-top: 0; }
+  .when { color: var(--dim); font-size: 11px; white-space: nowrap; font-weight: 600; }
+  .flag { width: 5px; align-self: stretch; border-radius: 3px; background: var(--chip); flex: 0 0 5px; }
   .flag.GREEN, .flag.CLEAR { background: var(--green); } .flag.YELLOW, .flag.DOUBLE { background: #facc15; } .flag.RED { background: var(--red); }
-  .flag.BLUE { background: var(--blue); } .flag.CHEQUERED { background: repeating-linear-gradient(45deg, #fff 0 4px, #000 4px 8px); } .flag.SC { background: #f59e0b; }
-  .empty { color: var(--dim); padding: 14px 12px; }
+  .flag.BLUE { background: var(--blue); } .flag.CHEQUERED { background: repeating-linear-gradient(45deg, #fff 0 4px, #000 4px 8px); } .flag.SC { background: var(--amber); }
+  .rc-msg { font-weight: 600; }
+  .empty { color: var(--dim); padding: 16px 14px; }
 
   /* team radio */
-  .radio-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-weight: 500; }
-  .radio-tools select { background: var(--input); border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; font-size: 12px; }
-  .toggle { display: inline-flex; align-items: center; gap: 5px; color: var(--dim); font-size: 12px; cursor: pointer; }
-  .toggle input { accent-color: var(--red); margin: 0; }
-  .radio li { border-left: 3px solid var(--team, var(--chip)); align-items: center; }
-  .radio img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; flex: 0 0 46px; }
-  .radio .who { font-weight: 700; } .radio .meta { color: var(--dim); font-size: 11px; }
-  .radio .posn { display: inline-block; background: var(--chip); border-radius: 4px; padding: 0 5px; font-size: 10px; font-weight: 800; margin-right: 6px; color: var(--text); }
-  .radio .new { background: var(--red); color: #fff; font-size: 9px; font-weight: 800; border-radius: 4px; padding: 1px 5px; margin-left: 6px; }
-  .player { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
-  .play { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; background: var(--team, var(--chip)); display: grid; place-items: center; flex: 0 0 34px; color: #fff; }
+  .chips { display: flex; gap: 6px; overflow-x: auto; padding: 10px 14px; border-bottom: 1px solid var(--line); scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chips button { all: unset; cursor: pointer; flex: 0 0 auto; padding: 4px 10px; border-radius: 999px; background: var(--chip); font-weight: 800; font-size: 11.5px; color: var(--dim); box-shadow: 0 0 0 1.5px var(--tc, transparent) inset; }
+  .chips button[aria-pressed="true"] { background: var(--tc, var(--text)); color: var(--tcf, var(--bg)); }
+  .radio-opts { display: flex; gap: 12px; align-items: center; text-transform: none; letter-spacing: 0; }
+  .switch { display: inline-flex; align-items: center; gap: 6px; color: var(--dim); font-size: 11.5px; font-weight: 700; cursor: pointer; }
+  .switch input { appearance: none; width: 30px; height: 18px; border-radius: 999px; background: var(--chip); position: relative; margin: 0; cursor: pointer; transition: background .15s; }
+  .switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .15s; }
+  .switch input:checked { background: var(--red); } .switch input:checked::after { transform: translateX(12px); }
+  .rlist { list-style: none; margin: 0; padding: 6px; max-height: 520px; overflow-y: auto; display: grid; gap: 6px; }
+  .rcard { display: grid; grid-template-columns: 52px 1fr; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); position: relative; }
+  .rcard.playing { border-color: var(--tc); box-shadow: 0 0 0 1px var(--tc) inset; }
+  .avatar { position: relative; width: 52px; height: 52px; }
+  .avatar img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; background: var(--tc); box-shadow: 0 0 0 2.5px var(--tc); }
+  .avatar .mic { position: absolute; right: -3px; bottom: -3px; width: 20px; height: 20px; border-radius: 50%; background: var(--red); display: grid; place-items: center; box-shadow: 0 0 0 2px var(--panel2); }
+  .avatar .mic svg { width: 11px; height: 11px; fill: #fff; }
+  .rhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .rhead .who { font-weight: 800; font-size: 14px; }
+  .rmeta { color: var(--dim); font-size: 11.5px; font-weight: 600; margin-top: 1px; }
+  .new { background: var(--red); color: #fff; font-size: 9px; font-weight: 900; border-radius: 4px; padding: 2px 5px; letter-spacing: .4px; }
+  .player { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .play { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; background: var(--tc, var(--chip)); color: var(--tcf, #fff); display: grid; place-items: center; flex: 0 0 34px; }
   .play svg { width: 13px; height: 13px; fill: currentColor; }
-  .track { flex: 1; height: 6px; border-radius: 3px; background: var(--seg); overflow: hidden; cursor: pointer; }
-  .track i { display: block; height: 100%; width: 0; background: var(--team, var(--text)); }
-  .dur { color: var(--dim); font-size: 11px; min-width: 32px; text-align: right; }
-  li.playing { background: var(--hover); }
+  .wave { flex: 1; height: 26px; display: flex; align-items: center; gap: 2px; cursor: pointer; }
+  .wave b { flex: 1; border-radius: 2px; background: var(--seg); min-width: 2px; }
+  .wave b.on { background: var(--tc, var(--text)); }
+  .dur { color: var(--dim); font-size: 11px; min-width: 34px; text-align: right; font-weight: 700; }
 
   /* pop-up panels */
-  .sheet { position: fixed; z-index: 40; inset: 0; background: rgba(0, 0, 0, .45); display: grid; place-items: center; padding: 16px; }
-  .sheet > div { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; width: min(560px, 100%); max-height: min(80vh, 720px); overflow: auto; }
-  .sheet h3 { margin: 0; padding: 12px 14px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
-  .sheet section { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .sheet { position: fixed; z-index: 40; inset: 0; background: rgba(0, 0, 0, .55); display: grid; place-items: center; padding: 16px; }
+  .sheet > div { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; width: min(560px, 100%); max-height: min(80vh, 720px); overflow: auto; }
+  .sheet h3 { margin: 0; padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
+  .sheet section { padding: 14px 16px; border-bottom: 1px solid var(--line); }
   .sheet section:last-child { border-bottom: 0; }
-  .sheet h4 { margin: 0 0 8px; font-size: 12px; color: var(--dim); font-weight: 600; }
-  .sheet select { background: var(--input); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
-  .cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 12px; }
-  .cols label { display: flex; gap: 7px; align-items: center; cursor: pointer; }
-  .cols input { accent-color: var(--red); }
-  .seg-btns { display: inline-flex; background: var(--input); border-radius: 10px; padding: 3px; gap: 3px; }
-  .seg-btns button { all: unset; cursor: pointer; padding: 6px 14px; border-radius: 8px; font-weight: 600; color: var(--dim); }
+  .sheet h4 { margin: 0 0 10px; font-size: 11px; color: var(--dim); font-weight: 800; text-transform: uppercase; letter-spacing: .5px; }
+  .sheet select { background: var(--input); border: 1px solid var(--line); border-radius: 9px; padding: 7px 9px; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 9px 12px; }
+  .cols label { display: flex; gap: 8px; align-items: center; cursor: pointer; font-weight: 600; }
+  .cols input { accent-color: var(--red); width: 16px; height: 16px; }
+  .seg-btns { display: inline-flex; background: var(--input); border-radius: 11px; padding: 3px; gap: 3px; }
+  .seg-btns button { all: unset; cursor: pointer; padding: 7px 16px; border-radius: 9px; font-weight: 800; color: var(--dim); }
   .seg-btns button[aria-pressed="true"] { background: var(--chip); color: var(--text); }
-  .meet { border-top: 1px solid var(--line); padding: 10px 0; } .meet:first-child { border-top: 0; padding-top: 0; }
-  .meet b { display: block; margin-bottom: 6px; }
+  .meet { border-top: 1px solid var(--line); padding: 12px 0; } .meet:first-child { border-top: 0; padding-top: 0; }
+  .meet b { display: block; margin-bottom: 8px; }
   .meet .sess { display: flex; flex-wrap: wrap; gap: 6px; }
   .x { all: unset; cursor: pointer; color: var(--dim); font-size: 22px; line-height: 1; padding: 0 4px; }
 
   /* replay controls */
-  .rbar { position: sticky; bottom: 0; z-index: 35; background: color-mix(in srgb, var(--panel) 94%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-          border-top: 1px solid var(--line); padding: 8px 16px calc(8px + env(safe-area-inset-bottom)); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .rbar input[type=range] { flex: 1 1 200px; accent-color: var(--blue); }
-  .rbar select { background: var(--input); border: 1px solid var(--line); border-radius: 8px; padding: 5px 6px; }
-  .rbar .time { min-width: 110px; font-weight: 700; }
+  .rbar { position: sticky; bottom: 0; z-index: 25; background: color-mix(in srgb, var(--panel) 94%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+          border-top: 1px solid var(--line); padding: 8px 16px calc(10px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: auto auto auto 1fr auto auto; gap: 10px; align-items: center; }
+  .rbar select { background: var(--input); border: 1px solid var(--line); border-radius: 9px; padding: 6px 7px; }
+  .rbar .time { font-weight: 800; white-space: nowrap; } .rbar .time small { color: var(--dim); font-weight: 700; margin-left: 6px; }
   .ico { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; background: var(--chip); display: grid; place-items: center; }
   .ico svg { width: 15px; height: 15px; fill: currentColor; }
+  .timeline { position: relative; height: 34px; }
+  .timeline input { position: absolute; inset: 0; width: 100%; margin: 0; accent-color: var(--blue); background: transparent; }
+  .marks { position: absolute; left: 8px; right: 8px; top: 0; height: 100%; pointer-events: none; }
+  .marks i { position: absolute; top: 3px; height: 5px; border-radius: 2px; }
+  .marks i.sc { background: var(--amber); } .marks i.red { background: var(--red); }
+  .marks span { position: absolute; bottom: 0; transform: translateX(-50%); font-size: 9.5px; color: var(--dim); font-weight: 700; }
   .loading { color: var(--dim); padding: 6px 0; }
-
 
   @media (max-width: 900px) {
     main { grid-template-columns: 1fr; padding: 10px 10px 20px; }
     .top { padding: 8px 12px; }
+    .fact { min-width: 0; padding: 4px 8px; } .fact b { font-size: 13px; }
     td, th { padding: 5px 6px; }
+    .rbar { grid-template-columns: auto auto auto 1fr auto; gap: 8px; padding: 8px 10px calc(10px + env(safe-area-inset-bottom)); }
+    .rbar .timeline { grid-column: 1 / -1; grid-row: 2; }
+    .rbar .tod { display: none; }
+    .event b { white-space: normal; font-size: 15px; line-height: 1.2; }
+    .flagimg { width: 28px; height: 18px; }
+    .bests > div { padding: 9px 7px; } .bests .dtag .n { display: none; } .bests p { font-size: 12px; }
   }
 </style>
 <style id="colcss"></style>
@@ -195,50 +226,52 @@
 <header class="top">
   <div class="brand">
     <svg class="logo" viewBox="0 0 320 80" role="img" aria-label="F1"><path fill="#e10600" d="M45.2583 80L80.7417 45.575H80.7333C94.7167 32.0167 100.392 29.9583 127.058 29.9583H233.408L264.008 0H123.025C87.3333 0 77.2417 3.4 56.3083 24.1167L0 80H45.2583ZM127.7 34.7417H228.842L200.792 62.7917H128.225C114.925 62.7917 111.983 63.4167 105.383 70.0167L95.4 80H53.4333L84.4583 48.975C96.6417 36.8 100.842 34.7417 127.7 34.7417ZM320 0L239.783 80H190.175L270.175 0H320Z"/></svg>
-    <span class="event" id="event">Connecting to live timing…</span>
-  </div>
-  <div class="facts">
-    <span class="live" id="live">OFFLINE</span>
-    <span id="lap"></span>
-    <span id="clock"></span>
-    <span class="chip off" id="track">–</span>
-    <span id="weather"></span>
+    <img class="flagimg" id="flag" alt="" hidden>
+    <div class="event"><b id="event">Connecting to live timing…</b><span id="sub"></span></div>
   </div>
   <div class="tools">
     <button class="btn" id="replayBtn" type="button"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z"/></svg>Replay</button>
-    <button class="btn" id="settingsBtn" type="button"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.4-2.5 1a7.3 7.3 0 0 0-1.7-1L14.9 3h-4l-.4 2.9a7.3 7.3 0 0 0-1.7 1l-2.5-1-2 3.4L6.4 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.4 2.5-1c.5.4 1.1.7 1.7 1l.4 2.9h4l.4-2.9c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.4L19.4 13zM12.9 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>Settings</button>
+    <button class="btn" id="settingsBtn" type="button" aria-label="Settings"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.4-2.5 1a7.3 7.3 0 0 0-1.7-1L14.9 3h-4l-.4 2.9a7.3 7.3 0 0 0-1.7 1l-2.5-1-2 3.4L6.4 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.4 2.5-1c.5.4 1.1.7 1.7 1l.4 2.9h4l.4-2.9c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.4L19.4 13zM12.9 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg></button>
+  </div>
+  <div class="facts">
+    <div class="status off" id="track">–</div>
+    <div class="fact" id="lapBox" hidden><small>Lap</small><b id="lap"></b></div>
+    <div class="fact" id="clockBox" hidden><small id="clockLabel">Time left</small><b id="clock"></b></div>
+    <div class="fact" id="airBox" hidden><small>Air</small><b id="air"></b></div>
+    <div class="fact" id="trackTBox" hidden><small>Track</small><b id="trackT"></b></div>
+    <div class="fact" id="windBox" hidden><small>Wind</small><b id="wind"></b></div>
+    <div class="fact" id="rainBox" hidden><small>Rain</small><b>Yes</b></div>
   </div>
 </header>
 
 <main>
   <div class="col">
     <section class="panel">
-      <h2>Timing <small id="part"></small></h2>
+      <h2><span>Timing <small id="part"></small></span><span class="live" id="live">OFFLINE</span></h2>
       <div class="scroll"><table id="tower"></table></div>
     </section>
   </div>
   <div class="col">
     <section class="panel">
-      <h2><span>Track map <small id="mapKind">approximate positions</small></span><button class="btn" id="mapFull" type="button">Full screen</button></h2>
-      <svg id="map" viewBox="0 0 400 300" role="img" aria-label="Circuit map with each car's position"></svg>
-      <div class="map-note" id="mapNote">Cars are placed by how far through the lap they are, from the timing loops. Exact positions are only on F1 TV.</div>
+      <h2>Track map</h2>
+      <div class="mapwrap"><svg id="map" viewBox="0 0 400 300" role="img" aria-label="Circuit map with each car's position"></svg>
+        <div class="legend" id="mapLegend" hidden><span><i style="background:#facc15"></i>Yellow flag</span></div></div>
     </section>
+    <section class="panel"><h2>Fastest sectors</h2><div class="bests" id="bests"></div></section>
     <section class="panel">
       <h2><span>Live championship</span><span class="tabs" id="champTabs"><button type="button" data-k="d" aria-pressed="true">Drivers</button><button type="button" data-k="t" aria-pressed="false">Teams</button></span></h2>
       <ol class="champ" id="champ"></ol>
-      <div class="note" id="champNote"></div>
     </section>
-    <section class="panel"><h2>Fastest sectors</h2><div class="bests" id="bests"></div></section>
-    <section class="panel"><h2>Race control</h2><ol class="feed" id="rc"></ol></section>
     <section class="panel">
       <h2><span>Team radio</span>
-        <span class="radio-tools">
-          <select id="radioWho" aria-label="Show radio from"><option value="">All drivers</option></select>
-          <label class="toggle" title="Play each new message as it arrives (after you have played one yourself)"><input type="checkbox" id="radioAuto">Auto-play new</label>
-          <label class="toggle" title="When a message ends, play the next one"><input type="checkbox" id="radioNext">Play next</label>
+        <span class="radio-opts">
+          <label class="switch" title="Play each new message as it arrives (after you have played one yourself)"><input type="checkbox" id="radioAuto">Auto-play</label>
+          <label class="switch" title="When a message ends, play the next one"><input type="checkbox" id="radioNext">Play next</label>
         </span></h2>
-      <ol class="feed radio" id="radio"></ol>
+      <div class="chips" id="radioWho"></div>
+      <ol class="rlist" id="radio"></ol>
     </section>
+    <section class="panel"><h2>Race control</h2><ol class="feed" id="rc"></ol></section>
   </div>
 </main>
 
@@ -246,10 +279,12 @@
   <button class="ico" id="rBack" type="button" aria-label="Back 30 seconds"><svg viewBox="0 0 24 24"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6 8.5 6V6l-8.5 6z"/></svg></button>
   <button class="ico" id="rPlay" type="button" aria-label="Play or pause"></button>
   <button class="ico" id="rFwd" type="button" aria-label="Forward 30 seconds"><svg viewBox="0 0 24 24"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg></button>
+  <div class="timeline"><div class="marks" id="rMarks"></div><input type="range" id="rSeek" min="0" max="1000" value="0" aria-label="Replay position"></div>
   <span class="time" id="rTime"></span>
-  <input type="range" id="rSeek" min="0" max="1000" value="0" aria-label="Replay position">
-  <select id="rSpeed" aria-label="Replay speed"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option><option value="16">16×</option><option value="32">32×</option></select>
-  <button class="btn red" id="rExit" type="button">Back to live</button>
+  <span style="display:flex;gap:8px;align-items:center">
+    <select id="rSpeed" aria-label="Replay speed"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option><option value="16">16×</option><option value="32">32×</option></select>
+    <button class="btn red" id="rExit" type="button">Live</button>
+  </span>
 </div>
 
 <div class="sheet" id="settings" hidden><div>
@@ -267,7 +302,6 @@
     <div id="pList" style="margin-top:12px"><p class="loading">Loading the season…</p></div>
   </section>
 </div></div>
-
 
 <script>
 "use strict";
@@ -294,6 +328,9 @@ const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&a
 const list = x => Array.isArray(x) ? x : x && typeof x === "object" ? Object.keys(x).sort((a, b) => a - b).map(k => x[k]) : [];
 const driver = n => ((S.DriverList || {})[n]) || {};
 const colour = d => "#" + (d.TeamColour || "777777");
+const ink = hex => { const h = (hex || "#777").replace("#", ""), r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+                     return (r * 299 + g * 587 + b * 114) / 1000 > 165 ? "#000" : "#fff"; };   // black or white text on a team colour
+const tagVars = c => `--tc:${c};--tcf:${ink(c)}`;
 const year = () => +((S.SessionInfo && S.SessionInfo.StartDate || "").slice(0, 4)) || new Date().getFullYear();
 const utc = t => typeof t === "number" ? t : Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(t || "") ? t : t + "Z");   // F1 often leaves off the "Z" of UTC
 const timeOf = t => new Date(utc(t)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -308,7 +345,8 @@ function photo(d, px) {   // formula1.com's portrait for the season, in the curr
   return `https://media.formula1.com/image/upload/c_thumb,g_face,z_0.6,w_${px},h_${px}/d_common:f1:${y}:fallback:driver:${y}fallbackdriverright.webp/common/f1/${y}/${team}/${code}/${y}${team}${code}right.webp`;
 }
 const teamLogo = (team, white) => { const t = slug(team), y = year(); return `https://media.formula1.com/image/upload/c_fit,w_80,h_80/common/f1/${y}/${t}/${y}${t}logo${white ? "white" : ""}.png`; };
-const TYRES = { SOFT: ["S", "#e10600"], MEDIUM: ["M", "#eab308"], HARD: ["H", "#9ca3af"], INTERMEDIATE: ["I", "#16a34a"], WET: ["W", "#2563eb"] };
+const dtag = (n, small) => { const d = driver(n), c = colour(d); return `<span class="dtag${small ? " small" : ""}" style="${tagVars(c)}"><span class="n">${esc(d.RacingNumber || n)}</span><span class="t">${esc(d.Tla || n)}</span></span>`; };
+const TYRES = { SOFT: ["S", "#e10600"], MEDIUM: ["M", "#eab308"], HARD: ["H", "#d1d5db"], INTERMEDIATE: ["I", "#16a34a"], WET: ["W", "#2563eb"] };
 const segClass = s => ({ 2048: "y", 2049: "g", 2051: "p", 2064: "pit" })[s] || "";
 const timeClass = x => x && x.OverallFastest ? "t-purple" : x && x.PersonalFastest ? "t-green" : "";
 
@@ -325,6 +363,7 @@ function apply(topic, data, ts) {
   S[topic] = merge(S[topic], data);
   if (topic === "TimingData") trackLive(ts);
   if (topic === "TeamRadio") radioArrived();
+  if (topic === "SessionInfo") { loadCircuit(); loadFlag(); }
   dirty = true;
 }
 function segmentsPassed(line) {
@@ -374,7 +413,6 @@ function connect() {
       if (m.type === 3 && m.result) {  // the full state, then changes as they happen
         S = {}; radioSeen = null;
         for (const [topic, data] of Object.entries(m.result)) apply(topic, data, now());
-        loadCircuit();
       } else if (m.type === 1 && Array.isArray(m.arguments)) {
         const [topic, data, ts] = m.arguments;
         if (typeof topic === "string") apply(topic, data, utc(ts) || now());
@@ -409,10 +447,9 @@ async function of1(path) {   // OpenF1 allows 3 requests a second and 30 a minut
 let replayToken = 0;
 async function startReplay(key) {
   const token = ++replayToken;
-  mode = "replay"; R.playing = false; R.data = null; S = {}; radioSeen = null; towerHead = ""; dirty = true;
+  mode = "replay"; R.playing = false; R.data = null; S = {}; radioSeen = null; towerHead = ""; dirty = true; resetCars();
   if (ws) ws.close();
-  setLive("loading"); $("rbar").hidden = false; $("event").textContent = "Loading the replay…";
-  $("mapKind").textContent = "replay"; $("mapNote").textContent = "Cars are placed by where they are in their lap, from the lap times.";
+  setLive("loading"); $("rbar").hidden = false; $("event").textContent = "Loading the replay…"; $("sub").textContent = "";
   try {
     const [sess] = await of1(`sessions?session_key=${key}`);
     if (!sess) throw new Error("no such session");
@@ -421,7 +458,7 @@ async function startReplay(key) {
     const got = {};
     for (const n of names) {
       if (token !== replayToken) return;
-      $("event").textContent = `Loading the replay… ${Math.round(100 * Object.keys(got).length / names.length)}%`;
+      $("sub").textContent = `${Math.round(100 * Object.keys(got).length / names.length)}%`;
       got[n] = await of1(`${n}?session_key=${key}`); await sleep(350);
     }
     const [meet] = await of1(`meetings?meeting_key=${sess.meeting_key}`);
@@ -437,18 +474,16 @@ async function startReplay(key) {
     R.data = prepare(sess, meet || {}, got);
     R.start = R.data.start; R.end = R.data.end; R.t = R.start; R.speed = +$("rSpeed").value || 1; R.last = 0;
     history.replaceState(null, "", `?replay=${key}`);
-    buildReplay(); loadCircuit(); setLive("replay"); R.playing = true; syncReplayBar();
+    buildReplay(); drawMarks(); setLive("replay"); R.playing = true; syncReplayBar();
   } catch (e) {
     if (token !== replayToken) return;
-    $("event").textContent = "Couldn't load that replay (OpenF1 didn't answer). Try again in a minute.";
+    $("event").textContent = "Couldn't load that replay"; $("sub").textContent = "OpenF1 didn't answer. Try again in a minute.";
     setLive("offline");
   }
 }
 function exitReplay() {
   replayToken++;
-  if ($("map").closest(".panel").classList.contains("mapfull")) setTimeout(() => mapFull(true));
-  mode = "live"; R.playing = false; R.data = null; $("rbar").hidden = true; S = {}; radioSeen = null; towerHead = ""; dirty = true;
-  $("mapKind").textContent = "approximate positions"; $("mapNote").textContent = "Cars are placed by how far through the lap they are, from the timing loops. Exact positions are only on F1 TV.";
+  mode = "live"; R.playing = false; R.data = null; $("rbar").hidden = true; S = {}; radioSeen = null; towerHead = ""; dirty = true; resetCars();
   history.replaceState(null, "", location.pathname);
   connect();   // reconnecting brings the full live state back
 }
@@ -485,8 +520,10 @@ const upTo = (arr, at) => { let lo = 0, hi = arr.length - 1, k = -1; while (lo <
 const fastest = laps => Math.min(Infinity, ...laps.filter(l => l.dur && !l.out).map(l => l.dur));
 function buildReplay() {   // the session as it stood at R.t, in the live feed's shapes
   const D = R.data, at = R.t, s = D.sess, race = s.session_type === "Race";
+  const first = !S.SessionInfo;
   S.SessionInfo = { Key: s.session_key, Name: s.session_name, Type: s.session_type, StartDate: s.date_start, Path: "",
-                    Meeting: { Name: D.meet.meeting_name || s.country_name, Circuit: { Key: s.circuit_key } } };
+                    Meeting: { Name: D.meet.meeting_name || s.country_name, Circuit: { Key: s.circuit_key }, Country: { Name: s.country_name } } };
+  if (first) { loadCircuit(); loadFlag(); }
   S.DriverList = Object.fromEntries(D.drivers.map(d => [String(d.driver_number), { RacingNumber: String(d.driver_number), Tla: d.name_acronym, FirstName: d.first_name,
     LastName: d.last_name, TeamName: d.team_name, TeamColour: d.team_colour, HeadshotUrl: d.headshot_url }]));
   const done = {}; let bestLap = Infinity, bestST = 0; const bestSec = [Infinity, Infinity, Infinity];
@@ -527,7 +564,9 @@ function buildReplay() {   // the session as it stood at R.t, in the live feed's
       else {
         const behind = leadDone - fin.length, le = lapEnd(leader, fin.length), ae = i ? lapEnd(order[i - 1], fin.length) : null;
         gap = behind >= 1 && lapEnd(leader, fin.length + 1) && le && last.end - le > 0 ? `+${behind} LAP${behind > 1 ? "S" : ""}` : le ? "+" + ((last.end - le) / 1000).toFixed(3) : "";
-        intv = ae ? "+" + ((last.end - ae) / 1000).toFixed(3) : gap;
+        // the car ahead crossed the line first; if the order changed mid-lap (a pit stop), use the gaps instead, never a negative
+        const ahead = lines[order[i - 1]], diff = ae ? (last.end - ae) / 1000 : null, gapNum = parseFloat(gap), aheadGap = ahead ? parseFloat(ahead.GapToLeader) || 0 : 0;
+        intv = diff != null && diff >= 0 ? "+" + diff.toFixed(3) : isFinite(gapNum) && gapNum - aheadGap >= 0 ? "+" + (gapNum - aheadGap).toFixed(3) : "";
       }
     } else if (!race && isFinite(pb)) {
       const prev = i ? fastest(done[order[i - 1]] || []) : Infinity;
@@ -544,7 +583,7 @@ function buildReplay() {   // the session as it stood at R.t, in the live feed's
       BestLapTime: isFinite(pb) ? { Value: lapText(pb), Position: pb <= bestLap ? 1 : 2 } : {},
       Sectors: sectors, Speeds: { ST: last && last.st ? { Value: String(last.st), OverallFastest: last.st >= bestST, PersonalFastest: last.st >= Math.max(...fin.map(l => l.st || 0)) } : {} },
       InPit: !!pit, PitOut: !!(cur && cur.out && !pit), Retired: !!retired, Stopped: false,
-      NumberOfPitStops: D.pits.filter(p => p.n === n && p.at <= at).length, _stints: stints, _grid: grid[n], _lap: cur
+      NumberOfPitStops: D.pits.filter(p => p.n === n && p.at <= at).length, _stints: stints, _grid: grid[n], _lap: cur, _laps: laps
     };
     stats[n] = { BestSectors: [0, 1, 2].map(k => { const v = Math.min(...fin.map(l => l.sec[k] || Infinity)); return isFinite(v) ? { Value: v.toFixed(3), _v: v } : {}; }) };
   });
@@ -555,7 +594,7 @@ function buildReplay() {   // the session as it stood at R.t, in the live feed's
   S.TimingStats = { Lines: stats };
   S.LapCount = race ? { CurrentLap: Math.min(D.totalLaps, leadDone + 1), TotalLaps: D.totalLaps } : undefined;
   const rcSoFar = D.rc.slice(0, upTo(D.rc, at) + 1);
-  S.RaceControlMessages = { Messages: rcSoFar.map(({ at, m }) => ({ Utc: at, Lap: m.lap_number, Category: m.category, Flag: m.flag, Message: m.message })) };
+  S.RaceControlMessages = { Messages: rcSoFar.map(({ at, m }) => ({ Utc: at, Lap: m.lap_number, Category: m.category, Flag: m.flag, Scope: m.scope, Sector: m.sector, Message: m.message })) };
   S.TrackStatus = trackStatusFrom(rcSoFar.map(x => x.m));
   const w = D.weather[upTo(D.weather, at)];
   S.WeatherData = w ? { AirTemp: w.w.air_temperature, TrackTemp: w.w.track_temperature, WindSpeed: w.w.wind_speed, Rainfall: w.w.rainfall ? "1" : "0" } : undefined;
@@ -568,7 +607,7 @@ function trackStatusFrom(msgs) {   // the track's state, from race control's mes
   let st = "1";
   for (const m of msgs) {
     const text = (m.message || "").toUpperCase();
-    if (m.category === "SafetyCar") st = /VIRTUAL/.test(text) ? (/ENDING/.test(text) ? "7" : "6") : /IN THIS LAP/.test(text) ? "4" : "4";
+    if (m.category === "SafetyCar") st = /VIRTUAL/.test(text) ? (/ENDING/.test(text) ? "7" : "6") : "4";
     if (m.flag === "RED" && m.scope !== "Sector") st = "5";
     if (/TRACK CLEAR|GREEN LIGHT - PIT EXIT OPEN/.test(text) || ((m.flag === "GREEN" || m.flag === "CLEAR") && m.scope === "Track")) st = "1";
   }
@@ -580,38 +619,73 @@ function replayTick() {
   if (R.playing) { R.t = Math.min(R.end, R.t + dt * R.speed); if (R.t >= R.end) R.playing = false; }
   if (R.playing || R.dirty) { R.dirty = false; buildReplay(); syncReplayBar(); }
 }
+function lapAt(t) {   // the leader's lap at a moment of the replay
+  const D = R.data; if (!D) return 0;
+  let best = 0; for (const laps of Object.values(D.byDriver)) { const k = laps.filter(l => l.start <= t).length; if (k > best) best = k; }
+  return Math.min(best, D.totalLaps);
+}
+function clock(ms) { const el = Math.max(0, ms / 1000), h = Math.floor(el / 3600), m = Math.floor(el / 60) % 60, s = Math.floor(el % 60);
+  return `${h ? h + ":" : ""}${String(m).padStart(h ? 2 : 1, "0")}:${String(s).padStart(2, "0")}`; }
 function syncReplayBar() {
   $("rPlay").innerHTML = R.playing ? ICON_PAUSE : ICON_PLAY;
   if (document.activeElement !== $("rSeek")) $("rSeek").value = String(Math.round(1000 * (R.t - R.start) / (R.end - R.start || 1)));
-  const el = Math.max(0, (R.t - R.start) / 1000), h = Math.floor(el / 3600), m = Math.floor(el / 60) % 60, s = Math.floor(el % 60);
-  $("rTime").textContent = `${h ? h + ":" : ""}${String(m).padStart(h ? 2 : 1, "0")}:${String(s).padStart(2, "0")} · ${timeOf(R.t)}`;
+  const race = R.data && R.data.sess.session_type === "Race";
+  $("rTime").innerHTML = `${clock(R.t - R.start)}<small>${race ? "Lap " + Math.max(1, lapAt(R.t)) : ""}<span class="tod">${race ? " · " : ""}${timeOf(R.t)}</span></small>`;
+}
+function drawMarks() {   // the replay timeline: safety cars, red flags and every 10th lap
+  const D = R.data, span = R.end - R.start, x = t => (100 * (t - R.start) / span).toFixed(2) + "%";
+  const out = [];
+  let from = null, kind = null;
+  for (const { at, m } of D.rc) {
+    const text = (m.message || "").toUpperCase();
+    const start = m.category === "SafetyCar" && /DEPLOYED/.test(text) ? "sc" : m.flag === "RED" && m.scope !== "Sector" ? "red" : null;
+    if (start && from === null) { from = at; kind = start; }
+    else if (from !== null && (/IN THIS LAP|ENDING|TRACK CLEAR|GREEN LIGHT/.test(text) || (m.flag === "GREEN" && m.scope === "Track"))) {
+      out.push(`<i class="${kind}" style="left:${x(from)};width:max(3px,calc(${x(at)} - ${x(from)}))" title="${kind === "sc" ? "Safety car" : "Red flag"}"></i>`); from = null;
+    }
+  }
+  const lead = Object.values(D.byDriver).sort((a, b) => b.length - a.length)[0] || [];
+  for (const l of lead) if (l.n % 10 === 0) out.push(`<span style="left:${x(l.start)}">L${l.n}</span>`);
+  $("rMarks").innerHTML = out.join("");
 }
 
 // ---------- header ----------
+let flagFor = "";
+async function loadFlag() {
+  const info = S.SessionInfo || {}, key = (info.Meeting || {}).Name || "";
+  if (!key || key === flagFor) return; flagFor = key;
+  try {
+    const y = year(), meets = await (await fetch(`${OPENF1}/meetings?year=${y}`)).json();
+    const m = (Array.isArray(meets) ? meets : []).find(x => x.meeting_name === key);
+    if (m && m.country_flag) { $("flag").src = m.country_flag; $("flag").hidden = false; }
+  } catch (e) {}
+}
+const show = (id, on) => { $(id).hidden = !on; };
 function renderHeader() {
   const info = S.SessionInfo || {}, meeting = info.Meeting || {};
-  if (meeting.Name) $("event").textContent = `${meeting.Name.replace("Grand Prix", "GP")}: ${info.Name || ""}`;
-  else if (mode === "live") $("event").textContent = "Waiting for live timing…";
+  if (meeting.Name) { $("event").textContent = `${meeting.Name.replace("Grand Prix", "GP")}: ${info.Name || ""}`; if (mode === "live") $("sub").textContent = ((meeting.Circuit || {}).ShortName || meeting.Location || ""); }
+  else if (mode === "live") { $("event").textContent = "Waiting for live timing…"; $("sub").textContent = ""; }
+  if (mode === "replay" && R.data) $("sub").textContent = "Replay · " + new Date(R.start).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" });
   document.title = meeting.Name ? `${info.Name} · ${meeting.Name} · F1 ${mode === "replay" ? "Replay" : "Live Timing"}` : "F1 Live Timing";
   const status = (S.SessionStatus || {}).Status;
   if (mode === "live" && ws && ws.readyState === 1) setLive(status === "Started" ? "live" : ["Finished", "Finalised", "Ends"].includes(status) ? "ended" : status === "Inactive" ? "waiting" : "live");
   const lap = S.LapCount;
-  $("lap").innerHTML = lap && lap.TotalLaps ? `Lap <b>${lap.CurrentLap}/${lap.TotalLaps}</b>` : "";
+  show("lapBox", lap && lap.TotalLaps); if (lap && lap.TotalLaps) $("lap").textContent = `${lap.CurrentLap}/${lap.TotalLaps}`;
   const ts = S.TrackStatus || {}, chip = $("track");
   const kinds = { "1": ["Track clear", ""], "2": ["Yellow flag", "yellow"], "4": ["Safety car", "sc"], "5": ["Red flag", "red"], "6": ["VSC", "sc"], "7": ["VSC ending", "sc"] };
   const [label, cls] = kinds[ts.Status] || [ts.Message || "–", "off"];
-  chip.textContent = label; chip.className = "chip " + cls;
+  chip.textContent = label; chip.className = "status " + cls;
   const w = S.WeatherData;
-  $("weather").innerHTML = w ? `Air <b>${(+w.AirTemp).toFixed(1)}°</b> · Track <b>${(+w.TrackTemp).toFixed(1)}°</b> · Wind <b>${(+w.WindSpeed * 3.6).toFixed(0)} km/h</b>${w.Rainfall === "1" ? " · <b>Rain</b>" : ""}` : "";
+  for (const id of ["airBox", "trackTBox", "windBox"]) show(id, !!w);
+  show("rainBox", w && w.Rainfall === "1");
+  if (w) { $("air").textContent = `${(+w.AirTemp).toFixed(1)}°`; $("trackT").textContent = `${(+w.TrackTemp).toFixed(1)}°`; $("wind").textContent = `${(+w.WindSpeed * 3.6).toFixed(0)} km/h`; }
 }
 function renderClock() {
-  const c = S.ExtrapolatedClock, el = $("clock");
-  if (mode === "replay" || !c || !c.Remaining) { el.textContent = ""; return; }
+  const c = S.ExtrapolatedClock;
+  if (mode === "replay" || !c || !c.Remaining) { show("clockBox", false); return; }
   let left = seconds(c.Remaining) * 1000;
   if (c.Extrapolating && c.Utc) left -= now() - utc(c.Utc);
-  left = Math.max(0, left / 1000);
-  const h = Math.floor(left / 3600), m = Math.floor(left / 60) % 60, s = Math.floor(left % 60);
-  el.innerHTML = `<b>${h ? h + ":" + String(m).padStart(2, "0") : m}:${String(s).padStart(2, "0")}</b> left`;
+  show("clockBox", true); $("clock").textContent = clock(Math.max(0, left));
 }
 
 // ---------- timing tower ----------
@@ -631,15 +705,15 @@ function renderTower() {
   $("part").textContent = part ? `Q${part}` : "";
   const app = (S.TimingAppData || {}).Lines || {};
   const rows = Object.entries(lines).sort((a, b) => (+a[1].Line || 99) - (+b[1].Line || 99));
-  const head = `<tr><th>Pos</th><th>Driver</th><th data-c="int">${race ? "Interval" : "Gap"}</th><th data-c="gap">${race ? "Gap" : "Int"}</th><th data-c="last">Last lap</th>
-              <th data-c="best">Best lap</th><th data-c="s1">Sector 1</th><th data-c="s2">Sector 2</th><th data-c="s3">Sector 3</th><th data-c="speed">Speed trap</th><th data-c="tyres">Tyres (laps)</th><th data-c="pit">Pit</th>${race ? `<th data-c="moved">+/-</th>` : ""}</tr>`;
+  const head = `<tr><th>Driver</th><th data-c="int">${race ? "Interval" : "Gap"}</th><th data-c="gap">${race ? "Gap" : "Int"}</th><th data-c="last">Last lap</th>
+              <th data-c="best">Best lap</th><th data-c="s1">Sector 1</th><th data-c="s2">Sector 2</th><th data-c="s3">Sector 3</th><th data-c="speed">Speed</th><th data-c="tyres">Tyres</th><th data-c="pit">Pit</th>${race ? `<th data-c="moved">+/-</th>` : ""}</tr>`;
   if (head !== towerHead) { table.innerHTML = head; towerHead = head; towerRows = {}; }   // a different session: start over
   const body = table.tBodies[0] || table;
   for (const [num, l] of rows) {
-    const d = driver(num), stats = list(l.Stats)[part ? part - 1 : 0] || {};
+    const d = driver(num), c = colour(d), stats = list(l.Stats)[part ? part - 1 : 0] || {};
     let gap = l.GapToLeader != null ? l.GapToLeader : l.TimeDiffToFastest != null ? l.TimeDiffToFastest : stats.TimeDiffToFastest;
-    if (/^LAP/i.test(gap || "")) gap = "—";   // the leader's row shows the lap number in F1's feed
     let intv = l.IntervalToPositionAhead ? l.IntervalToPositionAhead.Value : l.TimeDiffToPositionAhead != null ? l.TimeDiffToPositionAhead : stats.TimeDifftoPositionAhead;
+    if (/^LAP/i.test(gap || "")) gap = "—";   // the leader's row shows the lap number in F1's feed
     if (/^LAP/i.test(intv || "")) intv = "—";
     const lapsDown = v => String(v || "").replace(/^\+?(\d+)\s*L(?:APS?)?$/i, (_, k) => `+${k} Lap${k > 1 ? "s" : ""}`);
     gap = lapsDown(gap); intv = lapsDown(intv);
@@ -658,13 +732,14 @@ function renderTower() {
     const secCells = list(l.Sectors).map((sec, k) => ["s" + (k + 1), "", `<span class="sector"><span class="${timeClass(sec)}">${esc(sec.Value || "")}</span>
         <span class="segs">${list(sec.Segments).map(g => `<b class="${segClass(g && g.Status)}"></b>`).join("")}</span></span>`]);
     while (secCells.length < 3) secCells.push(["s" + (secCells.length + 1), "", ""]);
+    const pos = l.ShowPosition === false || out ? "" : l.Position;
+    const lastV = (l.LastLapTime || {}).Value || "", lastC = timeClass(l.LastLapTime);
     const cells = [
-      ["", "pos", esc(l.ShowPosition === false ? "" : l.Position)],
-      ["", "", `<span class="drv"><i style="background:${colour(d)}"></i><img src="${photo(d, 64)}" alt="">${esc(d.Tla || num)}${tags}</span>`],
-      ["int", race && catching ? "catch" : "", esc(race ? intv : gap) || "–"],
+      ["", "", `<span class="dtag" style="${tagVars(c)}"><span class="n">${esc(pos || "–")}</span><span class="t">${esc(d.Tla || num)}</span></span><span class="tags">${tags}</span>`],
+      ["int", "", race && catching && intv && intv !== "—" ? `<span class="pill ring">${esc(intv)}</span>` : esc(race ? intv : gap) || "–"],
       ["gap", "", esc(race ? gap : intv) || ""],
-      ["last", timeClass(l.LastLapTime), esc((l.LastLapTime || {}).Value || "")],
-      ["best", "", `<span class="best ${l.BestLapTime && l.BestLapTime.Position === 1 ? "t-purple" : ""}">${esc(best)}</span>`],
+      ["last", lastC, lastC === "t-purple" ? `<span class="pill purple">${esc(lastV)}</span>` : esc(lastV)],
+      ["best", "", l.BestLapTime && l.BestLapTime.Position === 1 ? `<span class="pill purple">${esc(best)}</span>` : esc(best)],
       ...secCells,
       ["speed", timeClass(trap), trap.Value ? esc(trap.Value) + ` <small class="u">km/h</small>` : ""],
       ["tyres", "", `<span class="stints">${stintHtml}</span>`],
@@ -672,14 +747,14 @@ function renderTower() {
       ...(race ? [["moved", moved > 0 ? "up" : moved < 0 ? "down" : "same", moved > 0 ? "▲" + moved : moved < 0 ? "▼" + -moved : "–"]] : [])
     ];
     let tr = towerRows[num];
-    if (!tr) { tr = towerRows[num] = document.createElement("tr"); cells.forEach(([k]) => { const c = document.createElement("td"); if (k) c.dataset.c = k; tr.appendChild(c); }); }
+    if (!tr) { tr = towerRows[num] = document.createElement("tr"); cells.forEach(([k]) => { const td = document.createElement("td"); if (k) td.dataset.c = k; tr.appendChild(td); }); }
     tr.className = out ? "out" : "";
-    cells.forEach(([, cls, html], i) => {   // rewrite a cell only when it changed: the photo isn't reloaded each update
+    cells.forEach(([, cls, html], i) => {   // rewrite a cell only when it changed
       const cell = tr.cells[i];
       if (cell.className !== cls) cell.className = cls;
       if (cell._html !== html) { cell.innerHTML = html; cell._html = html; }
     });
-    body.appendChild(tr);   // in running order; moving a row keeps its photo
+    body.appendChild(tr);   // in running order
   }
   for (const [num, tr] of Object.entries(towerRows)) if (!lines[num]) { tr.remove(); delete towerRows[num]; }
 }
@@ -690,7 +765,7 @@ function renderBests() {
   for (let i = 0; i < 3; i++) {
     const top = Object.entries(lines).map(([n, l]) => [n, list(l.BestSectors)[i] || {}]).filter(([, b]) => b.Value && b.Position)
                       .sort((a, b) => a[1].Position - b[1].Position).slice(0, 3);
-    out.push(`<div><h3>Sector ${i + 1}</h3>${top.map(([n, b]) => `<p><span class="drv"><i style="background:${colour(driver(n))}"></i>${esc(driver(n).Tla || n)}</span><span>${esc(b.Value)}</span></p>`).join("") || `<p class="when">–</p>`}</div>`);
+    out.push(`<div><h3>Sector ${i + 1}</h3>${top.map(([n, b]) => `<p>${dtag(n, true)}<span>${esc(b.Value)}</span></p>`).join("") || `<p class="when">–</p>`}</div>`);
   }
   $("bests").innerHTML = out.join("");
 }
@@ -732,8 +807,8 @@ function champBase() {   // where everyone stood before this sprint or race, and
   return { drivers, teams: standings.teams.map(t => ({ name: teamOf(t.cid) || t.name, pts: t.pts, pos: t.pos })), live: !!kind && !counted, kind };
 }
 function renderChampionship() {
-  const el = $("champ"), note = $("champNote"), base = champBase();
-  if (!base) { el.innerHTML = `<li class="empty">${mode === "replay" ? "The championship is shown for sprints and races." : standings ? "Standings unavailable right now" : "Loading standings…"}</li>`; note.textContent = ""; champKey = ""; return; }
+  const el = $("champ"), base = champBase();
+  if (!base) { el.innerHTML = `<li class="empty">${mode === "replay" ? "The championship is shown for sprints and races." : standings ? "Standings unavailable right now" : "Loading standings…"}</li>`; champKey = ""; return; }
   const { kind, live } = base, lines = (S.TimingData || {}).Lines || {};
   const scored = num => { const l = live && num && lines[num]; return l && !l.Retired && !l.Stopped ? POINTS[kind][(+l.Position || 99) - 1] || 0 : 0; };
   const rank = rows => { rows.forEach(r => r.total = r.pts + r.add); rows.sort((a, b) => b.total - a.total || a.pos - b.pos); rows.forEach((r, i) => r.now = i + 1); return rows; };
@@ -745,60 +820,61 @@ function renderChampionship() {
   if (key === champKey) return;   // unchanged: keep the photos as they are
   champKey = key;
   const teamColour = name => { const d = drivers.find(x => slug(x.team) === slug(name) && x.num); return d ? colour(driver(d.num)) : "#777"; };
-  const move = r => { const m = r.pos - r.now; return r.pos === 99 || !m ? `<span class="mv same">–</span>` : `<span class="mv ${m > 0 ? "up" : "down"}">${m > 0 ? "+" + m : m}</span>`; };
-  const pts = r => `<span class="pts">${r.total}${live ? `<small>${r.add ? "+" + r.add : "–"}</small>` : ""}</span>`;
+  const move = r => { const m = r.pos - r.now; return r.pos === 99 || !m ? `<span class="mv same">–</span>` : `<span class="mv ${m > 0 ? "up" : "down"}">${m > 0 ? "▲" + m : "▼" + -m}</span>`; };
+  const pts = r => `<span class="pts">${r.total}${live ? `<small class="${r.add ? "" : "none"}">${r.add ? "+" + r.add : "–"}</small>` : ""}</span>`;
   el.innerHTML = champTab === "d"
     ? drivers.map(r => { const tc = r.num ? colour(driver(r.num)) : teamColour(r.team), d = { HeadshotUrl: r.headshot, ...driver(r.num), FirstName: r.first, LastName: r.last, TeamName: r.team };
-        return `<li><span class="p">${r.now}</span>${move(r)}<span class="bar" style="background:${tc}"></span>
-          <img class="face" src="${photo(d, 64)}" alt="" style="background:${tc}">
-          <span class="nm"><b>${esc(r.code)}</b> <small>${esc(`${r.first || ""} ${r.last || ""}`)}</small></span>${pts(r)}</li>`; }).join("")
-    : teams.map(r => `<li><span class="p">${r.now}</span>${move(r)}<span class="bar" style="background:${teamColour(r.name)}"></span>
+        return `<li style="--tc:${tc}"><span class="p">${r.now}</span>${move(r)}<img class="face" src="${photo(d, 64)}" alt="" style="background:${tc}">
+          <span class="nm"><span class="dtag small" style="${tagVars(tc)}"><span class="t">${esc(r.code)}</span></span><small>${esc(`${r.first || ""} ${r.last || ""}`)}</small></span>${pts(r)}</li>`; }).join("")
+    : teams.map(r => `<li><span class="p">${r.now}</span>${move(r)}
           <span><img class="tl lg-light" src="${teamLogo(r.name)}" alt=""><img class="tl lg-dark" src="${teamLogo(r.name, true)}" alt=""></span>
-          <span class="nm"><b>${esc(r.name)}</b></span>${pts(r)}</li>`).join("");
-  note.textContent = live ? `Live: the standings if the ${kind.toLowerCase()} ended now (${POINTS[kind][0]} points for the win). +/- is the change since before the ${kind.toLowerCase()}.`
-                          : mode === "replay" ? "" : `Standings after round ${standings.round}. During a sprint or race they update live.`;
+          <span class="nm"><span style="width:4px;height:18px;border-radius:2px;background:${teamColour(r.name)};flex:0 0 4px"></span><b>${esc(r.name)}</b></span>${pts(r)}</li>`).join("");
 }
 
 // ---------- race control ----------
 function renderRaceControl() {
-  const msgs = list((S.RaceControlMessages || {}).Messages).slice(-50).reverse();
+  const msgs = list((S.RaceControlMessages || {}).Messages).slice(-60).reverse();
   $("rc").innerHTML = msgs.length ? msgs.map(m => {
     const flag = (m.Flag || (m.Category === "SafetyCar" ? "SC" : "")).split(" ")[0];
-    return `<li><span class="flag ${esc(flag)}"></span><div><div>${esc(m.Message)}</div><div class="when">${m.Lap ? "Lap " + esc(m.Lap) + " · " : ""}${timeOf(m.Utc)}</div></div></li>`;
+    return `<li><span class="flag ${esc(flag)}"></span><div><div class="rc-msg">${esc(m.Message)}</div><div class="when">${m.Lap ? "Lap " + esc(m.Lap) + " · " : ""}${timeOf(m.Utc)}</div></div></li>`;
   }).join("") : `<li class="empty">No messages yet</li>`;
 }
 
 // ---------- team radio ----------
 const audio = new Audio();
-let playingSrc = null, userPlayed = false, radioSeen = null;
+let playingSrc = null, userPlayed = false, radioSeen = null, radioWho = "";
 const ICON_PLAY = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`, ICON_PAUSE = `<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>`;
+const MIC = `<svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11h-2z"/></svg>`;
 const mmss = s => isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}` : "";
 const radioUrl = c => /^https?:/.test(c.Path || "") ? c.Path : STATIC + ((S.SessionInfo || {}).Path || "") + c.Path;
 const ago = t => { const m = Math.round((now() - utc(t)) / 60000); return m < 1 ? "just now" : m < 60 ? `${m} min ago` : `${Math.floor(m / 60)} h ${m % 60} min ago`; };
+const BARS = 34;
+const waveOf = src => { let h = 0; for (const ch of src) h = (h * 31 + ch.charCodeAt(0)) >>> 0;   // a steady shape per clip (the audio itself can't be read)
+  return Array.from({ length: BARS }, (_, i) => { h = (h * 1103515245 + 12345) >>> 0; return 25 + (h % 70) * (0.55 + 0.45 * Math.sin(i / 3)); }); };
 let radioKey = "";
 function renderRadio() {
-  const sel = $("radioWho"), who = sel.value;
   const all = list((S.TeamRadio || {}).Captures);
   const have = [...new Set(all.map(c => c.RacingNumber))].sort((a, b) => (driver(a).Tla || a).localeCompare(driver(b).Tla || b));
-  if (sel.dataset.have !== have.join()) {   // the driver filter: everyone who has spoken
-    sel.dataset.have = have.join();
-    sel.innerHTML = `<option value="">All drivers</option>` + have.map(n => `<option value="${esc(n)}">${esc(driver(n).Tla || n)} · ${esc(driver(n).LastName || "")}</option>`).join("");
-    sel.value = have.includes(who) ? who : "";
-  }
-  const caps = all.filter(c => !sel.value || c.RacingNumber === sel.value).slice(-30).reverse();
-  const key = caps.length + ":" + (caps[0] && caps[0].Utc) + ":" + sel.value + ":" + Math.floor(now() / 30000);   // "x min ago" twice a minute
+  if (radioWho && !have.includes(radioWho)) radioWho = "";
+  const chips = `<button type="button" data-n="" aria-pressed="${!radioWho}">All · ${all.length}</button>` +
+    have.map(n => `<button type="button" data-n="${esc(n)}" style="${tagVars(colour(driver(n)))}" aria-pressed="${radioWho === n}">${esc(driver(n).Tla || n)}</button>`).join("");
+  if ($("radioWho")._html !== chips) { $("radioWho").innerHTML = chips; $("radioWho")._html = chips; }
+  const caps = all.filter(c => !radioWho || c.RacingNumber === radioWho).reverse();   // newest first; every message F1 has published
+  const key = caps.length + ":" + (caps[0] && caps[0].Utc) + ":" + radioWho + ":" + Math.floor(now() / 30000);   // "x min ago" twice a minute
   if (key === radioKey) return;          // otherwise don't rebuild while something is playing
   radioKey = key;
   const lines = (S.TimingData || {}).Lines || {};
   $("radio").innerHTML = caps.length ? caps.map(c => {
-    const d = driver(c.RacingNumber), at = utc(c.Utc), fresh = now() - at < 5 * 60000, l = lines[c.RacingNumber] || {};
-    return `<li data-src="${esc(radioUrl(c))}" style="--team:${colour(d)}"><img src="${photo(d, 96)}" alt="" loading="lazy" style="background:${colour(d)}">
-      <div style="flex:1;min-width:0">
-        <div>${l.Position ? `<span class="posn">P${esc(l.Position)}</span>` : ""}<span class="who">${esc(d.FirstName ? d.FirstName + " " + d.LastName : d.Tla || c.RacingNumber)}</span>${fresh ? `<span class="new">NEW</span>` : ""}</div>
-        <div class="meta">${esc(d.TeamName || "")} · ${timeOf(at)} · ${ago(at)}</div>
-        <div class="player"><button class="play" type="button" aria-label="Play radio from ${esc(d.LastName || "")}">${ICON_PLAY}</button><span class="track"><i></i></span><span class="dur"></span></div>
+    const d = driver(c.RacingNumber), tc = colour(d), at = utc(c.Utc), fresh = now() - at < 5 * 60000, l = lines[c.RacingNumber] || {}, src = radioUrl(c);
+    return `<li class="rcard" data-src="${esc(src)}" style="${tagVars(tc)}">
+      <span class="avatar"><img src="${photo(d, 104)}" alt="" loading="lazy"><span class="mic">${MIC}</span></span>
+      <div style="min-width:0">
+        <div class="rhead">${dtag(c.RacingNumber, true)}<span class="who">${esc(d.FirstName ? d.FirstName + " " + d.LastName : d.Tla || c.RacingNumber)}</span>${fresh ? `<span class="new">NEW</span>` : ""}</div>
+        <div class="rmeta">${l.Position ? "P" + esc(l.Position) + " · " : ""}${esc(d.TeamName || "")} · ${timeOf(at)} · ${ago(at)}</div>
+        <div class="player"><button class="play" type="button" aria-label="Play radio from ${esc(d.LastName || "")}">${ICON_PLAY}</button>
+          <span class="wave">${waveOf(src).map(h => `<b style="height:${h.toFixed(0)}%"></b>`).join("")}</span><span class="dur"></span></div>
       </div></li>`;
-  }).join("") : `<li class="empty">${sel.value ? "No radio from this driver yet" : "No team radio yet"}</li>`;
+  }).join("") : `<li class="empty">${radioWho ? "No radio from this driver yet" : "No team radio yet"}</li>`;
   syncRadio();
 }
 function radioArrived() {   // auto-play: a message that wasn't there before, once you've played one yourself
@@ -807,16 +883,15 @@ function radioArrived() {   // auto-play: a message that wasn't there before, on
   if (radioSeen === null) { radioSeen = key; return; }
   if (key && key !== radioSeen) {
     radioSeen = key;
-    const who = $("radioWho").value;
-    if ($("radioAuto").checked && userPlayed && audio.paused && (!who || newest.RacingNumber === who)) playSrc(key);
+    if ($("radioAuto").checked && userPlayed && audio.paused && (!radioWho || newest.RacingNumber === radioWho)) playSrc(key);
   }
 }
 function syncRadio() {
   for (const li of document.querySelectorAll("#radio li[data-src]")) {
-    const on = li.dataset.src === playingSrc;
+    const on = li.dataset.src === playingSrc, part = on && audio.duration ? audio.currentTime / audio.duration : 0;
     li.classList.toggle("playing", on && !audio.paused);
     li.querySelector(".play").innerHTML = on && !audio.paused ? ICON_PAUSE : ICON_PLAY;
-    li.querySelector(".track i").style.width = on && audio.duration ? (100 * audio.currentTime / audio.duration) + "%" : "0";
+    li.querySelectorAll(".wave b").forEach((b, i) => b.classList.toggle("on", on && i / BARS < part));
     li.querySelector(".dur").textContent = on && audio.duration ? mmss(audio.duration - audio.currentTime) : "";
   }
 }
@@ -830,45 +905,40 @@ audio.addEventListener("ended", () => {
 });
 $("radio").addEventListener("click", e => {
   const li = e.target.closest("li[data-src]"); if (!li) return;
-  if (e.target.closest(".track") && li.dataset.src === playingSrc && audio.duration) {   // tap the bar to jump
-    const r = e.target.closest(".track").getBoundingClientRect();
+  const wave = e.target.closest(".wave");
+  if (wave && li.dataset.src === playingSrc && audio.duration) {   // tap the wave to jump
+    const r = wave.getBoundingClientRect();
     audio.currentTime = audio.duration * Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)); return;
   }
-  if (!e.target.closest(".play")) return;
+  if (!e.target.closest(".play") && !wave) return;
   userPlayed = true;
   if (li.dataset.src === playingSrc && !audio.paused) { audio.pause(); return; }
   if (li.dataset.src !== playingSrc) playSrc(li.dataset.src); else audio.play().catch(() => {});
 });
-$("radioWho").addEventListener("change", () => { radioKey = ""; dirty = true; });
+$("radioWho").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; radioWho = b.dataset.n; radioKey = ""; $("radioWho")._html = ""; dirty = true; });
 for (const id of ["radioAuto", "radioNext"]) { $(id).checked = store.get("f1." + id, false); $(id).addEventListener("change", e => store.set("f1." + id, e.target.checked)); }
 
 // ---------- track map ----------
-let circuit = null, circuitKey = null, trackLen = [], mapBox = null;
+let circuit = null, circuitKey = null, trackLen = [], mapBox = null, sectorIdx = [];
 async function loadCircuit() {
   const key = (((S.SessionInfo || {}).Meeting || {}).Circuit || {}).Key;
   if (!key || key === circuitKey) return;
-  circuitKey = key; circuit = null; $("map").innerHTML = "";
+  circuitKey = key; circuit = null; $("map").innerHTML = ""; resetCars();
   for (const y of [year(), year() - 1, year() - 2]) {
     try { const r = await fetch(`https://api.multiviewer.app/api/v1/circuits/${key}/${y}`); if (r.ok) { circuit = await r.json(); break; } } catch (e) {}
   }
   if (circuit) drawCircuit();
 }
 function rotate(x, y, deg) { const a = deg * Math.PI / 180; return [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)]; }
+const pathOf = pts => "M" + pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join("L");
 function drawCircuit() {
-  const full = $("map").closest(".panel").classList.contains("mapfull"), svgBox = $("map").getBoundingClientRect();
-  const span = rot => { const q = circuit.x.map((x, i) => rotate(x, circuit.y[i], rot)); return [Math.max(...q.map(p => p[0])) - Math.min(...q.map(p => p[0])), Math.max(...q.map(p => p[1])) - Math.min(...q.map(p => p[1]))]; };
-  let rot = circuit.rotation || 0;
-  if (full) {   // full screen: turn the circuit so its long side runs along the screen's long side
-    const [sw, sh] = span(rot), tall = svgBox.height > svgBox.width;
-    if (tall !== sh > sw) rot += 90;
-  }
+  const rot = circuit.rotation || 0;
   const pts = circuit.x.map((x, i) => rotate(x, circuit.y[i], rot));
   const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
   const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
-  // the box takes the circuit's own shape, so the track fills the width; on a phone, a smaller margin; full screen: the screen's shape
-  const phone = matchMedia("(max-width: 900px)").matches, pad = phone || full ? 14 : 26, w = 400;
-  const h = full ? Math.round(w * svgBox.height / svgBox.width)
-                 : Math.round(Math.min(phone ? 560 : 420, Math.max(240, (w - 2 * pad) * (maxY - minY) / (maxX - minX) + 2 * pad)));
+  // the box takes the circuit's own shape, so the track fills the width
+  const phone = matchMedia("(max-width: 900px)").matches, pad = phone ? 22 : 28, w = 400;
+  const h = Math.round(Math.min(phone ? 600 : 440, Math.max(250, (w - 2 * pad) * (maxY - minY) / (maxX - minX) + 2 * pad)));
   const k = Math.min((w - 2 * pad) / (maxX - minX), (h - 2 * pad) / (maxY - minY));
   $("map").setAttribute("viewBox", `0 0 ${w} ${h}`);
   const ox = (w - (maxX - minX) * k) / 2, oy = (h - (maxY - minY) * k) / 2;
@@ -877,69 +947,112 @@ function drawCircuit() {
   const times = circuit.trackPositionTime || [];   // when a real car reached each point: place cars by time through the lap
   const t0 = times[0] || 0, t1 = times[times.length - 1] || 1;
   trackLen = times.length === pts.length ? times.map(t => (t - t0) / (t1 - t0 || 1)) : pts.map((_, i) => i / (pts.length - 1));
-  const d = "M" + circuit.screen.map(p => p.map(v => v.toFixed(1)).join(",")).join("L") + "Z";
+  const nearest = (x, y) => { let bi = 0, bd = Infinity; circuit.screen.forEach((p, i) => { const d = (p[0] - x) ** 2 + (p[1] - y) ** 2; if (d < bd) { bd = d; bi = i; } }); return bi; };
+  // marshal sectors: where each starts on the outline, so a yellow flag can light up its stretch of track
+  sectorIdx = (circuit.marshalSectors || []).map(s => { const [x, y] = mapBox(rotate(s.trackPosition.x, s.trackPosition.y, rot)); return { n: s.number, i: nearest(x, y) }; }).sort((a, b) => a.i - b.i);
+  const d = pathOf(circuit.screen) + "Z";
   const corners = (circuit.corners || []).map(c => {
     const [x, y] = mapBox(rotate(c.trackPosition.x, c.trackPosition.y, rot));
-    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="var(--corner)" font-size="8" text-anchor="middle" dy="-6">${c.number}</text>`;
+    const a = (c.angle || 0) * Math.PI / 180, ox2 = Math.cos(a) * 15, oy2 = -Math.sin(a) * 15;   // set off to the side of the track
+    return `<g transform="translate(${(x + ox2).toFixed(1)},${(y + oy2).toFixed(1)})"><circle r="6" fill="var(--corner)"/><text y="2.4" font-size="6.8" font-weight="800" text-anchor="middle" fill="var(--corner-text)">${c.number}</text></g>`;
   }).join("");
-  const [sx, sy] = circuit.screen[0];
-  $("map").innerHTML = `<path d="${d}" fill="none" stroke="var(--track-edge)" stroke-width="9" stroke-linejoin="round"/>
-    <path d="${d}" fill="none" stroke="var(--track)" stroke-width="2.4" stroke-linejoin="round"/>${corners}
-    <rect x="${(sx - 1.5).toFixed(1)}" y="${(sy - 6).toFixed(1)}" width="3" height="12" fill="var(--text)"/><g id="cars"></g>`;
+  const [sx, sy] = circuit.screen[0], [nx, ny] = circuit.screen[3], ang = Math.atan2(ny - sy, nx - sx) * 180 / Math.PI;
+  $("map").innerHTML = `<path d="${d}" fill="none" stroke="var(--track-edge)" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="${d}" fill="none" stroke="var(--track)" stroke-width="3.2" stroke-linejoin="round"/>
+    <g id="flags"></g>${corners}
+    <g transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${(ang + 90).toFixed(1)})"><rect x="-7" y="-2" width="14" height="4" fill="#fff"/>
+      ${[0, 1, 2, 3, 4, 5, 6].map(i => `<rect x="${-7 + i * 2}" y="${i % 2 ? 0 : -2}" width="2" height="2" fill="#000"/>`).join("")}</g>
+    <g id="cars"></g>`;
+  flagKey = ""; resetCars();
 }
-function pointAt(f) {   // a fraction of the lap -> a point on the outline
+let flagKey = "";
+function renderFlags() {   // yellow and double-yellow sectors, lit up on the track; the whole track under a red flag or safety car
+  const g = $("flags"); if (!g || !circuit) return;
+  const yellow = {};
+  for (const m of list((S.RaceControlMessages || {}).Messages)) {
+    const text = (m.Message || "").toUpperCase(), n = m.Sector || (/SECTOR (\d+)/.exec(text) || [])[1];
+    if (/TRACK CLEAR/.test(text) || (m.Flag === "GREEN" && m.Scope === "Track")) for (const k in yellow) delete yellow[k];
+    if (!n || !/SECTOR/.test(text)) continue;
+    if (/^(DOUBLE )?YELLOW/.test(m.Flag || "") || /^(DOUBLE )?YELLOW IN TRACK SECTOR/.test(text)) yellow[n] = /DOUBLE/.test(m.Flag || text) ? 2 : 1;
+    else if (m.Flag === "CLEAR" || /^CLEAR IN TRACK SECTOR/.test(text)) delete yellow[n];
+  }
+  const st = (S.TrackStatus || {}).Status;
+  const key = JSON.stringify(yellow) + st;
+  if (key === flagKey) return; flagKey = key;
+  $("mapLegend").hidden = !Object.keys(yellow).length;
+  const parts = [];
+  if (st === "5" || st === "4" || st === "6" || st === "7")
+    parts.push(`<path d="${pathOf(circuit.screen)}Z" fill="none" stroke="${st === "5" ? "#e10600" : "#f59e0b"}" stroke-width="5" stroke-linejoin="round" opacity=".85"/>`);
+  for (const [n, kind] of Object.entries(yellow)) {
+    const j = sectorIdx.findIndex(s => String(s.n) === String(n)); if (j < 0) continue;
+    const a = sectorIdx[j].i, b = (sectorIdx[j + 1] || { i: circuit.screen.length - 1 }).i;
+    const seg = circuit.screen.slice(a, Math.max(a + 2, b + 1));
+    parts.push(`<path d="${pathOf(seg)}" fill="none" stroke="#facc15" stroke-width="${kind === 2 ? 7 : 5}" stroke-linecap="round" stroke-linejoin="round"/>`);
+  }
+  g.innerHTML = parts.join("");
+}
+function pointAt(f) {   // a fraction of the lap -> a point on the outline (binary search)
   f = ((f % 1) + 1) % 1;
-  let i = 1;
-  while (i < trackLen.length - 1 && trackLen[i] < f) i++;
-  const a = trackLen[i - 1], b = trackLen[i], u = b > a ? (f - a) / (b - a) : 0, p = circuit.screen[i - 1], q = circuit.screen[i];
+  let lo = 1, hi = trackLen.length - 1;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (trackLen[m] < f) lo = m + 1; else hi = m; }
+  const i = lo, a = trackLen[i - 1], b = trackLen[i], u = b > a ? (f - a) / (b - a) : 0, p = circuit.screen[i - 1], q = circuit.screen[i];
   return [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u];
 }
 function lapFraction(num, l) {
-  if (mode === "replay") { const L = l._lap; return L && L.dur ? (now() - L.start) / (L.dur * 1000) : null; }
+  if (mode === "replay") {   // where in its lap the car is, from the lap's start and length; between laps, the next lap
+    const t = now(), L = l._lap || (l._laps || []).find(x => x.start <= t && t < x.end);
+    return L && L.dur ? (t - L.start) / (L.dur * 1000) : null;
+  }
   const p = prog[num]; if (!p || !p.total) return null;
   const lap = (seconds((l.LastLapTime || {}).Value) || seconds((l.BestLapTime || {}).Value) || 100) * 1000;
   const end = k => segFrac[k] != null ? segFrac[k] : (k + 1) / p.total;   // learned, or evenly spaced until a lap is seen
   const a = p.n ? end(p.n - 1) : 0, b = p.n < p.total ? end(p.n) : 1 + end(0);
-  return a + (b - a) * Math.min(0.95, Math.max(0, (now() - p.at) / ((b - a) * lap)));   // moving on toward the next mark
+  return a + (b - a) * Math.min(1.3, Math.max(0, (now() - p.at) / ((b - a) * lap)));   // keep moving if the next mark is a little late
 }
-function renderCars() {
-  const g = $("cars");
-  if (!g || !circuit) return;
-  const lines = (S.TimingData || {}).Lines || {}, dots = [];
+const cars = {};   // one drawn tag per car, moved smoothly every frame
+function resetCars() { for (const k in cars) delete cars[k]; const g = $("cars"); if (g) g.innerHTML = ""; }
+let lastFrame = 0;
+function animateCars(ts) {
+  requestAnimationFrame(animateCars);
+  const g = $("cars"), dt = Math.min(0.1, lastFrame ? (ts - lastFrame) / 1000 : 0); lastFrame = ts;
+  if (!g || !circuit || !trackLen.length) return;
+  const lines = (S.TimingData || {}).Lines || {};
   const over = mode === "live" && ["Finished", "Finalised", "Ends", "Inactive"].includes((S.SessionStatus || {}).Status);
-  const z = $("map").closest(".panel").classList.contains("mapfull") ? 1.35 : 1;   // bigger cars on the full-screen map
+  const seen = new Set();
   for (const [num, l] of over ? [] : Object.entries(lines)) {
     if (l.Retired || l.Stopped || l.InPit) continue;
-    const f = lapFraction(num, l); if (f == null) continue;
-    const [x, y] = pointAt(f), d = driver(num);
-    dots.push([+l.Line || 99, `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)}) scale(${z})"><circle r="7" fill="${colour(d)}" stroke="var(--bg)" stroke-width="1.5"/>
-      <text y="2.6" font-size="6.5" font-weight="800" text-anchor="middle" fill="#000">${esc(d.RacingNumber || num)}</text>
-      <text x="9" y="-6" font-size="7" font-weight="700" fill="var(--text)">${esc(d.Tla || "")}</text></g>`]);
+    const target = lapFraction(num, l); if (target == null) continue;
+    let c = cars[num];
+    if (!c) {
+      const d = driver(num), tc = colour(d), w = 6 + 5.6 * (d.Tla || num).length;
+      const el = document.createElementNS("http://www.w3.org/2000/svg", "g"); el.setAttribute("class", "car");
+      el.innerHTML = `<rect x="${-w / 2}" y="-6.5" width="${w}" height="13" rx="4" fill="${tc}"/><text y="3.4" font-size="8.4" font-weight="900" text-anchor="middle" fill="${ink(tc)}" letter-spacing=".3">${esc(d.Tla || num)}</text>`;
+      g.appendChild(el); c = cars[num] = { el, f: target };
+    }
+    // ease toward where the car should be: no jumps when a timing mark comes early or late
+    let diff = target - c.f; diff -= Math.round(diff);
+    c.f += Math.abs(diff) > 0.25 ? diff : diff * Math.min(1, dt * 4);
+    const [x, y] = pointAt(c.f);
+    c.el.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+    c.line = +l.Line || 99; seen.add(num);
   }
-  g.innerHTML = dots.sort((a, b) => b[0] - a[0]).map(d => d[1]).join("");   // the leader on top
+  for (const [num, c] of Object.entries(cars)) if (!seen.has(num)) { c.el.remove(); delete cars[num]; }
+  const order = Object.entries(cars).sort((a, b) => b[1].line - a[1].line);   // the leader drawn on top
+  if (order.map(o => o[0]).join() !== g.dataset.order) { g.dataset.order = order.map(o => o[0]).join(); order.forEach(([, c]) => g.appendChild(c.el)); }
 }
+requestAnimationFrame(animateCars);
 
 // ---------- settings: appearance and columns ----------
 function setTheme(pick) {
   store.set("f1.theme", pick);
   const dark = pick === "dark" || (pick === "device" && matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.dataset.mode = dark ? "dark" : "light";
-  document.querySelector('meta[name="theme-color"]').content = dark ? "#0b0b10" : "#f3f3f7";
+  document.querySelector('meta[name="theme-color"]').content = dark ? "#000000" : "#eef0f4";
   for (const b of document.querySelectorAll("#themeBtns button")) b.setAttribute("aria-pressed", String(b.dataset.t === pick));
   dirty = true;
 }
 matchMedia("(max-width: 900px)").addEventListener("change", () => circuit && drawCircuit());   // phone <-> wide: refit the map
-function mapFull(on) {
-  const panel = $("map").closest(".panel");
-  panel.classList.toggle("mapfull", on);
-  panel.style.bottom = on && !$("rbar").hidden ? $("rbar").offsetHeight + "px" : "";   // leave the replay controls showing
-  $("mapFull").textContent = on ? "Close" : "Full screen";
-  document.body.style.overflow = on ? "hidden" : "";
-  if (circuit) drawCircuit();
-}
-$("mapFull").addEventListener("click", () => mapFull(!$("map").closest(".panel").classList.contains("mapfull")));
-addEventListener("resize", () => { if ($("map").closest(".panel").classList.contains("mapfull")) mapFull(true); });
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => store.get("f1.theme", "device") === "device" && setTheme("device"));
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => store.get("f1.theme", "dark") === "device" && setTheme("device"));
 $("themeBtns").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setTheme(b.dataset.t); });
 $("colPicks").innerHTML = COLS.map(([k, label]) => `<label><input type="checkbox" data-k="${k}" ${hiddenCols.has(k) ? "" : "checked"}>${label}</label>`).join("");
 $("colPicks").addEventListener("change", e => {
@@ -949,7 +1062,7 @@ $("colPicks").addEventListener("change", e => {
 });
 $("settingsBtn").addEventListener("click", () => { $("settings").hidden = false; });
 for (const sheet of document.querySelectorAll(".sheet")) sheet.addEventListener("click", e => { if (e.target === sheet || e.target.closest("[data-close]")) sheet.hidden = true; });
-document.addEventListener("keydown", e => { if (e.key === "Escape") { for (const s of document.querySelectorAll(".sheet")) s.hidden = true; mapFull(false); } });
+document.addEventListener("keydown", e => { if (e.key === "Escape") for (const s of document.querySelectorAll(".sheet")) s.hidden = true; });
 
 // ---------- the replay picker and controls ----------
 async function fillPicker() {
@@ -973,9 +1086,9 @@ $("pYear").addEventListener("change", fillPicker);
 $("replayBtn").addEventListener("click", () => { $("picker").hidden = false; if (!$("pList").dataset.loaded) { $("pList").dataset.loaded = "1"; fillPicker(); } });
 $("pList").addEventListener("click", e => { const b = e.target.closest("[data-key]"); if (!b) return; $("picker").hidden = true; startReplay(+b.dataset.key); });
 $("rPlay").addEventListener("click", () => { if (!R.data) return; if (R.t >= R.end) R.t = R.start; R.playing = !R.playing; R.last = 0; syncReplayBar(); });
-$("rBack").addEventListener("click", () => { R.t = Math.max(R.start, R.t - 30000); R.dirty = true; });
-$("rFwd").addEventListener("click", () => { R.t = Math.min(R.end, R.t + 30000); R.dirty = true; });
-$("rSeek").addEventListener("input", e => { if (!R.data) return; R.t = R.start + (R.end - R.start) * e.target.value / 1000; R.dirty = true; });
+$("rBack").addEventListener("click", () => { R.t = Math.max(R.start, R.t - 30000); R.dirty = true; resetCars(); });
+$("rFwd").addEventListener("click", () => { R.t = Math.min(R.end, R.t + 30000); R.dirty = true; resetCars(); });
+$("rSeek").addEventListener("input", e => { if (!R.data) return; R.t = R.start + (R.end - R.start) * e.target.value / 1000; R.dirty = true; resetCars(); syncReplayBar(); });
 $("rSpeed").addEventListener("change", e => { R.speed = +e.target.value; });
 $("rExit").addEventListener("click", exitReplay);
 $("champTabs").addEventListener("click", e => {
@@ -989,11 +1102,11 @@ $("champTabs").addEventListener("click", e => {
 let tick = 0;
 function frame() {
   replayTick();
-  if (dirty) { dirty = false; renderHeader(); renderTower(); renderBests(); renderRaceControl(); renderRadio(); renderChampionship(); }
+  if (dirty) { dirty = false; renderHeader(); renderTower(); renderBests(); renderRaceControl(); renderRadio(); renderChampionship(); renderFlags(); }
   else if (++tick % 8 === 0) renderRadio();   // "x min ago"
-  renderClock(); renderCars();
+  renderClock();
 }
-setTheme(store.get("f1.theme", "device")); applyColumns();
+setTheme(store.get("f1.theme", "dark")); applyColumns();
 setInterval(frame, 250);
 loadStandings(); setInterval(loadStandings, 15 * 60000);
 if (params.get("replay")) startReplay(+params.get("replay")); else connect();
