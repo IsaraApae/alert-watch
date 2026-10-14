@@ -59,8 +59,12 @@
   .live.replay { background: var(--blue); color: #fff; }
   @keyframes pulse { 50% { opacity: .25; } }
 
-  main { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(330px, 1fr); gap: 12px; padding: 12px 16px 24px; max-width: 1640px; margin: 0 auto; }
+  main { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(360px, 1fr); gap: 12px; padding: 12px 16px 24px; max-width: 1680px; margin: 0 auto; align-items: start; }
   .col { display: grid; gap: 12px; align-content: start; min-width: 0; }
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }   /* team radio and race control side by side under the timing */
+  .duo .panel { display: flex; flex-direction: column; } .duo .rlist, .duo ol.feed { max-height: 560px; }
+  .duo.solo { grid-template-columns: 1fr; }
+  @media (min-width: 1180px) { .duo.solo .rlist { grid-template-columns: 1fr 1fr; } }   /* wide screens: radio messages in two columns */
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; min-width: 0; }
   .panel h2 { margin: 0; padding: 10px 14px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; border-bottom: 1px solid var(--line);
               display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -76,8 +80,8 @@
   /* timing tower */
   .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table { border-collapse: collapse; width: 100%; white-space: nowrap; }
-  th { background: var(--panel2); color: var(--dim); font-weight: 700; font-size: 10.5px; text-transform: uppercase; letter-spacing: .4px; text-align: right; padding: 8px; }
-  td { padding: 6px 8px; border-top: 1px solid var(--line); text-align: right; font-weight: 600; }
+  th { background: var(--panel2); color: var(--dim); font-weight: 700; font-size: 10.5px; text-transform: uppercase; letter-spacing: .4px; text-align: right; padding: 8px 7px; }
+  td { padding: 6px 7px; border-top: 1px solid var(--line); text-align: right; font-weight: 600; }
   tbody tr:nth-child(even) td, tr:nth-child(even) td { background: var(--row); }
   th:first-child, td:first-child { text-align: left; position: sticky; left: 0; z-index: 1; background: var(--panel); box-shadow: 6px 0 8px -6px var(--shadow); }
   tr:nth-child(even) td:first-child { background: var(--row); }
@@ -89,8 +93,8 @@
   .t-purple { color: var(--purple); font-weight: 800; } .t-green { color: var(--green); font-weight: 800; }
   .pill { display: inline-block; padding: 2px 7px; border-radius: 6px; font-weight: 800; }
   .pill.purple { background: var(--purple); color: #fff; } .pill.green { background: var(--green); color: #000; } .pill.ring { box-shadow: 0 0 0 1.5px var(--green) inset; color: var(--green); }
-  .sector { display: inline-grid; gap: 3px; justify-items: end; min-width: 64px; }
-  .segs { display: flex; gap: 2px; } .segs b { width: 6px; height: 4px; border-radius: 1px; background: var(--seg); }
+  .sector { display: inline-grid; gap: 3px; justify-items: end; min-width: 58px; }
+  .segs { display: flex; gap: 2px; } .segs b { width: 5px; height: 4px; border-radius: 1px; background: var(--seg); }
   .segs b.y { background: #facc15; } .segs b.g { background: var(--green); } .segs b.p { background: var(--purple); } .segs b.pit { background: var(--blue); }
   .stints { display: inline-flex; gap: 4px; align-items: center; justify-content: flex-end; }
   .stint { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--dim); opacity: .5; }
@@ -231,6 +235,8 @@
 
   @media (max-width: 900px) {
     main { grid-template-columns: 1fr; padding: 10px 10px 20px; }
+    .col, .duo { display: contents; }
+    #p-tower { order: 1; } #p-map { order: 2; } #p-bests { order: 3; } #p-champ { order: 4; } #p-radio { order: 5; } #p-rc { order: 6; }
     .top { padding: 8px 12px; }
     .fact { min-width: 0; padding: 4px 8px; } .fact b { font-size: 13px; }
     td, th { padding: 5px 6px; }
@@ -270,32 +276,34 @@
 
 <main>
   <div class="col">
-    <section class="panel">
+    <section class="panel" id="p-tower">
       <h2><span>Timing <small id="part"></small></span><span class="live" id="live">OFFLINE</span></h2>
       <div class="scroll"><table id="tower"></table></div>
     </section>
+    <div class="duo solo">
+      <section class="panel" id="p-radio">
+        <h2><span>Team radio</span>
+          <span class="radio-opts">
+            <label class="switch" title="Play each new message as it arrives (after you have played one yourself)"><input type="checkbox" id="radioAuto">Auto-play</label>
+            <label class="switch" title="When a message ends, play the next one"><input type="checkbox" id="radioNext">Play next</label>
+          </span></h2>
+        <div class="chips" id="radioWho"></div>
+        <ol class="rlist" id="radio"></ol>
+      </section>
+    </div>
   </div>
   <div class="col">
-    <section class="panel">
+    <section class="panel" id="p-map">
       <h2>Track map</h2>
       <div class="mapwrap"><svg id="map" viewBox="0 0 400 300" role="img" aria-label="Circuit map with each car's position"></svg>
         <div class="legend" id="mapLegend" hidden><span><i style="background:#facc15"></i>Yellow flag</span></div></div>
     </section>
-    <section class="panel"><h2>Fastest sectors</h2><div class="bests" id="bests"></div></section>
-    <section class="panel">
+    <section class="panel" id="p-bests"><h2>Fastest sectors</h2><div class="bests" id="bests"></div></section>
+    <section class="panel" id="p-champ">
       <h2><span>Live championship</span><span class="tabs" id="champTabs"><button type="button" data-k="d" aria-pressed="true">Drivers</button><button type="button" data-k="t" aria-pressed="false">Teams</button></span></h2>
       <ol class="champ" id="champ"></ol>
     </section>
-    <section class="panel">
-      <h2><span>Team radio</span>
-        <span class="radio-opts">
-          <label class="switch" title="Play each new message as it arrives (after you have played one yourself)"><input type="checkbox" id="radioAuto">Auto-play</label>
-          <label class="switch" title="When a message ends, play the next one"><input type="checkbox" id="radioNext">Play next</label>
-        </span></h2>
-      <div class="chips" id="radioWho"></div>
-      <ol class="rlist" id="radio"></ol>
-    </section>
-    <section class="panel"><h2>Race control</h2><ol class="feed" id="rc"></ol></section>
+      <section class="panel" id="p-rc"><h2>Race control</h2><ol class="feed" id="rc"></ol></section>
   </div>
 </main>
 
