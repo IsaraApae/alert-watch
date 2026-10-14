@@ -50,7 +50,7 @@
   .facts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
   .fact { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 5px 10px; display: grid; align-content: center; min-width: 74px; }
   .fact small { color: var(--dim); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
-  .fact b { font-size: 15px; font-weight: 800; }
+  .fact b { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; } .fact.hot b { color: var(--red); }
   .status { border-radius: 10px; padding: 5px 14px; display: grid; place-items: center; font-weight: 900; font-size: 15px; color: #000; background: var(--green); }
   .status.yellow { background: #facc15; } .status.red { background: var(--red); color: #fff; } .status.sc { background: var(--amber); } .status.off { background: var(--chip); color: var(--dim); }
   .live { display: inline-flex; align-items: center; gap: 6px; font-weight: 900; font-size: 11px; letter-spacing: .6px; padding: 3px 8px; border-radius: 6px; background: var(--chip); color: var(--dim); }
@@ -521,7 +521,8 @@ function merge(target, delta) {        // F1 sends changes only; lists change by
 }
 
 // ---------- live: F1's feed, straight into the browser ----------
-const lapLog = [], pitLog = {};   // live: when the lap counter changed while the page was open
+const lapLog = [], pitLog = {};
+const QUALI_BREAK = 7 * 60000;   // F1's break between Q1, Q2 and Q3   // live: when the lap counter changed while the page was open
 function apply(topic, data, ts) {
   S[topic] = merge(S[topic], data);
   if (topic === "LapCount" && S.LapCount && S.LapCount.CurrentLap && (!lapLog.length || lapLog[lapLog.length - 1].lap !== S.LapCount.CurrentLap))
@@ -679,6 +680,7 @@ function prepare(sess, meet, g) {
     totalLaps: Math.max(0, ...g.laps.map(l => l.lap_number || 0)),
     drivers: g.drivers, positions: g.position.map(p => ({ at: t(p.date), n: String(p.driver_number), p: p.position })).sort((a, b) => a.at - b.at),
     stints: g.stints, pits: g.pit.map(p => ({ at: t(p.date), n: String(p.driver_number), lap: p.lap_number, lane: p.lane_duration || p.pit_duration, dur: p.lane_duration || p.pit_duration || 25 })),
+    qflags: g.race_control.filter(m => m.qualifying_phase && /CHEQUERED FLAG/.test(m.message)).map(m => ({ p: m.qualifying_phase, at: t(m.date) })).sort((a, b) => a.at - b.at),
     parts: g.race_control.filter(m => m.qualifying_phase && /SESSION STARTED/.test(m.message)).map(m => ({ p: m.qualifying_phase, at: t(m.date) })).sort((a, b) => a.at - b.at),
     rc: g.race_control.map(m => ({ at: t(m.date), m })).sort((a, b) => a.at - b.at),
     radio: g.team_radio.map(r => ({ at: t(r.date), n: String(r.driver_number), url: r.recording_url })).sort((a, b) => a.at - b.at),
@@ -715,12 +717,16 @@ function buildReplay() {   // the session as it stood at R.t, in the live feed's
     for (const l of done[n]) { l.sec.forEach((v, i) => { if (v) bestSec[i] = Math.min(bestSec[i], v); }); if (l.st) bestST = Math.max(bestST, l.st); }
   }
   const everyone = [...new Set(D.drivers.map(d => String(d.driver_number)).concat(Object.keys(D.byDriver)))];
-  let order, quali = null;
+  let order, quali = null, classified = 0;
   if (race) {   // the running order; before the start, the grid
     const pos = {};
     for (const p of D.positions) { if (p.at > at) break; pos[p.n] = p.p; }
     for (const p of D.positions) if (!(p.n in pos)) pos[p.n] = p.p;
     order = everyone.sort((a, b) => (pos[a] || 99) - (pos[b] || 99));
+    // once the winner has taken the flag: the official classification (OpenF1's laps can include an extra trip to the pits)
+    const win = Object.values(D.result).find(r => r.position === 1), wl = win && (D.byDriver[String(win.driver_number)] || []).find(x => x.n === win.number_of_laps);
+    classified = wl && at >= wl.end ? wl.end : 0;   // when the winner took the flag
+    if (classified) order = everyone.sort((a, b) => ((D.result[a] || {}).position || 99) - ((D.result[b] || {}).position || 99) || a - b);
   } else if (D.parts.length) {   // qualifying: ranked within the part running now; those knocked out sit below, by their own part's time
     quali = qualiAt(D, done, everyone, at);
     const timed = n => isFinite(quali.best[n]) ? 0 : 1;
@@ -749,13 +755,22 @@ function buildReplay() {   // the session as it stood at R.t, in the live feed's
     if (race && last) {
       if (n === leader) gap = intv = "LAP " + Math.min(D.totalLaps, leadDone + 1);
       else {
-        const le = lapEnd(leader, fin.length), ae = i ? lapEnd(order[i - 1], fin.length) : null;
+        const le = lapEnd(leader, fin.length);
+        // interval: time since the car ahead last crossed the line, even if it's a lap up (as F1 shows it), not its crossing of this car's lap
+        const aheadLaps = i ? (D.byDriver[order[i - 1]] || []).filter(x => x.end <= last.end) : [], ae = aheadLaps.length ? aheadLaps[aheadLaps.length - 1].end : null;
         // laps down: the leader's extra laps finished before this car last crossed the line (not just "the leader has crossed more times right now")
         const down = (D.byDriver[leader] || []).filter(x => x.n > fin.length && x.end <= last.end).length;
         gap = down ? `+${down} LAP${down > 1 ? "S" : ""}` : le ? "+" + ((last.end - le) / 1000).toFixed(3) : "";
         // the car ahead crossed the line first; if the order changed mid-lap (a pit stop), use the gaps instead, never a negative
         const ahead = lines[order[i - 1]], diff = ae ? (last.end - ae) / 1000 : null, gapNum = parseFloat(gap), aheadGap = ahead ? parseFloat(ahead.GapToLeader) || 0 : 0;
-        intv = diff != null && diff >= 0 ? "+" + diff.toFixed(3) : isFinite(gapNum) && gapNum - aheadGap >= 0 ? "+" + (gapNum - aheadGap).toFixed(3) : "";
+        // an interval is never a lap or more: if it looks like one, the cars swapped places mid-lap, so use the gaps instead
+        intv = diff != null && diff >= 0 && diff < 0.9 * (isFinite(fastest(fin)) ? fastest(fin) : 90) ? "+" + diff.toFixed(3) : isFinite(gapNum) && gapNum - aheadGap >= 0 ? "+" + (gapNum - aheadGap).toFixed(3) : "";
+      }
+      const r = classified && D.result[n];
+      if (r && n !== leader && (fin.length >= (r.number_of_laps || 0) || last.end >= classified)) {   // this car has finished too (OpenF1 can miss a lap): its official gap
+        const g = r.gap_to_leader, ga = (D.result[order[i - 1]] || {}).gap_to_leader;
+        gap = typeof g === "number" ? "+" + g.toFixed(3) : g ? String(g).toUpperCase() : gap;
+        intv = typeof g === "number" ? (typeof ga === "number" ? "+" + (g - ga).toFixed(3) : gap) : "";
       }
       if (retired) gap = intv = "";   // out of the race: no gap, like F1's timing
     } else if (!race && isFinite(pb)) {
@@ -907,12 +922,42 @@ function renderHeader() {
   show("rainBox", w && w.Rainfall === "1");
   if (w) { $("air").textContent = `${(+w.AirTemp).toFixed(1)}°`; $("trackT").textContent = `${(+w.TrackTemp).toFixed(1)}°`; $("wind").textContent = `${(+w.WindSpeed * 3.6).toFixed(0)} km/h`; }
 }
-function renderClock() {
-  const c = S.ExtrapolatedClock;
-  if (mode === "replay" || !c || !c.Remaining) { show("clockBox", false); return; }
-  let left = seconds(c.Remaining) * 1000;
-  if (c.Extrapolating && c.Utc) left -= now() - utc(c.Utc);
-  show("clockBox", true); $("clock").textContent = clock(Math.max(0, left));
+function renderClock() {   // time left; in qualifying, a countdown to the end of Q1, Q2, Q3 (and to the next part's start)
+  const quali = (S.SessionInfo || {}).Type === "Qualifying";
+  let label = "Time left", left = null, running = false;
+  if (mode === "replay") {
+    const D = R.data;
+    if (quali && D && D.parts.length) {
+      const now_ = R.t, part = D.parts.filter(x => x.at <= now_).pop(), next = D.parts.find(x => x.at > now_);
+      const flag = part && D.qflags.find(x => x.p === part.p && x.at >= part.at);
+      if (!part) { label = "Q1 starts in"; left = next.at - now_; }
+      else if (flag && now_ < flag.at) { label = `Q${part.p} ends in`; left = flag.at - now_; running = true; }
+      else if (next) { label = `Q${next.p} starts in`; left = next.at - now_; }
+      else { label = "Qualifying"; left = "done"; }
+    }
+  } else {
+    const c = S.ExtrapolatedClock, part = (S.TimingData || {}).SessionPart, status = (S.SessionStatus || {}).Status;
+    if (c && c.Remaining) {
+      left = seconds(c.Remaining) * 1000;
+      if (c.Extrapolating && c.Utc) left -= now() - utc(c.Utc);
+      running = !!c.Extrapolating;
+      if (quali && part) label = running ? `Q${part} ends in` : `Q${part}`;
+      // between parts F1's clock stands still: count down the break from when the last part ended
+      const next = status === "Finished" ? part + 1 : status === "Inactive" && part > 1 ? part : 0;
+      if (quali && part && !running && next) {
+        if (next > 3) { label = "Qualifying"; left = "done"; }
+        else {   // from race control's chequered flag for the part that just ended
+          const flag = list((S.RaceControlMessages || {}).Messages).filter(m => /CHEQUERED FLAG/.test(m.Message || "")).pop();
+          label = `Q${next} starts in`; left = flag ? Math.max(0, utc(flag.Utc) + QUALI_BREAK - now()) : "Soon";
+        }
+      }
+    }
+  }
+  show("clockBox", left != null);
+  if (left == null) return;
+  $("clockLabel").textContent = label;
+  $("clock").textContent = typeof left === "string" ? (left === "done" ? "Finished" : left) : clock(Math.max(0, left));
+  $("clockBox").classList.toggle("hot", running && typeof left === "number" && left < 120000);   // the last 2 minutes
 }
 
 // ---------- timing tower ----------
@@ -952,6 +997,7 @@ function renderTower() {
     let gap = l.GapToLeader != null ? l.GapToLeader : l.TimeDiffToFastest != null ? l.TimeDiffToFastest : stats.TimeDiffToFastest;
     let intv = l.IntervalToPositionAhead ? l.IntervalToPositionAhead.Value : l.TimeDiffToPositionAhead != null ? l.TimeDiffToPositionAhead : stats.TimeDifftoPositionAhead;
     if (/^LAP/i.test(gap || "")) gap = "—";   // the leader's row shows the lap number in F1's feed
+    if (l.Retired || l.Stopped) gap = intv = "";   // out of the race: no gap (F1 can leave the last one there)
     if (/^LAP/i.test(intv || "")) intv = "—";
     const lapsDown = v => String(v || "").replace(/^\+?(\d+)\s*L(?:APS?)?$/i, (_, k) => `+${k} Lap${k > 1 ? "s" : ""}`);
     gap = lapsDown(gap); intv = lapsDown(intv);
