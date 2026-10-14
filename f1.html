@@ -64,7 +64,7 @@
   .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }   /* team radio and race control side by side under the timing */
   .duo .panel { display: flex; flex-direction: column; } .duo .rlist, .duo ol.feed { max-height: 560px; }
   .duo.solo { grid-template-columns: 1fr; }
-  @media (min-width: 1180px) { .duo.solo .rlist { grid-template-columns: 1fr 1fr; } }   /* wide screens: radio messages in two columns */
+
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; min-width: 0; }
   .panel h2 { margin: 0; padding: 10px 14px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; border-bottom: 1px solid var(--line);
               display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -158,7 +158,23 @@
   .switch input { appearance: none; width: 30px; height: 18px; border-radius: 999px; background: var(--chip); position: relative; margin: 0; cursor: pointer; transition: background .15s; }
   .switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .15s; }
   .switch input:checked { background: var(--red); } .switch input:checked::after { transform: translateX(12px); }
-  .rlist { list-style: none; margin: 0; padding: 6px; max-height: 520px; overflow-y: auto; display: grid; gap: 6px; }
+  .rlist { list-style: none; margin: 0; padding: 8px 14px 14px 30px; max-height: 560px; overflow-y: auto; position: relative; }
+  .rlist::before { content: ""; position: absolute; left: 17px; top: 14px; bottom: 14px; width: 2px; border-radius: 1px; background: var(--line); }
+  .tl-lap { position: relative; margin: 12px 0 6px -18px; padding-left: 18px; font-weight: 900; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--text); }
+  .tl-lap:first-child { margin-top: 2px; }
+  .tl-lap::before { content: ""; position: absolute; left: 0; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -4px; border-radius: 50%; background: var(--panel); box-shadow: 0 0 0 2px var(--dim) inset; }
+  .tl-lap small { color: var(--dim); font-weight: 700; text-transform: none; letter-spacing: 0; margin-left: 6px; }
+  .tl-item { position: relative; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 10px; border-radius: 10px; }
+  .tl-item::before { content: ""; position: absolute; left: -17px; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 0 3px var(--panel); }
+  .tl-item:hover { background: var(--hover, rgba(127, 127, 127, .06)); }
+  .tl-item.playing { background: color-mix(in srgb, var(--tc) 14%, transparent); }
+  .tl-time { color: var(--dim); font-weight: 700; font-size: 11.5px; }
+  .tl-who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .tl-who .nm { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tl-who .nm small { color: var(--dim); font-weight: 600; margin-left: 4px; }
+  .tl-play { display: flex; align-items: center; gap: 8px; }
+  .tl-item .play { width: 30px; height: 30px; flex: 0 0 30px; }
+  .tl-item .wave { width: 120px; flex: 0 0 120px; height: 22px; }
   .rcard { display: grid; grid-template-columns: 52px 1fr; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); position: relative; }
   .rcard.playing { border-color: var(--tc); box-shadow: 0 0 0 1px var(--tc) inset; }
   .avatar { position: relative; width: 52px; height: 52px; }
@@ -247,6 +263,7 @@
     .tiles button { padding: 12px 6px; }
     .event b { white-space: normal; font-size: 15px; line-height: 1.2; }
     .flagimg { width: 28px; height: 18px; }
+    .tl-item { grid-template-columns: 38px minmax(0, 1fr) auto; } .tl-item .tl-who .nm { display: none; } .tl-item .wave { width: 80px; flex-basis: 80px; }
     .bests > div { padding: 9px 7px; } .bests .dtag .n { display: none; } .bests p { font-size: 12px; }
   }
 </style>
@@ -376,6 +393,7 @@ const tagVars = c => `--tc:${c};--tcf:${ink(c)}`;
 const year = () => +((S.SessionInfo && S.SessionInfo.StartDate || "").slice(0, 4)) || new Date().getFullYear();
 const utc = t => typeof t === "number" ? t : Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(t || "") ? t : t + "Z");   // F1 often leaves off the "Z" of UTC
 const timeOf = t => new Date(utc(t)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+const hhmm = t => new Date(utc(t)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });   // short, for the radio timeline
 function seconds(t) { if (t == null || t === "") return null; if (typeof t === "number") return t; const p = String(t).split(":").map(Number); return p.reduce((a, b) => a * 60 + b, 0); }
 const lapText = t => { if (!t) return ""; const m = Math.floor(t / 60), s = (t - m * 60).toFixed(3); return m ? `${m}:${s.padStart(6, "0")}` : s; };
 const slug = name => (name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -401,8 +419,11 @@ function merge(target, delta) {        // F1 sends changes only; lists change by
 }
 
 // ---------- live: F1's feed, straight into the browser ----------
+const lapLog = [];   // live: when the lap counter changed while the page was open
 function apply(topic, data, ts) {
   S[topic] = merge(S[topic], data);
+  if (topic === "LapCount" && S.LapCount && S.LapCount.CurrentLap && (!lapLog.length || lapLog[lapLog.length - 1].lap !== S.LapCount.CurrentLap))
+    lapLog.push({ lap: S.LapCount.CurrentLap, at: ts });
   if (topic === "TimingData") trackLive(ts);
   if (topic === "TeamRadio") radioArrived();
   if (topic === "SessionInfo") { loadCircuit(); loadFlag(); }
@@ -912,6 +933,15 @@ const ago = t => { const m = Math.round((now() - utc(t)) / 60000); return m < 1 
 const BARS = 34;
 const waveOf = src => { let h = 0; for (const ch of src) h = (h * 31 + ch.charCodeAt(0)) >>> 0;   // a steady shape per clip (the audio itself can't be read)
   return Array.from({ length: BARS }, (_, i) => { h = (h * 1103515245 + 12345) >>> 0; return 25 + (h % 70) * (0.55 + 0.45 * Math.sin(i / 3)); }); };
+function lapOf(t) {   // the race's lap at a moment: exact in a replay; live, the lap counter seen so far, else race control's lap numbers
+  if (mode === "replay") return R.data && R.data.sess.session_type === "Race" ? Math.max(1, lapAt(t)) : null;
+  if ((S.SessionInfo || {}).Type !== "Race") return null;
+  let lap = null;
+  for (const x of lapLog) if (x.at <= t) lap = x.lap;
+  if (lap) return lap;
+  for (const m of list((S.RaceControlMessages || {}).Messages)) if (m.Lap && utc(m.Utc) <= t) lap = m.Lap;
+  return lap;
+}
 let radioKey = "";
 function renderRadio() {
   const all = list((S.TeamRadio || {}).Captures);
@@ -924,18 +954,19 @@ function renderRadio() {
   const key = caps.length + ":" + (caps[0] && caps[0].Utc) + ":" + radioWho + ":" + Math.floor(now() / 30000);   // "x min ago" twice a minute
   if (key === radioKey) return;          // otherwise don't rebuild while something is playing
   radioKey = key;
-  const lines = (S.TimingData || {}).Lines || {};
-  $("radio").innerHTML = caps.length ? caps.map(c => {
-    const d = driver(c.RacingNumber), tc = colour(d), at = utc(c.Utc), fresh = now() - at < 5 * 60000, l = lines[c.RacingNumber] || {}, src = radioUrl(c);
-    return `<li class="rcard" data-src="${esc(src)}" style="${tagVars(tc)}">
-      <span class="avatar"><img src="${photo(d, 104)}" alt="" loading="lazy"><span class="mic">${MIC}</span></span>
-      <div style="min-width:0">
-        <div class="rhead">${dtag(c.RacingNumber, true)}<span class="who">${esc(d.FirstName ? d.FirstName + " " + d.LastName : d.Tla || c.RacingNumber)}</span>${fresh ? `<span class="new">NEW</span>` : ""}</div>
-        <div class="rmeta">${l.Position ? "P" + esc(l.Position) + " · " : ""}${esc(d.TeamName || "")} · ${timeOf(at)} · ${ago(at)}</div>
-        <div class="player"><button class="play" type="button" aria-label="Play radio from ${esc(d.LastName || "")}">${ICON_PLAY}</button>
-          <span class="wave">${waveOf(src).map(h => `<b style="height:${h.toFixed(0)}%"></b>`).join("")}</span><span class="dur"></span></div>
-      </div></li>`;
-  }).join("") : `<li class="empty">${radioWho ? "No radio from this driver yet" : "No team radio yet"}</li>`;
+  // newest first, grouped under the lap they came on (practice and qualifying: by time of day, in 10-minute steps)
+  let html = "", group = null;
+  for (const c of caps) {
+    const d = driver(c.RacingNumber), tc = colour(d), at = utc(c.Utc), fresh = now() - at < 5 * 60000, src = radioUrl(c);
+    const lap = lapOf(at), g = lap ? `Lap ${lap}` : hhmm(Math.floor(at / 600000) * 600000);
+    if (g !== group) { group = g; html += `<li class="tl-lap">${esc(g)}</li>`; }
+    html += `<li class="tl-item" data-src="${esc(src)}" style="${tagVars(tc)}">
+      <span class="tl-time">${hhmm(at)}</span>
+      <span class="tl-who">${dtag(c.RacingNumber, true)}<span class="nm">${esc(d.FirstName ? d.FirstName + " " + d.LastName : "")}${fresh ? ` <span class="new">NEW</span>` : ""}</span></span>
+      <span class="tl-play"><span class="wave">${waveOf(src).map(h => `<b style="height:${h.toFixed(0)}%"></b>`).join("")}</span><span class="dur"></span>
+        <button class="play" type="button" aria-label="Play radio from ${esc(d.LastName || "")}">${ICON_PLAY}</button></span></li>`;
+  }
+  $("radio").innerHTML = html || `<li class="empty">${radioWho ? "No radio from this driver yet" : "No team radio yet"}</li>`;
   syncRadio();
 }
 function radioArrived() {   // auto-play: a message that wasn't there before, once you've played one yourself
