@@ -137,15 +137,54 @@
   .champ .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
   .champ .nm small { color: var(--dim); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 
+  /* position column (plain) next to the car-number tag */
+  .posn { display: inline-block; min-width: 22px; text-align: right; margin-right: 9px; font-weight: 900; font-size: 14px; vertical-align: middle; }
+  .pen { background: var(--amber); color: #000; font-size: 9.5px; font-weight: 900; padding: 2px 5px; border-radius: 4px; }
+
+  /* penalties */
+  .penlist { list-style: none; margin: 0; padding: 4px 0; }
+  .penlist h4 { margin: 10px 14px 6px; font-size: 10.5px; color: var(--dim); font-weight: 800; text-transform: uppercase; letter-spacing: .5px; }
+  .penrow { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 7px 14px; border-top: 1px solid var(--line); }
+  .penrow .what { font-weight: 800; } .penrow .what::first-letter, .penrow .why::first-letter { text-transform: uppercase; } .penrow .why { color: var(--dim); font-size: 11.5px; font-weight: 600; }
+  .penrow .st { font-size: 10px; font-weight: 900; padding: 3px 7px; border-radius: 999px; text-transform: uppercase; letter-spacing: .4px; }
+  .st.active { background: var(--amber); color: #000; } .st.served { background: var(--chip); color: var(--dim); } .st.inv { background: color-mix(in srgb, var(--blue) 25%, var(--panel)); color: var(--blue); }
+  .st.warn { background: var(--chip); color: var(--text); }
+  .penrow.done { opacity: .55; }
+  .nopen { display: flex; align-items: center; gap: 10px; padding: 16px 14px; color: var(--dim); font-weight: 700; }
+  .nopen svg { width: 20px; height: 20px; fill: var(--green); }
+
+  /* charts: race positions and tyre strategy */
+  .chart { padding: 8px 10px 12px; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart .who { cursor: pointer; }
+  .strat { display: grid; grid-template-columns: 74px 1fr; gap: 5px 10px; align-items: center; padding: 10px 14px 14px; }
+  .strat .bar { display: flex; height: 18px; border-radius: 5px; overflow: hidden; background: var(--seg); }
+  .strat .bar span { height: 100%; display: grid; place-items: center; font-size: 9.5px; font-weight: 900; color: #000; border-right: 2px solid var(--panel); min-width: 0; overflow: hidden; }
+  .strat .bar span:last-child { border-right: 0; }
+  .strat .bar span.used { background-image: repeating-linear-gradient(135deg, rgba(0, 0, 0, .18) 0 3px, transparent 3px 6px); }
+  .strat .axis { grid-column: 2; display: flex; justify-content: space-between; color: var(--dim); font-size: 10px; font-weight: 700; }
+  .legend2 { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--dim); font-weight: 700; text-transform: none; letter-spacing: 0; }
+  .legend2 i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+
   /* race control */
-  ol.feed { list-style: none; margin: 0; padding: 0; max-height: 380px; overflow-y: auto; }
-  ol.feed > li { padding: 9px 14px; border-top: 1px solid var(--line); display: flex; gap: 10px; align-items: flex-start; }
+  ol.feed { list-style: none; margin: 0; padding: 0; max-height: 420px; overflow-y: auto; }
+  ol.feed > li { padding: 9px 14px; border-top: 1px solid var(--line); display: flex; gap: 11px; align-items: flex-start; }
   ol.feed > li:first-child { border-top: 0; }
   .when { color: var(--dim); font-size: 11px; white-space: nowrap; font-weight: 600; }
-  .flag { width: 5px; align-self: stretch; border-radius: 3px; background: var(--chip); flex: 0 0 5px; }
-  .flag.GREEN, .flag.CLEAR { background: var(--green); } .flag.YELLOW, .flag.DOUBLE { background: #facc15; } .flag.RED { background: var(--red); }
-  .flag.BLUE { background: var(--blue); } .flag.CHEQUERED { background: repeating-linear-gradient(45deg, #fff 0 4px, #000 4px 8px); } .flag.SC { background: var(--amber); }
-  .rc-msg { font-weight: 600; }
+  .rc-ico { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex: 0 0 32px; background: var(--chip); color: var(--dim); }
+  .rc-ico svg { width: 17px; height: 17px; fill: currentColor; }
+  .rc-ico.green { background: color-mix(in srgb, var(--green) 20%, var(--panel)); color: var(--green); }
+  .rc-ico.yellow { background: color-mix(in srgb, #facc15 22%, var(--panel)); color: #e0b100; }
+  .rc-ico.red { background: color-mix(in srgb, var(--red) 22%, var(--panel)); color: #ff4d4d; }
+  .rc-ico.blue { background: color-mix(in srgb, var(--blue) 22%, var(--panel)); color: var(--blue); }
+  .rc-ico.sc { background: color-mix(in srgb, var(--amber) 24%, var(--panel)); color: var(--amber); }
+  .rc-ico.pen { background: color-mix(in srgb, var(--purple) 22%, var(--panel)); color: var(--purple); }
+  .rc-ico.chq { background: repeating-conic-gradient(#fff 0 25%, #111 0 50%) 0 0 / 10px 10px; color: transparent; }
+  .rc-body { min-width: 0; flex: 1; }
+  .rc-msg { font-weight: 600; line-height: 1.4; }
+  .rc-msg .dtag { vertical-align: middle; margin: 0 1px; }
+  .rc-meta { display: flex; gap: 8px; align-items: center; margin-top: 3px; }
+  .rc-kind { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .4px; color: var(--dim); }
   .empty { color: var(--dim); padding: 16px 14px; }
 
   /* team radio */
@@ -253,7 +292,8 @@
   @media (max-width: 900px) {
     main { grid-template-columns: 1fr; padding: 10px 10px 20px; }
     .col, .duo { display: contents; }
-    #p-tower { order: 1; } #p-map { order: 2; } #p-bests { order: 3; } #p-champ { order: 4; } #p-radio { order: 5; } #p-rc { order: 6; }
+    #p-tower { order: 1; } #p-map { order: 2; } #p-bests { order: 3; } #p-pos { order: 4; } #p-strat { order: 5; } #p-champ { order: 6; } #p-pen { order: 7; } #p-radio { order: 8; } #p-rc { order: 9; }
+    .strat { grid-template-columns: 58px 1fr; padding: 10px; }
     .top { padding: 8px 12px; }
     .fact { min-width: 0; padding: 4px 8px; } .fact b { font-size: 13px; }
     td, th { padding: 5px 6px; }
@@ -298,6 +338,14 @@
       <h2><span>Timing <small id="part"></small></span><span class="live" id="live">OFFLINE</span></h2>
       <div class="scroll"><table id="tower"></table></div>
     </section>
+    <section class="panel" id="p-pos" hidden>
+      <h2><span>Race positions</span><small>tap a driver to highlight</small></h2>
+      <div class="chart" id="posChart"></div>
+    </section>
+    <section class="panel" id="p-strat">
+      <h2><span>Tyre strategy</span><span class="legend2"><span><i style="background:#e10600"></i>Soft</span><span><i style="background:#eab308"></i>Medium</span><span><i style="background:#d1d5db"></i>Hard</span><span><i style="background:#16a34a"></i>Inter</span><span><i style="background:#2563eb"></i>Wet</span></span></h2>
+      <div class="strat" id="strat"></div>
+    </section>
     <div class="duo solo">
       <section class="panel" id="p-radio">
         <h2><span>Team radio</span>
@@ -312,7 +360,7 @@
   </div>
   <div class="col">
     <section class="panel" id="p-map">
-      <h2>Track map</h2>
+      <h2><span>Track map</span><span class="legend2"><span><i style="background:#ff3b5c"></i>S1</span><span><i style="background:#3b9eff"></i>S2</span><span><i style="background:#b06cff"></i>S3</span></span></h2>
       <div class="mapwrap"><svg id="map" viewBox="0 0 400 300" role="img" aria-label="Circuit map with each car's position"></svg>
         <div class="legend" id="mapLegend" hidden><span><i style="background:#facc15"></i>Yellow flag</span></div></div>
     </section>
@@ -321,7 +369,8 @@
       <h2><span>Live championship</span><span class="tabs" id="champTabs"><button type="button" data-k="d" aria-pressed="true">Drivers</button><button type="button" data-k="t" aria-pressed="false">Teams</button></span></h2>
       <ol class="champ" id="champ"></ol>
     </section>
-      <section class="panel" id="p-rc"><h2>Race control</h2><ol class="feed" id="rc"></ol></section>
+      <section class="panel" id="p-pen"><h2>Penalties</h2><div id="pens"></div></section>
+      <section class="panel" id="p-rc"><h2><span>Race control</span></h2><div class="chips" id="rcKinds"></div><ol class="feed" id="rc"></ol></section>
   </div>
 </main>
 
@@ -369,7 +418,7 @@ const FEED = "wss://livetiming.formula1.com/signalrcore";
 const STATIC = "https://livetiming.formula1.com/static/";
 const OPENF1 = "https://api.openf1.org/v1";
 const TOPICS = ["Heartbeat", "SessionInfo", "SessionStatus", "TrackStatus", "LapCount", "ExtrapolatedClock", "TimingData",
-                "TimingAppData", "TimingStats", "DriverList", "WeatherData", "RaceControlMessages", "TeamRadio"];
+                "TimingAppData", "TimingStats", "DriverList", "WeatherData", "RaceControlMessages", "TeamRadio", "LapSeries"];
 const RS = "\u001e";
 const params = new URLSearchParams(location.search);
 const store = { get: (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
@@ -580,8 +629,19 @@ function prepare(sess, meet, g) {
     radio: g.team_radio.map(r => ({ at: t(r.date), n: String(r.driver_number), url: r.recording_url })).sort((a, b) => a.at - b.at),
     weather: g.weather.map(w => ({ at: t(w.date), w })).sort((a, b) => a.at - b.at),
     result: Object.fromEntries((g.session_result || []).map(r => [String(r.driver_number), r])),
-    champD: g.championship_drivers || [], champT: g.championship_teams || [], extra: g.extra || {}
+    champD: g.championship_drivers || [], champT: g.championship_teams || [], extra: g.extra || {},
+    lapPos: lapPositions(byDriver, g.position)
   };
+}
+function lapPositions(byDriver, positions) {   // [lap][driver] = position: lap 0 is the grid, then the order each lap was finished in
+  const grid = {}; for (const p of positions) if (!(p.driver_number in grid)) grid[p.driver_number] = { p: p.position, at: Date.parse(p.date) };
+  const rows = [Object.fromEntries(Object.entries(grid).map(([n, x]) => [n, x.p]))];
+  const most = Math.max(0, ...Object.values(byDriver).map(l => l.length));
+  for (let k = 1; k <= most; k++) {
+    const done = Object.entries(byDriver).map(([n, laps]) => [n, (laps.find(l => l.n === k) || {}).end]).filter(([, e]) => e).sort((a, b) => a[1] - b[1]);
+    rows.push(Object.fromEntries(done.map(([n, e], i) => [n, { p: i + 1, at: e }])));
+  }
+  return rows;
 }
 const upTo = (arr, at) => { let lo = 0, hi = arr.length - 1, k = -1; while (lo <= hi) { const m = (lo + hi) >> 1; if (arr[m].at <= at) { k = m; lo = m + 1; } else hi = m - 1; } return k; };
 const fastest = laps => Math.min(Infinity, ...laps.filter(l => l.dur && !l.out).map(l => l.dur));
@@ -641,7 +701,8 @@ function buildReplay() {   // the session as it stood at R.t, in the live feed's
     }
     const curLap = cur ? cur.n : fin.length;
     const stints = D.stints.filter(x => String(x.driver_number) === n && x.lap_start <= Math.max(1, curLap)).sort((a, b) => a.stint_number - b.stint_number)
-      .map(x => ({ Compound: x.compound, TotalLaps: Math.max(0, Math.min(curLap, x.lap_end || curLap) - x.lap_start + 1) + (x.tyre_age_at_start || 0) }));
+      .map(x => ({ Compound: x.compound, StartLaps: x.tyre_age_at_start || 0, New: String(!x.tyre_age_at_start),
+                   TotalLaps: Math.max(0, Math.min(curLap, x.lap_end || curLap) - x.lap_start + 1) + (x.tyre_age_at_start || 0) }));
     lines[n] = {
       Line: i + 1, Position: String(i + 1), ShowPosition: true, RacingNumber: n, NumberOfLaps: fin.length,
       GapToLeader: race ? gap : undefined, IntervalToPositionAhead: race ? { Value: intv } : undefined,
@@ -659,6 +720,11 @@ function buildReplay() {   // the session as it stood at R.t, in the live feed's
   S.TimingData = { Lines: lines };
   S.TimingAppData = { Lines: Object.fromEntries(Object.entries(lines).map(([n, l]) => [n, { Stints: l._stints, GridPos: race && l._grid ? String(l._grid) : undefined }])) };
   S.TimingStats = { Lines: stats };
+  if (race) {   // positions lap by lap, up to now
+    const series = {};
+    D.lapPos.forEach((row, k) => { for (const [n, x] of Object.entries(row)) { if (k && x.at > at) continue; (series[n] = series[n] || { LapPosition: [] }).LapPosition[k] = String(k ? x.p : x); } });
+    S.LapSeries = series;
+  } else S.LapSeries = undefined;
   S.LapCount = race ? { CurrentLap: Math.min(D.totalLaps, leadDone + 1), TotalLaps: D.totalLaps } : undefined;
   const rcSoFar = D.rc.slice(0, upTo(D.rc, at) + 1);
   S.RaceControlMessages = { Messages: rcSoFar.map(({ at, m }) => ({ Utc: at, Lap: m.lap_number, Category: m.category, Flag: m.flag, Scope: m.scope, Sector: m.sector, Message: m.message })) };
@@ -788,7 +854,7 @@ function renderTower() {
   $("part").textContent = part ? `Q${part}` : "";
   const app = (S.TimingAppData || {}).Lines || {};
   const rows = Object.entries(lines).sort((a, b) => (+a[1].Line || 99) - (+b[1].Line || 99));
-  const head = `<tr><th>Driver</th><th data-c="int">${race ? "Interval" : "Gap"}</th><th data-c="gap">${race ? "Gap" : "Int"}</th><th data-c="last">Last lap</th>
+  const head = `<tr><th>Pos · Driver</th><th data-c="int">${race ? "Interval" : "Gap"}</th><th data-c="gap">${race ? "Gap" : "Int"}</th><th data-c="last">Last lap</th>
               <th data-c="best">Best lap</th><th data-c="s1">Sector 1</th><th data-c="s2">Sector 2</th><th data-c="s3">Sector 3</th><th data-c="speed">Speed</th><th data-c="tyres">Tyres</th><th data-c="pit">Pit</th>${race ? `<th data-c="moved">+/-</th>` : ""}</tr>`;
   if (head !== towerHead) { table.innerHTML = head; towerHead = head; towerRows = {}; }   // a different session: start over
   const body = table.tBodies[0] || table;
@@ -815,10 +881,10 @@ function renderTower() {
     const secCells = list(l.Sectors).map((sec, k) => ["s" + (k + 1), "", `<span class="sector"><span class="${timeClass(sec)}">${esc(sec.Value || "")}</span>
         <span class="segs">${list(sec.Segments).map(g => `<b class="${segClass(g && g.Status)}"></b>`).join("")}</span></span>`]);
     while (secCells.length < 3) secCells.push(["s" + (secCells.length + 1), "", ""]);
-    const pos = l.ShowPosition === false || out ? "" : l.Position;
+    const pos = l.ShowPosition === false || out ? "" : l.Position, owed = penaltyOwed(num);
     const lastV = (l.LastLapTime || {}).Value || "", lastC = timeClass(l.LastLapTime);
     const cells = [
-      ["", "", `<span class="dtag" style="${tagVars(c)}"><span class="n">${esc(pos || "–")}</span><span class="t">${esc(d.Tla || num)}</span></span><span class="tags">${tags}</span>`],
+      ["", "", `<span class="posn">${esc(pos || "–")}</span>${dtag(num)}<span class="tags">${tags}${owed ? `<span class="pen" title="Penalty not yet served">${esc(owed)}</span>` : ""}</span>`],
       ["int", "", race && catching && intv && intv !== "—" ? `<span class="pill ring">${esc(intv)}</span>` : esc(race ? intv : gap) || "–"],
       ["gap", "", esc(race ? gap : intv) || ""],
       ["last", lastC, lastC === "t-purple" ? `<span class="pill purple">${esc(lastV)}</span>` : esc(lastV)],
@@ -915,12 +981,141 @@ function renderChampionship() {
 }
 
 // ---------- race control ----------
+// ---------- race control ----------
+const RC_ICON = {
+  flag: `<svg viewBox="0 0 24 24"><path d="M5 2h2v20H5zm3 1h12l-3 4.5 3 4.5H8z"/></svg>`,
+  car: `<svg viewBox="0 0 24 24"><path d="M5 11l1.6-4.6A2 2 0 0 1 8.5 5h7a2 2 0 0 1 1.9 1.4L19 11v6a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H8v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1zm2.6-1h8.8l-1-3H8.6zM7.6 14.2a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6zm8.8 0a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6z"/></svg>`,
+  gavel: `<svg viewBox="0 0 24 24"><path d="M1 21h12v2H1zM5.2 8.1l2.9-2.9 14.1 14.2-2.8 2.8zM12.3 1 18 6.7l-2.9 2.8-5.6-5.7zM3.8 9.5l5.7 5.7-2.8 2.8L1 12.3z"/></svg>`,
+  warn: `<svg viewBox="0 0 24 24"><path d="M1 21h22L12 2zm12-3h-2v-2h2zm0-4h-2v-4h2z"/></svg>`,
+  drs: `<svg viewBox="0 0 24 24"><path d="M2 6h20v3H2zm3 5h14l-1.5 4h-11zm3 6h8v2H8z"/></svg>`,
+  info: `<svg viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-1 5h2v2h-2zm0 4h2v6h-2z"/></svg>`,
+  ok: `<svg viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-1.4 14.2-4.2-4.2 1.4-1.4 2.8 2.8 5.6-5.6 1.4 1.4z"/></svg>`
+};
+function rcKind(m) {   // [icon colour, icon, label, filter group]
+  const t = (m.Message || "").toUpperCase(), f = (m.Flag || "").toUpperCase();
+  if (m.Category === "SafetyCar" || /SAFETY CAR|^VSC /.test(t)) return ["sc", "car", /VIRTUAL|^VSC/.test(t) ? "Virtual safety car" : "Safety car", "sc"];
+  if (/STEWARDS|PENALTY|INVESTIGAT|INCIDENT|BLACK AND WHITE|WARNING/.test(t)) return ["pen", "gavel", "Stewards", "pen"];
+  if (/TRACK LIMITS|DELETED/.test(t)) return ["yellow", "warn", "Track limits", "tl"];
+  if (f === "CHEQUERED") return ["chq", "flag", "Chequered flag", "flags"];
+  if (f === "RED") return ["red", "flag", "Red flag", "flags"];
+  if (f === "DOUBLE YELLOW") return ["yellow", "flag", "Double yellow", "flags"];
+  if (f === "YELLOW") return ["yellow", "flag", "Yellow flag", "flags"];
+  if (f === "BLUE") return ["blue", "flag", "Blue flag", "flags"];
+  if (f === "GREEN" || f === "CLEAR") return ["green", "flag", f === "GREEN" ? "Green flag" : "Track clear", "flags"];
+  if (m.Category === "Drs" || /\bDRS\b/.test(t)) return ["", "drs", "DRS", "other"];
+  return ["", "info", "Info", "other"];
+}
+const withTags = text => esc(text).replace(/(?:CARS? )?(\d+) \(([A-Z]{2,3})\)/g, (_, n) => dtag(n, true));   // "CAR 81 (PIA)" -> the driver's tag
+const RC_FILTERS = [["all", "All"], ["flags", "Flags"], ["sc", "Safety car"], ["pen", "Stewards"], ["tl", "Track limits"]];
+let rcFilter = "all";
 function renderRaceControl() {
-  const msgs = list((S.RaceControlMessages || {}).Messages).slice(-60).reverse();
-  $("rc").innerHTML = msgs.length ? msgs.map(m => {
-    const flag = (m.Flag || (m.Category === "SafetyCar" ? "SC" : "")).split(" ")[0];
-    return `<li><span class="flag ${esc(flag)}"></span><div><div class="rc-msg">${esc(m.Message)}</div><div class="when">${m.Lap ? "Lap " + esc(m.Lap) + " · " : ""}${timeOf(m.Utc)}</div></div></li>`;
-  }).join("") : `<li class="empty">No messages yet</li>`;
+  const all = list((S.RaceControlMessages || {}).Messages).map(m => ({ m, k: rcKind(m) }));
+  const count = g => g === "all" ? all.length : all.filter(x => x.k[3] === g).length;
+  $("rcKinds").innerHTML = RC_FILTERS.map(([g, label]) => `<button data-g="${g}" aria-pressed="${g === rcFilter}">${label} ${count(g) || ""}</button>`).join("");
+  const msgs = all.filter(x => rcFilter === "all" || x.k[3] === rcFilter).slice(-80).reverse();
+  $("rc").innerHTML = msgs.length ? msgs.map(({ m, k: [cls, icon, label] }) =>
+    `<li><span class="rc-ico ${cls}">${RC_ICON[icon]}</span><div class="rc-body"><div class="rc-msg">${withTags(m.Message)}</div>
+      <div class="rc-meta"><span class="rc-kind">${label}</span><span class="when">${m.Lap ? "Lap " + esc(m.Lap) + " · " : ""}${timeOf(m.Utc)}</span></div></div></li>`).join("")
+    : `<li class="empty">No messages yet</li>`;
+}
+$("rcKinds").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { rcFilter = b.dataset.g; renderRaceControl(); } });
+
+// ---------- penalties ----------
+let penCache = { key: null, v: null };
+function penaltyInfo() {   // the stewards' decisions so far, read from race control's messages
+  const msgs = list((S.RaceControlMessages || {}).Messages), lastM = msgs[msgs.length - 1] || {};
+  const key = msgs.length + "|" + lastM.Message;
+  if (penCache.key === key) return penCache.v;
+  const pens = [], invs = {}, limits = {}, flags = [];
+  const carsIn = t => [...t.matchAll(/(\d+) \([A-Z]{2,3}\)/g)].map(x => x[1]);
+  for (const m of msgs) {
+    const t = (m.Message || "").toUpperCase().replace(/^(FIA STEWARDS: )?UPDATE:\s*/, "$1"), why = t.split(" - ").slice(1).join(" - ").replace(/\s*\(\d\d:\d\d(:\d\d)?\)$/, "");
+    const car = (/FOR CAR (\d+)/.exec(t) || [])[1];
+    if (/PENALTY SERVED/.test(t)) { const p = pens.find(x => x.n === car && !x.served); if (p) p.served = true; continue; }
+    const secs = /(\d+) SECOND TIME PENALTY/.exec(t);
+    const kind = secs ? `+${secs[1]}s` : /DRIVE[ -]THROUGH/.test(t) ? "DT" : /STOP[ /-]?(?:AND[ -])?GO/.test(t) ? "SG" : null;
+    if (car && kind && /PENALTY/.test(t)) {
+      pens.push({ n: car, kind, what: secs ? `${secs[1]} second time penalty` : kind === "DT" ? "Drive-through penalty" : "Stop-and-go penalty", why, lap: m.Lap, served: false });
+      for (const v of Object.values(invs)) if (v.open && v.cars.includes(car)) { v.open = false; v.status = "Penalty"; }   // decided
+      continue;
+    }
+    const inv = /^(?:FIA STEWARDS: )?(.*?)\s+(UNDER INVESTIGATION|WILL BE INVESTIGATED AFTER THE RACE|NOTED|REVIEWED NO FURTHER INVESTIGATION|NO FURTHER INVESTIGATION|NO FURTHER ACTION)\b/.exec(t);
+    if (inv && /INCIDENT|CARS? \d/.test(inv[1])) {
+      const v = invs[inv[1]] = invs[inv[1]] || { cars: carsIn(inv[1]), what: inv[1].replace(/\s*INCIDENT INVOLVING.*$/, "").trim(), why, lap: m.Lap };
+      v.open = /INVESTIGAT(ION|ED AFTER)/.test(inv[2]) && !/NO FURTHER/.test(inv[2]);
+      v.status = /AFTER THE RACE/.test(inv[2]) ? "After race" : v.open ? "Investigating" : /NOTED/.test(inv[2]) ? "Noted" : "No action";
+      if (why) v.why = why;
+      continue;
+    }
+    const lim = /CAR (\d+) \([A-Z]+\) (?:TIME|LAP).*DELETED/.exec(t);
+    if (lim) { limits[lim[1]] = (limits[lim[1]] || 0) + 1; continue; }
+    const bw = /BLACK AND WHITE FLAG FOR CAR (\d+)/.exec(t);
+    if (bw) flags.push({ n: bw[1], why, lap: m.Lap });
+  }
+  const owed = {};
+  for (const p of pens) if (!p.served) owed[p.n] = (owed[p.n] ? owed[p.n] + " " : "") + p.kind;
+  return (penCache = { key, v: { pens, invs: Object.values(invs), limits, flags, owed } }).v;
+}
+const penaltyOwed = n => penaltyInfo().owed[n] || "";
+function renderPenalties() {
+  const { pens, invs, limits, flags } = penaltyInfo();
+  const row = (cars, what, why, st, cls, done) => `<li class="penrow${done ? " done" : ""}"><span>${cars.map(n => dtag(n, true)).join(" ")}</span>
+    <span><div class="what">${esc(what)}</div>${why ? `<div class="why">${esc(why)}</div>` : ""}</span><span class="st ${cls}">${esc(st)}</span></li>`;
+  const lap = l => l ? ` · Lap ${l}` : "";
+  const active = pens.filter(p => !p.served), open = invs.filter(v => v.open);
+  let html = active.length ? "" : `<div class="nopen">${RC_ICON.ok}No active penalties</div>`;
+  const parts = [];
+  if (pens.length) parts.push(`<h4>Penalties</h4>` + [...active, ...pens.filter(p => p.served)].map(p => row([p.n], p.what, p.why.toLowerCase() + lap(p.lap), p.served ? "Served" : "Active", p.served ? "served" : "active", p.served)).join(""));
+  if (invs.length) parts.push(`<h4>Investigations</h4>` + [...open, ...invs.filter(v => !v.open)].map(v => row(v.cars, v.what.toLowerCase() || "Incident", v.why.toLowerCase() + lap(v.lap), v.status, v.open ? "inv" : "served", !v.open)).join(""));
+  const tl = Object.entries(limits).sort((a, b) => b[1] - a[1]);
+  if (tl.length || flags.length) parts.push(`<h4>Warnings</h4>` + flags.map(f => row([f.n], "Black and white flag", f.why.toLowerCase() + lap(f.lap), "Warning", "warn")).join("")
+    + tl.map(([n, k]) => row([n], `${k} lap time${k > 1 ? "s" : ""} deleted`, "track limits", `${k}×`, "warn")).join(""));
+  $("pens").innerHTML = html + (parts.length ? `<ul class="penlist">${parts.join("")}</ul>` : "");
+}
+
+// ---------- race positions ----------
+let posPick = null, posKey = "";
+function renderPositions() {
+  const series = S.LapSeries, race = (S.SessionInfo || {}).Type === "Race";
+  const rows = race && series ? Object.entries(series).map(([n, x]) => [n, list(x.LapPosition).map(Number)]).filter(([, p]) => p.length > 1) : [];
+  show("p-pos", rows.length > 0);
+  if (!rows.length) return;
+  const key = rows.map(([n, p]) => n + ":" + p.join(",")).join("|") + posPick + JSON.stringify(Object.keys(S.DriverList || {}));
+  if (key === posKey) return; posKey = key;
+  const laps = Math.max(((S.LapCount || {}).TotalLaps) || 0, ...rows.map(([, p]) => p.length - 1));
+  const cars = Math.max(rows.length, ...rows.flatMap(([, p]) => p.filter(isFinite)));
+  const W = 640, L = 22, Rt = 40, T = 8, rowH = 15, H = T + (cars - 1) * rowH + 26;
+  const x = k => L + (W - L - Rt) * k / Math.max(1, laps), y = p => T + (p - 1) * rowH;
+  const seen = {};   // the second driver of each team gets a dashed line
+  const lines = rows.map(([n, p]) => {
+    const d = driver(n), c = colour(d), dash = seen[d.TeamName] ? ' stroke-dasharray="5 3"' : ""; seen[d.TeamName] = 1;
+    const pts = p.map((v, k) => isFinite(v) && v > 0 ? `${x(k).toFixed(1)},${y(v).toFixed(1)}` : null).filter(Boolean);
+    const lastK = p.reduce((a, v, k) => isFinite(v) && v > 0 ? k : a, 0), dim = posPick && posPick !== n;
+    return { n, z: posPick === n ? 1 : 0, svg: `<g class="who" data-n="${n}" opacity="${dim ? 0.15 : 1}"><polyline points="${pts.join(" ")}" fill="none" stroke="${c}" stroke-width="${posPick === n ? 3.2 : 2}"${dash} stroke-linejoin="round"/>
+      <polyline points="${pts.join(" ")}" fill="none" stroke="transparent" stroke-width="10"/>
+      <circle cx="${x(lastK)}" cy="${y(p[lastK])}" r="3" fill="${c}"/><text x="${x(lastK) + 6}" y="${y(p[lastK]) + 3.5}" font-size="10" font-weight="800" fill="var(--text)">${esc(d.Tla || n)}</text></g>` };
+  }).sort((a, b) => a.z - b.z).map(l => l.svg).join("");
+  let grid = "";
+  for (let k = 1; k <= cars; k++) grid += `<text x="${L - 6}" y="${y(k) + 3.5}" font-size="9.5" font-weight="700" fill="var(--dim)" text-anchor="end">${k}</text>`;
+  const step = laps > 40 ? 10 : 5;
+  for (let k = 0; k <= laps; k += step) grid += `<line x1="${x(k)}" x2="${x(k)}" y1="${T - 4}" y2="${H - 18}" stroke="var(--line)"/><text x="${x(k)}" y="${H - 5}" font-size="9.5" font-weight="700" fill="var(--dim)" text-anchor="middle">${k ? "L" + k : "Grid"}</text>`;
+  $("posChart").innerHTML = `<svg viewBox="0 0 ${W} ${H}">${grid}${lines}</svg>`;
+}
+$("posChart").addEventListener("click", e => { const g = e.target.closest(".who"); posPick = g && g.dataset.n !== posPick ? g.dataset.n : null; renderPositions(); });
+
+// ---------- tyre strategy ----------
+function renderStrategy() {
+  const lines = (S.TimingData || {}).Lines || {}, app = (S.TimingAppData || {}).Lines || {};
+  const order = Object.entries(lines).sort((a, b) => (+a[1].Line || 99) - (+b[1].Line || 99)).map(([n]) => n);
+  const rows = order.map(n => [n, list((app[n] || {}).Stints).map(st => ({ c: st.Compound, laps: Math.max(0, (+st.TotalLaps || 0) - (+st.StartLaps || 0)), used: st.New === "false" || +st.StartLaps > 0 }))])
+    .filter(([, st]) => st.length);
+  show("p-strat", rows.length > 0);
+  if (!rows.length) return;
+  const total = Math.max(((S.LapCount || {}).TotalLaps) || 0, ...rows.map(([, st]) => st.reduce((a, b) => a + b.laps, 0)), 1);
+  $("strat").innerHTML = rows.map(([n, st]) => `${dtag(n, true)}<div class="bar">${st.map(x => {
+    const [ltr, col] = TYRES[x.c] || ["?", "#777"], w = 100 * x.laps / total;
+    return `<span class="${x.used ? "used" : ""}" style="width:${w.toFixed(2)}%;background-color:${col};${x.c === "WET" ? "color:#fff" : ""}" title="${esc(x.c || "")}${x.used ? " (used)" : ""}, ${x.laps} laps">${w > 6 ? ltr + " " + x.laps : ""}</span>`;
+  }).join("")}</div>`).join("") + `<div class="axis"><span>Lap 0</span><span>${Math.round(total / 2)}</span><span>${total}</span></div>`;
 }
 
 // ---------- team radio ----------
@@ -1051,12 +1246,24 @@ function drawCircuit() {
   }).join("");
   const [sx, sy] = circuit.screen[0], [nx, ny] = circuit.screen[3], ang = Math.atan2(ny - sy, nx - sx) * 180 / Math.PI;
   $("map").innerHTML = `<path d="${d}" fill="none" stroke="var(--track-edge)" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/>
-    <path d="${d}" fill="none" stroke="var(--track)" stroke-width="3.2" stroke-linejoin="round"/>
-    <g id="flags"></g>${corners}
+    <g id="secs"></g><g id="flags"></g>${corners}
     <g transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${(ang + 90).toFixed(1)})"><rect x="-7" y="-2" width="14" height="4" fill="#fff"/>
       ${[0, 1, 2, 3, 4, 5, 6].map(i => `<rect x="${-7 + i * 2}" y="${i % 2 ? 0 : -2}" width="2" height="2" fill="#000"/>`).join("")}</g>
     <g id="cars"></g>`;
-  flagKey = ""; resetCars();
+  flagKey = ""; secKey = ""; resetCars();
+}
+const SECTOR_COLOURS = ["#ff3b5c", "#3b9eff", "#b06cff"];
+let secKey = "";
+function renderSectors() {   // where sectors 1 and 2 end, by the fastest sector times: how far through a lap (in time) each one ends
+  const g = $("secs"); if (!g || !circuit) return;
+  const best = [0, 1, 2].map(k => { let v = Infinity; for (const l of Object.values((S.TimingStats || {}).Lines || {})) { const b = list(l.BestSectors)[k]; if (b && +b.Value) v = Math.min(v, +b.Value); } return v; });
+  const tot = best[0] + best[1] + best[2];
+  const f = isFinite(tot) ? [best[0] / tot, (best[0] + best[1]) / tot] : [1 / 3, 2 / 3];
+  const key = f.map(v => v.toFixed(3)).join();
+  if (key === secKey) return; secKey = key;
+  const at = v => { const i = trackLen.findIndex(t => t >= v); return i < 0 ? trackLen.length - 1 : i; };
+  const cut = [0, at(f[0]), at(f[1]), circuit.screen.length - 1];
+  g.innerHTML = SECTOR_COLOURS.map((c, k) => `<path d="${pathOf(circuit.screen.slice(cut[k], cut[k + 1] + 1).concat(k === 2 ? [circuit.screen[0]] : []))}" fill="none" stroke="${c}" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"/>`).join("");
 }
 let flagKey = "";
 function renderFlags() {   // yellow and double-yellow sectors, lit up on the track; the whole track under a red flag or safety car
@@ -1217,7 +1424,7 @@ $("champTabs").addEventListener("click", e => {
 let tick = 0;
 function frame() {
   replayTick();
-  if (dirty) { dirty = false; renderHeader(); renderTower(); renderBests(); renderRaceControl(); renderRadio(); renderChampionship(); renderFlags(); }
+  if (dirty) { dirty = false; renderHeader(); renderTower(); renderBests(); renderRaceControl(); renderPenalties(); renderPositions(); renderStrategy(); renderRadio(); renderChampionship(); renderSectors(); renderFlags(); }
   else if (++tick % 8 === 0) renderRadio();   // "x min ago"
   renderClock();
 }
