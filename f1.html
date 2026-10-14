@@ -1342,13 +1342,15 @@ function drawCircuit() {
   mapBox = ([x, y]) => [ox + (x - minX) * k, h - (oy + (y - minY) * k)];
   circuit.screen = pts.map(mapBox); circuit.w = w; circuit.h = h;
   const P = circuit.screen, np = P.length;
-  circuit.normal = P.map((q, i) => {   // the side with more room: tags go there, clear of the track
-    const a = P[(i - 3 + np) % np], b = P[(i + 3) % np], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
-    let nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L;
-    const room = sgn => { const x = q[0] + nx * sgn * 20, y = q[1] + ny * sgn * 20; let m = Infinity; for (const r of P) m = Math.min(m, (r[0] - x) ** 2 + (r[1] - y) ** 2); return m; };
-    if (room(-1) > room(1)) { nx = -nx; ny = -ny; }
-    return [nx, ny];
-  });
+  const gw = Math.ceil(w / 4), gh = Math.ceil(h / 4), grid = new Uint8Array(gw * gh);   // which 4px cells the track covers, so tags can keep off it
+  for (let i = 0; i < P.length; i++) {
+    const a = P[i], b = P[(i + 1) % P.length], steps = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 2) || 1;
+    for (let k = 0; k < steps; k++) {
+      const cx = Math.floor((a[0] + (b[0] - a[0]) * k / steps) / 4), cy = Math.floor((a[1] + (b[1] - a[1]) * k / steps) / 4);
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const x = cx + dx, y = cy + dy; if (x >= 0 && y >= 0 && x < gw && y < gh) grid[y * gw + x] = 1; }
+    }
+  }
+  circuit.grid = grid; circuit.gw = gw; circuit.gh = gh;
   const times = circuit.trackPositionTime || [];   // when a real car reached each point: place cars by time through the lap
   const t0 = times[0] || 0, t1 = times[times.length - 1] || 1;
   trackLen = times.length === pts.length ? times.map(t => (t - t0) / (t1 - t0 || 1)) : pts.map((_, i) => i / (pts.length - 1));
@@ -1426,7 +1428,7 @@ const SVGNS = "http://www.w3.org/2000/svg";
 function animateCars(ts) {   // each car: a dot on the racing line, and its tag beside the track, kept apart from the others
   requestAnimationFrame(animateCars);
   const g = $("cars"), dt = Math.min(0.1, lastFrame ? (ts - lastFrame) / 1000 : 0); lastFrame = ts;
-  if (!g || !circuit || !trackLen.length || !circuit.normal) return;
+  if (!g || !circuit || !trackLen.length || !circuit.grid) return;
   const lines = (S.TimingData || {}).Lines || {};
   const over = mode === "live" && ["Finished", "Finalised", "Ends", "Inactive"].includes((S.SessionStatus || {}).Status);
   const seen = new Set();
@@ -1445,30 +1447,51 @@ function animateCars(ts) {   // each car: a dot on the racing line, and its tag 
     // ease toward where the car should be: no jumps when a timing mark comes early or late
     let diff = target - c.f; diff -= Math.round(diff);
     c.f += Math.abs(diff) > 0.25 ? diff : diff * Math.min(1, dt * 4);
-    const [x, y, i] = pointAt(c.f);
-    c.x = x; c.y = y; c.n = circuit.normal[i] || [0, -1];
+    const [x, y] = pointAt(c.f);
+    c.x = x; c.y = y;
     c.line = +l.Line || 99; seen.add(num);
   }
   for (const [num, c] of Object.entries(cars)) if (!seen.has(num)) { c.el.remove(); delete cars[num]; }
   const order = Object.entries(cars).sort((a, b) => a[1].line - b[1].line);   // the leader's tag is placed first
-  const placed = [], H = 12, W0 = circuit.w, H0 = circuit.h;
+  const placed = [], H = 12, W0 = circuit.w, H0 = circuit.h, { grid, gw } = circuit;
   const hit = (x, y, w) => placed.some(b => x < b[0] + b[2] + 2 && x + w + 2 > b[0] && y < b[1] + H + 2 && y + H + 2 > b[1]);
+  const onTrack = (x, y, w) => {   // the share of the tag's box that covers the track
+    let n = 0, m = 0;
+    for (let cy = Math.floor(y / 4); cy <= Math.floor((y + H) / 4); cy++) for (let cx = Math.floor(x / 4); cx <= Math.floor((x + w) / 4); cx++) { m++; n += grid[cy * gw + cx] || 0; }
+    return n / m;
+  };
   for (const [, c] of order) {
-    const [nx, ny] = c.n, w = c.w;
-    let spot = null;
-    for (const d of [13, 26, 39, 52, 65, 78, 91]) {   // out from the track, further each try; the other side too once it's crowded
-      for (const sgn of d < 39 ? [1] : [1, -1]) {
-        const reach = d + Math.abs(nx) * w / 2 + Math.abs(ny) * H / 2;
-        const bx = Math.max(1, Math.min(W0 - w - 1, c.x + nx * sgn * reach - w / 2)), by = Math.max(1, Math.min(H0 - H - 1, c.y + ny * sgn * reach - H / 2));
-        if (!hit(bx, by, w)) { spot = [bx, by]; break; }
-        if (!spot && d === 13 && sgn === 1) c.first = [bx, by];
-      }
-      if (spot) break;
+    const w = c.w;
+    const box = k => {   // slot k: one of 8 directions from the car (0 = up-right, going round), 12px out; 8-15 and 16-23: further out, for crowds
+      const a = Math.PI / 4 - (k % 8) * Math.PI / 4, r = 12 + 18 * (k >> 3), ux = Math.cos(a), uy = -Math.sin(a);
+      const cx = c.x + ux * (r + w / 2 * Math.abs(ux)), cy = c.y + uy * (r + H / 2 * Math.abs(uy));
+      return [Math.max(1, Math.min(W0 - w - 1, cx - w / 2)), Math.max(1, Math.min(H0 - H - 1, cy - H / 2))];
+    };
+    // keep its slot: move at once only if another tag is in the way; off the track only once it has sat on it for 2 s
+    let move = c.slot == null;
+    if (!move) {
+      const [x, y] = box(c.slot);
+      c.onFor = onTrack(x, y, w) > 0.45 ? (c.onFor || 0) + dt : 0;
+      move = hit(x, y, w) || c.onFor > 2;
     }
-    spot = spot || c.first;
+    if (move) {
+      c.onFor = 0;
+      let best = c.slot == null ? 0 : c.slot, score = Infinity;
+      for (let k = 0; k < 24; k++) {
+        const [x, y] = box(k); if (hit(x, y, w)) continue;
+        const turn = c.slot == null ? 0 : Math.min((k - c.slot + 8) % 8, (c.slot - k + 8) % 8);
+        const sc = onTrack(x, y, w) + 0.04 * turn + 0.7 * (k >> 3);
+        if (sc < score) { score = sc; best = k; }
+      }
+      c.slot = best;
+    }
+    const spot = box(c.slot);
     placed.push([spot[0], spot[1], w]);
-    if (c.lx == null || Math.hypot(spot[0] - c.lx, spot[1] - c.ly) > 80) { c.lx = spot[0]; c.ly = spot[1]; }   // first frame, or a jump: no glide
-    else { const k = Math.min(1, dt * 9); c.lx += (spot[0] - c.lx) * k; c.ly += (spot[1] - c.ly) * k; }
+    // the tag rides with its car; only its offset glides, when it changes slot
+    const ox = spot[0] - c.x, oy = spot[1] - c.y;
+    if (c.ox == null) { c.ox = ox; c.oy = oy; }
+    else { const k = Math.min(1, dt * 6); c.ox += (ox - c.ox) * k; c.oy += (oy - c.oy) * k; }
+    c.lx = c.x + c.ox; c.ly = c.y + c.oy;
     c.dot.setAttribute("cx", c.x.toFixed(2)); c.dot.setAttribute("cy", c.y.toFixed(2));
     c.lead.setAttribute("x1", c.x.toFixed(2)); c.lead.setAttribute("y1", c.y.toFixed(2));
     c.lead.setAttribute("x2", (c.lx + w / 2).toFixed(2)); c.lead.setAttribute("y2", (c.ly + H / 2).toFixed(2));
