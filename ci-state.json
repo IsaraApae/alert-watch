@@ -3020,7 +3020,8 @@
   "199426:2",
   "207329:2",
   "198727:1",
-  "176314:2"
+  "176314:2",
+  "152677:2"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3456,6 +3457,17 @@
    "published": 1791982807,
    "scheduled": 1791982800,
    "notified": true
+  },
+  "152677:2": {
+   "title": "The Detective Is Already Dead Season 2",
+   "episode": 2,
+   "version": "ซับไทย",
+   "first": "Muse Thailand",
+   "url": "https://www.youtube.com/watch?v=uQm1zrDbHU8",
+   "detected": 1791984617,
+   "published": 1791963702,
+   "scheduled": 1791984600,
+   "notified": true
   }
  },
  "watch_links": {
@@ -3489,7 +3501,8 @@
   "199426:2": "https://isaraapae.github.io/alert-watch/b.html?v=lIKdNzbe8Zs",
   "207329:2": "https://isaraapae.github.io/alert-watch/b.html?v=MvPs_e__QL4",
   "198727:1": "https://isaraapae.github.io/alert-watch/b.html?v=L9FhKX7WXME",
-  "176314:2": "https://isaraapae.github.io/alert-watch/b.html?v=TjGM9bk2_ro"
+  "176314:2": "https://isaraapae.github.io/alert-watch/b.html?v=TjGM9bk2_ro",
+  "152677:2": "https://isaraapae.github.io/alert-watch/b.html?v=uQm1zrDbHU8"
  },
  "special_rows": {
   "https://www.youtube.com/watch?v=dbKE_wq_ElA": [
