@@ -1281,7 +1281,7 @@ function renderNext() {
   if (key !== nextKey) {
     nextKey = key;
     $("nextName").textContent = `${next.meeting} · ${next.session_name}`;
-    $("nextWhen").textContent = new Date(next.start).toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }) + " (your time)";
+    $("nextWhen").textContent = new Date(next.start).toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false });
     $("nextReplay").hidden = !last;
     if (last) { $("nextReplay").textContent = `↺ Replay ${SHORT[last.session_name] || last.session_name} · ${last.meeting.replace(/ Grand Prix$/, " GP")}`; $("nextReplay").dataset.key = last.session_key; }
   }
