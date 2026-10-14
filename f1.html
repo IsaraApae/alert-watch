@@ -749,12 +749,15 @@ function buildReplay() {   // the session as it stood at R.t, in the live feed's
     if (race && last) {
       if (n === leader) gap = intv = "LAP " + Math.min(D.totalLaps, leadDone + 1);
       else {
-        const behind = leadDone - fin.length, le = lapEnd(leader, fin.length), ae = i ? lapEnd(order[i - 1], fin.length) : null;
-        gap = behind >= 1 && lapEnd(leader, fin.length + 1) && le && last.end - le > 0 ? `+${behind} LAP${behind > 1 ? "S" : ""}` : le ? "+" + ((last.end - le) / 1000).toFixed(3) : "";
+        const le = lapEnd(leader, fin.length), ae = i ? lapEnd(order[i - 1], fin.length) : null;
+        // laps down: the leader's extra laps finished before this car last crossed the line (not just "the leader has crossed more times right now")
+        const down = (D.byDriver[leader] || []).filter(x => x.n > fin.length && x.end <= last.end).length;
+        gap = down ? `+${down} LAP${down > 1 ? "S" : ""}` : le ? "+" + ((last.end - le) / 1000).toFixed(3) : "";
         // the car ahead crossed the line first; if the order changed mid-lap (a pit stop), use the gaps instead, never a negative
         const ahead = lines[order[i - 1]], diff = ae ? (last.end - ae) / 1000 : null, gapNum = parseFloat(gap), aheadGap = ahead ? parseFloat(ahead.GapToLeader) || 0 : 0;
         intv = diff != null && diff >= 0 ? "+" + diff.toFixed(3) : isFinite(gapNum) && gapNum - aheadGap >= 0 ? "+" + (gapNum - aheadGap).toFixed(3) : "";
       }
+      if (retired) gap = intv = "";   // out of the race: no gap, like F1's timing
     } else if (!race && isFinite(pb)) {
       const prev = i ? rankT(order[i - 1]) : Infinity, sameGroup = !quali || quali.out[n] === quali.out[order[i - 1]];
       gap = i && (!quali || !quali.out[n]) ? "+" + (pb - lead).toFixed(3) : ""; intv = i && isFinite(prev) && sameGroup ? "+" + (pb - prev).toFixed(3) : "";
