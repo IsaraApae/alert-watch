@@ -18,13 +18,13 @@
 <style>
   :root, [data-mode="dark"] {
     --bg: #0b0b10; --panel: #15151e; --panel2: #1b1b26; --row: #181821; --line: #262633; --text: #f2f2f6; --dim: #8d8d9c; --seg: #34343f;
-    --chip: #2a2a38; --input: #0e0e14; --map: #101018; --track: #e8e8ee; --track-edge: #2c2c3a; --corner: #2a2a38; --corner-text: #a0a0ae;
+    --chip: #2a2a38; --input: #0e0e14; --map: #101018; --track: #e8e8ee; --track-edge: #2c2c3a; --corner: #2a2a38; --corner-text: #a0a0ae; --tag-bg: rgba(8, 8, 14, .94); --tag-fg: #fff; --tag-line: rgba(255, 255, 255, .14);
     --purple: #b14cf0; --green: #22c55e; --yellow: #facc15; --red: #e10600; --blue: #3b82f6; --amber: #f59e0b; --shadow: rgba(0, 0, 0, .7);
     --tag-mix: 24%; --tag-ink: #fff; --tag-ink-mix: 55%; color-scheme: dark;
   }
   [data-mode="light"] {
     --bg: #eef0f4; --panel: #fff; --panel2: #f5f6f9; --row: #fafbfc; --line: #e4e6ec; --text: #111118; --dim: #6b6f7c; --seg: #dfe1e8;
-    --chip: #eceef3; --input: #f3f4f7; --map: #f7f8fa; --track: #22232b; --track-edge: #d5d8e0; --corner: #e9ebf0; --corner-text: #6b6f7c;
+    --chip: #eceef3; --input: #f3f4f7; --map: #f7f8fa; --track: #22232b; --track-edge: #d5d8e0; --corner: #e9ebf0; --corner-text: #6b6f7c; --tag-bg: #fff; --tag-fg: #111118; --tag-line: rgba(0, 0, 0, .18);
     --purple: #9333ea; --green: #16a34a; --yellow: #ca8a04; --red: #e10600; --blue: #2563eb; --amber: #d97706; --shadow: rgba(0, 0, 0, .12);
     --tag-mix: 14%; --tag-ink: #000; --tag-ink-mix: 78%; color-scheme: light;
   }
@@ -108,7 +108,11 @@
   .mapwrap { position: relative; background: var(--map); }
   #map { display: block; width: 100%; height: auto; max-height: 72vh; }   /* in the wide column, not taller than the screen */
   .car { transition: none; }
-  .car rect { stroke: var(--map); stroke-width: 1.2; }
+  .car .dot { stroke: #fff; stroke-width: 1.5; }
+  .car .lead { stroke-width: 1.2; opacity: .8; }
+  .car .tbg { fill: var(--tag-bg); stroke: var(--tag-line); stroke-width: .8; }
+  .car text { font-weight: 900; text-anchor: middle; letter-spacing: .3px; }
+  .car .tt { fill: var(--tag-fg); font-size: 8px; } .car .tn { font-size: 7.6px; }
   .legend { position: absolute; left: 10px; bottom: 8px; display: flex; gap: 10px; font-size: 10.5px; color: var(--dim); }
   .legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
 
@@ -1336,7 +1340,15 @@ function drawCircuit() {
   $("map").setAttribute("viewBox", `0 0 ${w} ${h}`);
   const ox = (w - (maxX - minX) * k) / 2, oy = (h - (maxY - minY) * k) / 2;
   mapBox = ([x, y]) => [ox + (x - minX) * k, h - (oy + (y - minY) * k)];
-  circuit.screen = pts.map(mapBox);
+  circuit.screen = pts.map(mapBox); circuit.w = w; circuit.h = h;
+  const P = circuit.screen, np = P.length;
+  circuit.normal = P.map((q, i) => {   // the side with more room: tags go there, clear of the track
+    const a = P[(i - 3 + np) % np], b = P[(i + 3) % np], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    let nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L;
+    const room = sgn => { const x = q[0] + nx * sgn * 20, y = q[1] + ny * sgn * 20; let m = Infinity; for (const r of P) m = Math.min(m, (r[0] - x) ** 2 + (r[1] - y) ** 2); return m; };
+    if (room(-1) > room(1)) { nx = -nx; ny = -ny; }
+    return [nx, ny];
+  });
   const times = circuit.trackPositionTime || [];   // when a real car reached each point: place cars by time through the lap
   const t0 = times[0] || 0, t1 = times[times.length - 1] || 1;
   trackLen = times.length === pts.length ? times.map(t => (t - t0) / (t1 - t0 || 1)) : pts.map((_, i) => i / (pts.length - 1));
@@ -1389,12 +1401,12 @@ function renderFlags() {   // yellow and double-yellow sectors, lit up on the tr
   }
   g.innerHTML = parts.join("");
 }
-function pointAt(f) {   // a fraction of the lap -> a point on the outline (binary search)
+function pointAt(f) {   // a fraction of the lap -> a point on the outline (binary search), and that point's index
   f = ((f % 1) + 1) % 1;
   let lo = 1, hi = trackLen.length - 1;
   while (lo < hi) { const m = (lo + hi) >> 1; if (trackLen[m] < f) lo = m + 1; else hi = m; }
   const i = lo, a = trackLen[i - 1], b = trackLen[i], u = b > a ? (f - a) / (b - a) : 0, p = circuit.screen[i - 1], q = circuit.screen[i];
-  return [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u];
+  return [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u, i];
 }
 function lapFraction(num, l) {
   if (mode === "replay") {   // where in its lap the car is, from the lap's start and length; between laps, the next lap
@@ -1410,10 +1422,11 @@ function lapFraction(num, l) {
 const cars = {};   // one drawn tag per car, moved smoothly every frame
 function resetCars() { for (const k in cars) delete cars[k]; const g = $("cars"); if (g) g.innerHTML = ""; }
 let lastFrame = 0;
-function animateCars(ts) {
+const SVGNS = "http://www.w3.org/2000/svg";
+function animateCars(ts) {   // each car: a dot on the racing line, and its tag beside the track, kept apart from the others
   requestAnimationFrame(animateCars);
   const g = $("cars"), dt = Math.min(0.1, lastFrame ? (ts - lastFrame) / 1000 : 0); lastFrame = ts;
-  if (!g || !circuit || !trackLen.length) return;
+  if (!g || !circuit || !trackLen.length || !circuit.normal) return;
   const lines = (S.TimingData || {}).Lines || {};
   const over = mode === "live" && ["Finished", "Finalised", "Ends", "Inactive"].includes((S.SessionStatus || {}).Status);
   const seen = new Set();
@@ -1422,21 +1435,47 @@ function animateCars(ts) {
     const target = lapFraction(num, l); if (target == null) continue;
     let c = cars[num];
     if (!c) {
-      const d = driver(num), tc = colour(d), w = 6 + 5.6 * (d.Tla || num).length;
-      const el = document.createElementNS("http://www.w3.org/2000/svg", "g"); el.setAttribute("class", "car");
-      el.innerHTML = `<rect x="${-w / 2}" y="-6.5" width="${w}" height="13" rx="4" fill="${tc}"/><text y="3.4" font-size="8.4" font-weight="900" text-anchor="middle" fill="${ink(tc)}" letter-spacing=".3">${esc(d.Tla || num)}</text>`;
-      g.appendChild(el); c = cars[num] = { el, f: target };
+      const d = driver(num), tc = colour(d), no = String(d.RacingNumber || num), nw = no.length > 1 ? 15 : 11, tw = 23;
+      const el = document.createElementNS(SVGNS, "g"); el.setAttribute("class", "car");
+      el.innerHTML = `<line class="lead" stroke="${tc}"/><circle class="dot" r="4.4" fill="${tc}"/>
+        <g class="tag"><rect class="tbg" width="${nw + tw}" height="12" rx="3"/><rect width="${nw}" height="12" rx="3" fill="${tc}"/><rect x="${nw - 3}" width="3" height="12" fill="${tc}"/>
+        <text class="tn" x="${nw / 2}" y="8.7" fill="${ink(tc)}">${esc(no)}</text><text class="tt" x="${nw + tw / 2}" y="8.8">${esc(d.Tla || num)}</text></g>`;
+      g.appendChild(el); c = cars[num] = { el, f: target, w: nw + tw, lead: el.firstChild, dot: el.children[1], tag: el.children[2] };
     }
     // ease toward where the car should be: no jumps when a timing mark comes early or late
     let diff = target - c.f; diff -= Math.round(diff);
     c.f += Math.abs(diff) > 0.25 ? diff : diff * Math.min(1, dt * 4);
-    const [x, y] = pointAt(c.f);
-    c.el.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+    const [x, y, i] = pointAt(c.f);
+    c.x = x; c.y = y; c.n = circuit.normal[i] || [0, -1];
     c.line = +l.Line || 99; seen.add(num);
   }
   for (const [num, c] of Object.entries(cars)) if (!seen.has(num)) { c.el.remove(); delete cars[num]; }
-  const order = Object.entries(cars).sort((a, b) => b[1].line - a[1].line);   // the leader drawn on top
-  if (order.map(o => o[0]).join() !== g.dataset.order) { g.dataset.order = order.map(o => o[0]).join(); order.forEach(([, c]) => g.appendChild(c.el)); }
+  const order = Object.entries(cars).sort((a, b) => a[1].line - b[1].line);   // the leader's tag is placed first
+  const placed = [], H = 12, W0 = circuit.w, H0 = circuit.h;
+  const hit = (x, y, w) => placed.some(b => x < b[0] + b[2] + 2 && x + w + 2 > b[0] && y < b[1] + H + 2 && y + H + 2 > b[1]);
+  for (const [, c] of order) {
+    const [nx, ny] = c.n, w = c.w;
+    let spot = null;
+    for (const d of [13, 26, 39, 52, 65, 78, 91]) {   // out from the track, further each try; the other side too once it's crowded
+      for (const sgn of d < 39 ? [1] : [1, -1]) {
+        const reach = d + Math.abs(nx) * w / 2 + Math.abs(ny) * H / 2;
+        const bx = Math.max(1, Math.min(W0 - w - 1, c.x + nx * sgn * reach - w / 2)), by = Math.max(1, Math.min(H0 - H - 1, c.y + ny * sgn * reach - H / 2));
+        if (!hit(bx, by, w)) { spot = [bx, by]; break; }
+        if (!spot && d === 13 && sgn === 1) c.first = [bx, by];
+      }
+      if (spot) break;
+    }
+    spot = spot || c.first;
+    placed.push([spot[0], spot[1], w]);
+    if (c.lx == null || Math.hypot(spot[0] - c.lx, spot[1] - c.ly) > 80) { c.lx = spot[0]; c.ly = spot[1]; }   // first frame, or a jump: no glide
+    else { const k = Math.min(1, dt * 9); c.lx += (spot[0] - c.lx) * k; c.ly += (spot[1] - c.ly) * k; }
+    c.dot.setAttribute("cx", c.x.toFixed(2)); c.dot.setAttribute("cy", c.y.toFixed(2));
+    c.lead.setAttribute("x1", c.x.toFixed(2)); c.lead.setAttribute("y1", c.y.toFixed(2));
+    c.lead.setAttribute("x2", (c.lx + w / 2).toFixed(2)); c.lead.setAttribute("y2", (c.ly + H / 2).toFixed(2));
+    c.tag.setAttribute("transform", `translate(${c.lx.toFixed(2)},${c.ly.toFixed(2)})`);
+  }
+  const key = order.map(o => o[0]).join();   // the leader drawn on top
+  if (key !== g.dataset.order) { g.dataset.order = key; [...order].reverse().forEach(([, c]) => g.appendChild(c.el)); }
 }
 requestAnimationFrame(animateCars);
 
