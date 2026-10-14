@@ -19,17 +19,22 @@ Anime alerts use the time the **Thai-sub** episode comes out (never dubbed, neve
 
 ## F1 Live page
 
-[isaraapae.github.io/alert-watch/f1.html](https://isaraapae.github.io/alert-watch/f1.html) has free live timing in any browser, and the LINE menu's **F1 Live** button opens it. Your browser connects straight to Formula 1's live timing feed, so there's no server.
+[isaraapae.github.io/alert-watch/f1.html](https://isaraapae.github.io/alert-watch/f1.html) has free live timing in any browser, styled like the broadcast timing screens, and the LINE menu's **F1 Live** button opens it. Your browser connects straight to Formula 1's live timing feed, so there's no server.
 
-- **Timing tower:** interval, gap, last and best lap, sectors with mini sectors, speed trap, tyre stints, pit stops and places gained. **Settings** lets you choose which columns to show.
-- **Track map:** an estimate of where each car is on the lap, from the timing loops. Exact positions are only on F1 TV. The map takes each circuit's own shape so the track fills the width. **Full screen** fills the whole screen; on an upright phone a wide circuit is turned so its long side runs down the screen, and replay controls stay visible.
-- **Live championship:** drivers (with photos and team colours) and teams (with logos), worked out live during sprints and races from the standings before them.
-- **Fastest sectors, race control and weather.**
-- **Team radio:** filter by driver, auto-play new messages, play the next one, see each driver's position.
-- **Replay:** any finished session since 2023, from [OpenF1](https://openf1.org). Play or pause it, skip 30 s, change speed (1×–32×), or drag to any moment.
-- **Appearance:** Light, Dark or Device, in Settings.
+- **Header:** the country flag, session, track status (clear, yellow, safety car, VSC, red flag), lap, time left, air and track temperature, wind.
+- **Timing tower:** each driver as a team-colour position box and name tag, interval (a green outline when catching), gap, last and best lap (purple for the fastest), sectors with mini sectors, speed trap, tyre stints, pit stops and places gained. **Settings** lets you choose which columns to show.
+- **Track map:** the circuit with numbered corners and the start line, and every car as a team-colour name tag that moves smoothly (60 frames a second). Live positions are an estimate from the timing loops (exact positions are only on F1 TV); replays place cars from their lap times. Sectors under a yellow flag light up yellow; under a safety car or red flag the whole track is outlined.
+- **Fastest sectors** and **race control.**
+- **Live championship:** drivers (photos, team colours) and teams (logos), worked out live during sprints and races from the standings before them.
+- **Team radio:** every message F1 publishes (for a race usually about 30, from the drivers shown on TV), as cards with the driver's photo, position, team and time, a waveform-style progress bar, filter chips for each driver, **Auto-play** for new messages and **Play next**. F1 publishes no transcripts, and its audio can't be read by other sites or by cloud servers, so there's no transcript text.
+- **Replay:** any finished session since 2023, from [OpenF1](https://openf1.org). Play or pause it, skip 30 s, change speed (1×–32×), or drag the timeline, which marks safety-car and red-flag periods and every 10th lap; the time shows the race clock, the lap and the time of day.
+- **Appearance:** Dark (default), Light or Device, in Settings.
 
-The page is published on the `gh-pages` branch as `f1.html`. Car outlines come from MultiViewer's circuit API, and photos and logos from formula1.com.
+The page is published on the `gh-pages` branch as `f1.html`. Circuits come from MultiViewer's circuit API, flags from OpenF1, and photos and logos from formula1.com.
+
+## Live session card
+
+From 15 minutes before an F1 session starts to 30 minutes after, LINE gets one card, "LIVE NOW" (or "STARTING SOON"), with a button that opens the F1 Live page (`f1_live` in `ci-state.json`).
 
 ## Formula 1 results
 
