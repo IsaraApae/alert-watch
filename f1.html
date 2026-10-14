@@ -680,8 +680,13 @@ function prepare(sess, meet, g) {
     totalLaps: Math.max(0, ...g.laps.map(l => l.lap_number || 0)),
     drivers: g.drivers, positions: g.position.map(p => ({ at: t(p.date), n: String(p.driver_number), p: p.position })).sort((a, b) => a.at - b.at),
     stints: g.stints, pits: g.pit.map(p => ({ at: t(p.date), n: String(p.driver_number), lap: p.lap_number, lane: p.lane_duration || p.pit_duration, dur: p.lane_duration || p.pit_duration || 25 })),
-    qflags: g.race_control.filter(m => m.qualifying_phase && /CHEQUERED FLAG/.test(m.message)).map(m => ({ p: m.qualifying_phase, at: t(m.date) })).sort((a, b) => a.at - b.at),
-    parts: g.race_control.filter(m => m.qualifying_phase && /SESSION STARTED/.test(m.message)).map(m => ({ p: m.qualifying_phase, at: t(m.date) })).sort((a, b) => a.at - b.at),
+    // qualifying parts: starts (and restarts after a red flag) and chequered flags. OpenF1 sometimes leaves Q1 unlabelled: that's Q1
+    ...(() => {
+      const quali = /Qualifying|Shootout/.test(sess.session_name) && g.race_control.some(m => m.qualifying_phase);
+      const of = re => quali ? g.race_control.filter(m => re.test(m.message)).map(m => ({ p: m.qualifying_phase || 1, at: t(m.date) })).sort((a, b) => a.at - b.at) : [];
+      const parts = of(/SESSION STARTED/), stops = of(/SESSION ABORTED/).map(a => [a.at, (parts.find(x => x.at > a.at) || {}).at || a.at]);   // red-flag stoppages
+      return { parts, qflags: of(/CHEQUERED FLAG/), stops };
+    })(),
     rc: g.race_control.map(m => ({ at: t(m.date), m })).sort((a, b) => a.at - b.at),
     radio: g.team_radio.map(r => ({ at: t(r.date), n: String(r.driver_number), url: r.recording_url })).sort((a, b) => a.at - b.at),
     weather: g.weather.map(w => ({ at: t(w.date), w })).sort((a, b) => a.at - b.at),
@@ -838,7 +843,9 @@ function flagState(msgs) {   // the track's state from race control's messages s
       else if (/^(VSC|VIRTUAL SAFETY CAR) ENDING/.test(text)) st = "7";
       else if (/^SAFETY CAR (DEPLOYED|IN THIS LAP)/.test(text)) st = "4";
     }
-    if (flag === "RED" && m.Scope !== "Sector") st = "5";
+    // red flag: the flag itself, or the words (OpenF1 often sends "RED FLAG - RACE SUSPENDED" with no flag colour)
+    if ((flag === "RED" && m.Scope !== "Sector") || /^RED FLAG|^SESSION ABORTED|^STARTING PROCEDURE SUSPENDED/.test(text)) st = "5";
+    if (st === "5" && /^SESSION STARTED|^START ORDER/.test(text)) st = "1";   // racing again
     if (/^TRACK CLEAR|^GREEN LIGHT - PIT EXIT OPEN/.test(text) || ((flag === "GREEN" || flag === "CLEAR") && m.Scope === "Track")) {
       st = "1"; for (const k in yellow) delete yellow[k];
     }
@@ -930,9 +937,16 @@ function renderClock() {   // time left; in qualifying, a countdown to the end o
     if (quali && D && D.parts.length) {
       const now_ = R.t, part = D.parts.filter(x => x.at <= now_).pop(), next = D.parts.find(x => x.at > now_);
       const flag = part && D.qflags.find(x => x.p === part.p && x.at >= part.at);
+      // stopped (red flag): race control's last word on the session was "aborted" ("track clear" comes before the restart)
+      const said = list((S.RaceControlMessages || {}).Messages).filter(m => /^SESSION (STARTED|ABORTED)/.test(m.Message || "")).pop();
+      const red = !!said && /ABORTED/.test(said.Message);
       if (!part) { label = "Q1 starts in"; left = next.at - now_; }
-      else if (flag && now_ < flag.at) { label = `Q${part.p} ends in`; left = flag.at - now_; running = true; }
-      else if (next) { label = `Q${next.p} starts in`; left = next.at - now_; }
+      else if (red && next && next.p === part.p) { label = `Q${part.p} restarts in`; left = next.at - now_; }   // red flag: until the restart
+      else if (flag && now_ < flag.at) {   // like F1's clock: stoppages still to come don't count
+        const paused = D.stops.reduce((sum, [a, b]) => sum + Math.max(0, Math.min(b, flag.at) - Math.max(a, now_)), 0);
+        label = `Q${part.p} ends in`; left = flag.at - now_ - paused; running = true;
+      }
+      else if (next) { label = `Q${next.p} ${next.p === part.p ? "restarts" : "starts"} in`; left = next.at - now_; }   // after a red flag: the same part restarts
       else { label = "Qualifying"; left = "done"; }
     }
   } else {
@@ -941,7 +955,7 @@ function renderClock() {   // time left; in qualifying, a countdown to the end o
       left = seconds(c.Remaining) * 1000;
       if (c.Extrapolating && c.Utc) left -= now() - utc(c.Utc);
       running = !!c.Extrapolating;
-      if (quali && part) label = running ? `Q${part} ends in` : `Q${part}`;
+      if (quali && part) label = running ? `Q${part} ends in` : status === "Aborted" || (S.TrackStatus || {}).Status === "5" ? `Q${part} stopped` : `Q${part}`;   // red flag: F1's clock stops
       // between parts F1's clock stands still: count down the break from when the last part ended
       const next = status === "Finished" ? part + 1 : status === "Inactive" && part > 1 ? part : 0;
       if (quali && part && !running && next) {
