@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>F1 Live Timing</title>
 <meta name="description" content="Free live Formula 1 timing: timing tower, sectors, tyres, track map, live championship, race control, weather and team radio, plus replays of past sessions.">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#0b0b10">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23000'/%3E%3Cg transform='translate(5 25) scale(0.168)'%3E%3Cpath fill='%23e10600' d='M45.2583 80L80.7417 45.575H80.7333C94.7167 32.0167 100.392 29.9583 127.058 29.9583H233.408L264.008 0H123.025C87.3333 0 77.2417 3.4 56.3083 24.1167L0 80H45.2583ZM127.7 34.7417H228.842L200.792 62.7917H128.225C114.925 62.7917 111.983 63.4167 105.383 70.0167L95.4 80H53.4333L84.4583 48.975C96.6417 36.8 100.842 34.7417 127.7 34.7417ZM320 0L239.783 80H190.175L270.175 0H320Z'/%3E%3C/g%3E%3C/svg%3E">
 <script>
   // appearance before the page draws, so it never flashes the wrong colours
@@ -17,16 +17,16 @@
 </script>
 <style>
   :root, [data-mode="dark"] {
-    --bg: #000; --panel: #0b0b0f; --panel2: #121218; --row: #0f0f14; --line: #1d1d26; --text: #fff; --dim: #8b8b99; --seg: #2c2c36;
-    --chip: #1f1f29; --input: #15151c; --map: #07070a; --track: #f2f2f5; --track-edge: #2a2a34; --corner: #23232c; --corner-text: #a0a0ae;
-    --purple: #b14cf0; --green: #22c55e; --yellow: #facc15; --red: #e10600; --blue: #3b82f6; --amber: #f59e0b; --shadow: rgba(0, 0, 0, .8);
-    --tag-bg: #fff; color-scheme: dark;
+    --bg: #0b0b10; --panel: #15151e; --panel2: #1b1b26; --row: #181821; --line: #262633; --text: #f2f2f6; --dim: #8d8d9c; --seg: #34343f;
+    --chip: #2a2a38; --input: #0e0e14; --map: #101018; --track: #e8e8ee; --track-edge: #2c2c3a; --corner: #2a2a38; --corner-text: #a0a0ae;
+    --purple: #b14cf0; --green: #22c55e; --yellow: #facc15; --red: #e10600; --blue: #3b82f6; --amber: #f59e0b; --shadow: rgba(0, 0, 0, .7);
+    --tag-mix: 24%; --tag-ink: #fff; --tag-ink-mix: 55%; color-scheme: dark;
   }
   [data-mode="light"] {
     --bg: #eef0f4; --panel: #fff; --panel2: #f5f6f9; --row: #fafbfc; --line: #e4e6ec; --text: #111118; --dim: #6b6f7c; --seg: #dfe1e8;
     --chip: #eceef3; --input: #f3f4f7; --map: #f7f8fa; --track: #22232b; --track-edge: #d5d8e0; --corner: #e9ebf0; --corner-text: #6b6f7c;
     --purple: #9333ea; --green: #16a34a; --yellow: #ca8a04; --red: #e10600; --blue: #2563eb; --amber: #d97706; --shadow: rgba(0, 0, 0, .12);
-    --tag-bg: #fff; color-scheme: light;
+    --tag-mix: 14%; --tag-ink: #000; --tag-ink-mix: 78%; color-scheme: light;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--text); }
@@ -67,9 +67,10 @@
   .panel h2 small { color: var(--dim); font-weight: 600; text-transform: none; letter-spacing: 0; }
 
   /* driver tag: team-colour position box + name box, like the broadcast graphics */
-  .dtag { display: inline-flex; align-items: stretch; height: 24px; border-radius: 5px; overflow: hidden; font-weight: 900; box-shadow: 0 0 0 1.5px var(--tc) inset; }
+  .dtag { display: inline-flex; align-items: stretch; height: 24px; border-radius: 6px; overflow: hidden; font-weight: 900; box-shadow: 0 0 0 1px color-mix(in srgb, var(--tc) 70%, transparent) inset; }
   .dtag .n { background: var(--tc); color: var(--tcf, #fff); min-width: 24px; display: grid; place-items: center; font-size: 12px; padding: 0 4px; }
-  .dtag .t { background: var(--tag-bg); color: var(--tct, var(--tc)); display: grid; place-items: center; padding: 0 7px; font-size: 12.5px; letter-spacing: .4px; }
+  .dtag .t { background: color-mix(in srgb, var(--tc) var(--tag-mix), var(--panel)); color: color-mix(in srgb, var(--tc) var(--tag-ink-mix), var(--tag-ink));
+             display: grid; place-items: center; padding: 0 7px; font-size: 12.5px; letter-spacing: .4px; }   /* team-tinted, readable in both modes */
   .dtag.small { height: 20px; } .dtag.small .n { min-width: 20px; font-size: 11px; } .dtag.small .t { font-size: 11px; padding: 0 5px; }
 
   /* timing tower */
@@ -93,8 +94,7 @@
   .segs b.y { background: #facc15; } .segs b.g { background: var(--green); } .segs b.p { background: var(--purple); } .segs b.pit { background: var(--blue); }
   .stints { display: inline-flex; gap: 4px; align-items: center; justify-content: flex-end; }
   .stint { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--dim); opacity: .5; }
-  .stint span { width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid; display: inline-grid; place-items: center; font-size: 9px; font-weight: 900; line-height: 1; background: #0b0b0f; }
-  [data-mode="light"] .stint span { background: #fff; }
+  .stint span { width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid; display: inline-grid; place-items: center; font-size: 9px; font-weight: 900; line-height: 1; background: var(--panel); }
   .stint.now { opacity: 1; color: var(--text); font-weight: 800; }
   .up { color: var(--green); } .down { color: var(--red); } .same { color: var(--dim); }
   small.u { color: var(--dim); font-size: 10px; }
@@ -175,36 +175,58 @@
 
   /* pop-up panels */
   .sheet { position: fixed; z-index: 40; inset: 0; background: rgba(0, 0, 0, .55); display: grid; place-items: center; padding: 16px; }
-  .sheet > div { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; width: min(560px, 100%); max-height: min(80vh, 720px); overflow: auto; }
-  .sheet h3 { margin: 0; padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
-  .sheet section { padding: 14px 16px; border-bottom: 1px solid var(--line); }
-  .sheet section:last-child { border-bottom: 0; }
-  .sheet h4 { margin: 0 0 10px; font-size: 11px; color: var(--dim); font-weight: 800; text-transform: uppercase; letter-spacing: .5px; }
-  .sheet select { background: var(--input); border: 1px solid var(--line); border-radius: 9px; padding: 7px 9px; }
-  .cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 9px 12px; }
-  .cols label { display: flex; gap: 8px; align-items: center; cursor: pointer; font-weight: 600; }
-  .cols input { accent-color: var(--red); width: 16px; height: 16px; }
-  .seg-btns { display: inline-flex; background: var(--input); border-radius: 11px; padding: 3px; gap: 3px; }
-  .seg-btns button { all: unset; cursor: pointer; padding: 7px 16px; border-radius: 9px; font-weight: 800; color: var(--dim); }
-  .seg-btns button[aria-pressed="true"] { background: var(--chip); color: var(--text); }
-  .meet { border-top: 1px solid var(--line); padding: 12px 0; } .meet:first-child { border-top: 0; padding-top: 0; }
-  .meet b { display: block; margin-bottom: 8px; }
-  .meet .sess { display: flex; flex-wrap: wrap; gap: 6px; }
-  .x { all: unset; cursor: pointer; color: var(--dim); font-size: 22px; line-height: 1; padding: 0 4px; }
+  .sheet > div { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; width: min(620px, 100%); max-height: min(84vh, 760px); overflow: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, .45); }
+  .sheet h3 { position: sticky; top: 0; z-index: 1; background: var(--panel); margin: 0; padding: 16px 18px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 900; }
+  .sheet section { padding: 6px 18px 18px; }
+  .sheet h4 { margin: 8px 0 10px; font-size: 11px; color: var(--dim); font-weight: 800; text-transform: uppercase; letter-spacing: .6px; display: flex; justify-content: space-between; align-items: center; }
+  .sheet h4 button { all: unset; cursor: pointer; color: var(--blue); text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 700; margin-left: 12px; }
+  .x { all: unset; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: var(--chip); display: grid; place-items: center; color: var(--dim); font-size: 18px; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tiles button { all: unset; cursor: pointer; border-radius: 14px; background: var(--panel2); border: 1.5px solid var(--line); padding: 14px 8px; display: grid; justify-items: center; gap: 8px; font-weight: 800; }
+  .tiles button svg { width: 24px; height: 24px; fill: var(--dim); }
+  .tiles button[aria-pressed="true"] { border-color: var(--red); background: color-mix(in srgb, var(--red) 10%, var(--panel2)); }
+  .tiles button[aria-pressed="true"] svg { fill: var(--red); }
+  .toggles { border-radius: 14px; background: var(--panel2); border: 1px solid var(--line); overflow: hidden; }
+  .toggles label { display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; border-top: 1px solid var(--line); cursor: pointer; font-weight: 700; }
+  .toggles label:first-child { border-top: 0; }
+  .toggles label small { display: block; color: var(--dim); font-weight: 600; font-size: 11px; }
+  .seasons { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px 0 12px; }
+  .seasons button { all: unset; cursor: pointer; padding: 6px 14px; border-radius: 999px; background: var(--chip); font-weight: 800; color: var(--dim); flex: 0 0 auto; }
+  .seasons button[aria-pressed="true"] { background: var(--red); color: #fff; }
+  .meets { display: grid; gap: 8px; }
+  .meet { border-radius: 14px; background: var(--panel2); border: 1px solid var(--line); padding: 12px 14px; display: grid; grid-template-columns: 40px 1fr; gap: 4px 12px; align-items: center; }
+  .meet img { width: 40px; height: 27px; border-radius: 5px; object-fit: cover; grid-row: span 2; box-shadow: 0 0 0 1px var(--line); }
+  .meet b { font-size: 14px; } .meet small { color: var(--dim); font-weight: 600; }
+  .meet .sess { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .meet .sess button { all: unset; cursor: pointer; padding: 6px 11px; border-radius: 9px; background: var(--chip); font-weight: 800; font-size: 12px; }
+  .meet .sess button.race { background: var(--red); color: #fff; }
+  .meet .sess button:hover { filter: brightness(1.15); }
 
   /* replay controls */
-  .rbar { position: sticky; bottom: 0; z-index: 25; background: color-mix(in srgb, var(--panel) 94%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-          border-top: 1px solid var(--line); padding: 8px 16px calc(10px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: auto auto auto 1fr auto auto; gap: 10px; align-items: center; }
-  .rbar select { background: var(--input); border: 1px solid var(--line); border-radius: 9px; padding: 6px 7px; }
-  .rbar .time { font-weight: 800; white-space: nowrap; } .rbar .time small { color: var(--dim); font-weight: 700; margin-left: 6px; }
-  .ico { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; background: var(--chip); display: grid; place-items: center; }
-  .ico svg { width: 15px; height: 15px; fill: currentColor; }
-  .timeline { position: relative; height: 34px; }
-  .timeline input { position: absolute; inset: 0; width: 100%; margin: 0; accent-color: var(--blue); background: transparent; }
-  .marks { position: absolute; left: 8px; right: 8px; top: 0; height: 100%; pointer-events: none; }
-  .marks i { position: absolute; top: 3px; height: 5px; border-radius: 2px; }
-  .marks i.sc { background: var(--amber); } .marks i.red { background: var(--red); }
-  .marks span { position: absolute; bottom: 0; transform: translateX(-50%); font-size: 9.5px; color: var(--dim); font-weight: 700; }
+  .rbar { position: sticky; bottom: 0; z-index: 25; background: color-mix(in srgb, var(--panel) 95%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+          border-top: 1px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); display: grid; gap: 8px; }
+  .timeline { position: relative; height: 30px; }
+  .timeline .rail { position: absolute; left: 0; right: 0; top: 11px; height: 8px; border-radius: 999px; background: var(--chip); overflow: hidden; }
+  .timeline .done { position: absolute; left: 0; top: 0; bottom: 0; background: var(--blue); opacity: .55; }
+  .timeline .band { position: absolute; top: 0; bottom: 0; }
+  .band.sc { background: var(--amber); } .band.vsc { background: repeating-linear-gradient(90deg, var(--amber) 0 4px, transparent 4px 7px); } .band.red { background: var(--red); }
+  .timeline .lapmark { position: absolute; top: 22px; transform: translateX(-50%); font-size: 9.5px; color: var(--dim); font-weight: 800; }
+  .timeline input { position: absolute; left: 0; right: 0; top: 4px; width: 100%; height: 22px; margin: 0; background: transparent; appearance: none; -webkit-appearance: none; cursor: pointer; }
+  .timeline input::-webkit-slider-runnable-track { height: 22px; background: transparent; }
+  .timeline input::-moz-range-track { height: 22px; background: transparent; }
+  .timeline input::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: 2px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px var(--blue), 0 2px 6px rgba(0, 0, 0, .4); }
+  .timeline input::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px var(--blue); }
+  .tip { position: absolute; bottom: 30px; transform: translateX(-50%); background: var(--text); color: var(--bg); font-size: 11px; font-weight: 800; padding: 3px 7px; border-radius: 6px; white-space: nowrap; pointer-events: none; }
+  .rctl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ico { all: unset; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; background: var(--chip); display: grid; place-items: center; }
+  .ico svg { width: 16px; height: 16px; fill: currentColor; }
+  .ico.big { width: 44px; height: 44px; background: var(--text); color: var(--bg); }
+  .ico.big svg { width: 18px; height: 18px; }
+  .rclock { display: grid; line-height: 1.15; margin-left: 4px; } .rclock b { font-size: 16px; font-weight: 900; } .rclock small { color: var(--dim); font-weight: 700; }
+  .speeds { display: inline-flex; background: var(--input); border-radius: 10px; padding: 3px; gap: 2px; margin-left: auto; }
+  .speeds button { all: unset; cursor: pointer; padding: 5px 9px; border-radius: 8px; font-weight: 800; font-size: 12px; color: var(--dim); }
+  .speeds button[aria-pressed="true"] { background: var(--chip); color: var(--text); }
+  .rtitle { color: var(--dim); font-weight: 700; font-size: 12px; }
   .loading { color: var(--dim); padding: 6px 0; }
 
   @media (max-width: 900px) {
@@ -212,9 +234,11 @@
     .top { padding: 8px 12px; }
     .fact { min-width: 0; padding: 4px 8px; } .fact b { font-size: 13px; }
     td, th { padding: 5px 6px; }
-    .rbar { grid-template-columns: auto auto auto 1fr auto; gap: 8px; padding: 8px 10px calc(10px + env(safe-area-inset-bottom)); }
-    .rbar .timeline { grid-column: 1 / -1; grid-row: 2; }
-    .rbar .tod { display: none; }
+    .rbar { padding: 8px 12px calc(10px + env(safe-area-inset-bottom)); gap: 6px; }
+    .rbar .tod, .rtitle { display: none; }
+    .rctl { gap: 8px; } .speeds button { padding: 5px 7px; }
+    .speeds button[data-s="32"], .speeds button[data-s="16"] { display: none; }
+    .tiles button { padding: 12px 6px; }
     .event b { white-space: normal; font-size: 15px; line-height: 1.2; }
     .flagimg { width: 28px; height: 18px; }
     .bests > div { padding: 9px 7px; } .bests .dtag .n { display: none; } .bests p { font-size: 12px; }
@@ -276,30 +300,40 @@
 </main>
 
 <div class="rbar" id="rbar" hidden>
-  <button class="ico" id="rBack" type="button" aria-label="Back 30 seconds"><svg viewBox="0 0 24 24"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6 8.5 6V6l-8.5 6z"/></svg></button>
-  <button class="ico" id="rPlay" type="button" aria-label="Play or pause"></button>
-  <button class="ico" id="rFwd" type="button" aria-label="Forward 30 seconds"><svg viewBox="0 0 24 24"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg></button>
-  <div class="timeline"><div class="marks" id="rMarks"></div><input type="range" id="rSeek" min="0" max="1000" value="0" aria-label="Replay position"></div>
-  <span class="time" id="rTime"></span>
-  <span style="display:flex;gap:8px;align-items:center">
-    <select id="rSpeed" aria-label="Replay speed"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option><option value="16">16×</option><option value="32">32×</option></select>
+  <div class="timeline" id="rLine">
+    <div class="rail"><div class="done" id="rDone"></div><div id="rBands"></div></div>
+    <div id="rLaps"></div>
+    <input type="range" id="rSeek" min="0" max="1000" value="0" aria-label="Replay position">
+    <div class="tip" id="rTip" hidden></div>
+  </div>
+  <div class="rctl">
+    <button class="ico" id="rBack" type="button" aria-label="Back 30 seconds"><svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05 1-6.9 2.6L2 7v9h9l-3.62-3.62A7.97 7.97 0 0 1 20.5 16l2.37-.78A10.48 10.48 0 0 0 12.5 8z"/></svg></button>
+    <button class="ico big" id="rPlay" type="button" aria-label="Play or pause"></button>
+    <button class="ico" id="rFwd" type="button" aria-label="Forward 30 seconds"><svg viewBox="0 0 24 24"><path d="M18.4 10.6A10.4 10.4 0 0 0 11.5 8 10.48 10.48 0 0 0 1.13 15.22l2.37.78a7.97 7.97 0 0 1 13.12-3.62L13 16h9V7l-3.6 3.6z"/></svg></button>
+    <span class="rclock"><b id="rTime"></b><small id="rLap"></small></span>
+    <span class="rtitle" id="rTitle"></span>
+    <span class="speeds" id="rSpeed"><button type="button" data-s="1" aria-pressed="true">1×</button><button type="button" data-s="2">2×</button><button type="button" data-s="4">4×</button><button type="button" data-s="8">8×</button><button type="button" data-s="16">16×</button><button type="button" data-s="32">32×</button></span>
     <button class="btn red" id="rExit" type="button">Live</button>
-  </span>
+  </div>
 </div>
 
 <div class="sheet" id="settings" hidden><div>
-  <h3>Settings <button class="x" type="button" data-close aria-label="Close">×</button></h3>
+  <h3>Settings <button class="x" type="button" data-close aria-label="Close">✕</button></h3>
   <section><h4>Appearance</h4>
-    <div class="seg-btns" id="themeBtns"><button type="button" data-t="light">Light</button><button type="button" data-t="dark">Dark</button><button type="button" data-t="device">Device</button></div>
+    <div class="tiles" id="themeBtns">
+      <button type="button" data-t="light"><svg viewBox="0 0 24 24"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0-5 1.4 3h-2.8L12 2zm0 20-1.4-3h2.8L12 22zM2 12l3-1.4v2.8L2 12zm20 0-3 1.4v-2.8l3 1.4zM4.9 4.9l3.1 1.2-2 2-1.1-3.2zm14.2 14.2-3.1-1.2 2-2 1.1 3.2zM4.9 19.1l1.2-3.1 2 2-3.2 1.1zM19.1 4.9 17.9 8l-2-2 3.2-1.1z"/></svg>Light</button>
+      <button type="button" data-t="dark"><svg viewBox="0 0 24 24"><path d="M21 14.5A9 9 0 0 1 9.5 3a9 9 0 1 0 11.5 11.5z"/></svg>Dark</button>
+      <button type="button" data-t="device"><svg viewBox="0 0 24 24"><path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 3v14h10V5H7zm5 15.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>Device</button>
+    </div>
   </section>
-  <section><h4>Timing columns</h4><div class="cols" id="colPicks"></div></section>
+  <section><h4><span>Timing columns</span><span><button type="button" id="colAll">Show all</button><button type="button" id="colFew">Hide extras</button></span></h4><div class="toggles" id="colPicks"></div></section>
 </div></div>
 
 <div class="sheet" id="picker" hidden><div>
-  <h3>Replay a session <button class="x" type="button" data-close aria-label="Close">×</button></h3>
+  <h3>Replay <button class="x" type="button" data-close aria-label="Close">✕</button></h3>
   <section>
-    <select id="pYear" aria-label="Season"></select>
-    <div id="pList" style="margin-top:12px"><p class="loading">Loading the season…</p></div>
+    <div class="seasons" id="pYear"></div>
+    <div class="meets" id="pList"><p class="loading">Loading the season…</p></div>
   </section>
 </div></div>
 
@@ -435,12 +469,14 @@ function setLive(state) {
 // ---------- replay: any past session, rebuilt from OpenF1 ----------
 const R = { t: 0, start: 0, end: 0, playing: false, speed: 1, data: null, last: 0, dirty: false };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-async function of1(path) {   // OpenF1 allows 3 requests a second and 30 a minute: space them out, retry if busy
-  for (let i = 0; i < 4; i++) {
-    const r = await fetch(`${OPENF1}/${path}`);
-    if (r.ok) return r.json();
-    if (r.status === 404) return [];
-    await sleep(2000 * (i + 1));
+async function of1(path) {   // OpenF1 allows 3 requests a second and 30 a minute: when it says "too many", wait and try again
+  for (let i = 0, waited = 0; waited < 90000; i++) {
+    let r; try { r = await fetch(`${OPENF1}/${path}`); } catch (e) { r = null; }
+    if (r && r.ok) return r.json();
+    if (r && r.status === 404) return [];
+    const pause = r && r.status === 429 ? Math.min(20000, 1000 * (+r.headers.get("Retry-After") || 8)) : 2000 * (i + 1);
+    if (mode === "replay") $("sub").textContent = "Waiting for OpenF1 (busy)…";
+    await sleep(pause); waited += pause;
   }
   throw new Error("OpenF1 didn't answer");
 }
@@ -472,7 +508,8 @@ async function startReplay(key) {
     }
     if (token !== replayToken || mode !== "replay") return;
     R.data = prepare(sess, meet || {}, got);
-    R.start = R.data.start; R.end = R.data.end; R.t = R.start; R.speed = +$("rSpeed").value || 1; R.last = 0;
+    R.start = R.data.start; R.end = R.data.end; R.t = R.start; R.speed = store.get("f1.speed", 1); R.last = 0;
+    for (const x of $("rSpeed").children) x.setAttribute("aria-pressed", String(+x.dataset.s === R.speed));
     history.replaceState(null, "", `?replay=${key}`);
     buildReplay(); drawMarks(); setLive("replay"); R.playing = true; syncReplayBar();
   } catch (e) {
@@ -595,7 +632,7 @@ function buildReplay() {   // the session as it stood at R.t, in the live feed's
   S.LapCount = race ? { CurrentLap: Math.min(D.totalLaps, leadDone + 1), TotalLaps: D.totalLaps } : undefined;
   const rcSoFar = D.rc.slice(0, upTo(D.rc, at) + 1);
   S.RaceControlMessages = { Messages: rcSoFar.map(({ at, m }) => ({ Utc: at, Lap: m.lap_number, Category: m.category, Flag: m.flag, Scope: m.scope, Sector: m.sector, Message: m.message })) };
-  S.TrackStatus = trackStatusFrom(rcSoFar.map(x => x.m));
+  S.TrackStatus = { Status: flagState(S.RaceControlMessages.Messages).status };
   const w = D.weather[upTo(D.weather, at)];
   S.WeatherData = w ? { AirTemp: w.w.air_temperature, TrackTemp: w.w.track_temperature, WindSpeed: w.w.wind_speed, Rainfall: w.w.rainfall ? "1" : "0" } : undefined;
   S.TeamRadio = { Captures: D.radio.slice(0, upTo(D.radio, at) + 1).map(r => ({ Utc: r.at, RacingNumber: r.n, Path: r.url })) };
@@ -603,15 +640,25 @@ function buildReplay() {   // the session as it stood at R.t, in the live feed's
   radioArrived();
   dirty = true;
 }
-function trackStatusFrom(msgs) {   // the track's state, from race control's messages so far
-  let st = "1";
+function flagState(msgs) {   // the track's state from race control's messages so far, in F1's codes: 1 clear, 2 yellow,
+  let st = "1"; const yellow = {};   // 4 safety car, 5 red flag, 6 VSC, 7 VSC ending; and which marshal sectors are yellow (2: double)
   for (const m of msgs) {
-    const text = (m.message || "").toUpperCase();
-    if (m.category === "SafetyCar") st = /VIRTUAL/.test(text) ? (/ENDING/.test(text) ? "7" : "6") : "4";
-    if (m.flag === "RED" && m.scope !== "Sector") st = "5";
-    if (/TRACK CLEAR|GREEN LIGHT - PIT EXIT OPEN/.test(text) || ((m.flag === "GREEN" || m.flag === "CLEAR") && m.scope === "Track")) st = "1";
+    const text = (m.Message || "").toUpperCase(), flag = (m.Flag || "").toUpperCase(), sector = m.Sector || (/SECTOR (\d+)/.exec(text) || [])[1];
+    if (m.Category === "SafetyCar" || /SAFETY CAR|^VSC /.test(text)) {
+      if (/^(VSC|VIRTUAL SAFETY CAR) DEPLOYED/.test(text)) st = "6";
+      else if (/^(VSC|VIRTUAL SAFETY CAR) ENDING/.test(text)) st = "7";
+      else if (/^SAFETY CAR (DEPLOYED|IN THIS LAP)/.test(text)) st = "4";
+    }
+    if (flag === "RED" && m.Scope !== "Sector") st = "5";
+    if (/^TRACK CLEAR|^GREEN LIGHT - PIT EXIT OPEN/.test(text) || ((flag === "GREEN" || flag === "CLEAR") && m.Scope === "Track")) {
+      st = "1"; for (const k in yellow) delete yellow[k];
+    }
+    if (sector && (m.Scope === "Sector" || /IN TRACK SECTOR/.test(text))) {
+      if (/YELLOW/.test(flag) || /^(DOUBLE )?YELLOW IN TRACK SECTOR/.test(text)) yellow[sector] = /DOUBLE/.test(flag + text) ? 2 : 1;
+      else if (flag === "CLEAR" || /^CLEAR IN TRACK SECTOR/.test(text)) delete yellow[sector];
+    }
   }
-  return { Status: st };
+  return { status: st === "1" && Object.keys(yellow).length ? "2" : st, yellow };
 }
 function replayTick() {
   if (mode !== "replay" || !R.data) return;
@@ -628,25 +675,31 @@ function clock(ms) { const el = Math.max(0, ms / 1000), h = Math.floor(el / 3600
   return `${h ? h + ":" : ""}${String(m).padStart(h ? 2 : 1, "0")}:${String(s).padStart(2, "0")}`; }
 function syncReplayBar() {
   $("rPlay").innerHTML = R.playing ? ICON_PAUSE : ICON_PLAY;
-  if (document.activeElement !== $("rSeek")) $("rSeek").value = String(Math.round(1000 * (R.t - R.start) / (R.end - R.start || 1)));
+  const part = (R.t - R.start) / (R.end - R.start || 1);
+  if (!seeking) $("rSeek").value = String(Math.round(1000 * part));
+  $("rDone").style.width = (100 * part).toFixed(2) + "%";
   const race = R.data && R.data.sess.session_type === "Race";
-  $("rTime").innerHTML = `${clock(R.t - R.start)}<small>${race ? "Lap " + Math.max(1, lapAt(R.t)) : ""}<span class="tod">${race ? " · " : ""}${timeOf(R.t)}</span></small>`;
+  $("rTime").textContent = clock(R.t - R.start);
+  $("rLap").innerHTML = `${race ? "Lap " + Math.max(1, lapAt(R.t)) + "/" + R.data.totalLaps : ""}<span class="tod">${race ? " · " : ""}${timeOf(R.t)}</span>`;
 }
-function drawMarks() {   // the replay timeline: safety cars, red flags and every 10th lap
-  const D = R.data, span = R.end - R.start, x = t => (100 * (t - R.start) / span).toFixed(2) + "%";
-  const out = [];
-  let from = null, kind = null;
-  for (const { at, m } of D.rc) {
-    const text = (m.message || "").toUpperCase();
-    const start = m.category === "SafetyCar" && /DEPLOYED/.test(text) ? "sc" : m.flag === "RED" && m.scope !== "Sector" ? "red" : null;
-    if (start && from === null) { from = at; kind = start; }
-    else if (from !== null && (/IN THIS LAP|ENDING|TRACK CLEAR|GREEN LIGHT/.test(text) || (m.flag === "GREEN" && m.scope === "Track"))) {
-      out.push(`<i class="${kind}" style="left:${x(from)};width:max(3px,calc(${x(at)} - ${x(from)}))" title="${kind === "sc" ? "Safety car" : "Red flag"}"></i>`); from = null;
-    }
-  }
+let seeking = false;
+function drawMarks() {   // the replay timeline: safety car, VSC and red flag periods, and every 10th lap
+  const D = R.data, span = R.end - R.start, x = t => 100 * Math.min(1, Math.max(0, (t - R.start) / span));
+  const msgs = D.rc.map(({ at, m }) => ({ at, Message: m.message, Category: m.category, Flag: m.flag, Scope: m.scope, Sector: m.sector }));
+  const kindOf = st => ({ "4": "sc", "6": "vsc", "7": "vsc", "5": "red" })[st] || null;
+  const bands = []; let open = null;
+  msgs.forEach((m, i) => {
+    const kind = kindOf(flagState(msgs.slice(0, i + 1)).status);
+    if (open && open.kind !== kind) { bands.push({ ...open, to: m.at }); open = null; }
+    if (kind && !open) open = { kind, from: m.at };
+  });
+  if (open) bands.push({ ...open, to: R.end });
+  const names = { sc: "Safety car", vsc: "Virtual safety car", red: "Red flag" };
+  $("rBands").innerHTML = bands.map(b => `<i class="band ${b.kind}" style="left:${x(b.from).toFixed(2)}%;width:max(3px,${(x(b.to) - x(b.from)).toFixed(2)}%)" title="${names[b.kind]}"></i>`).join("");
   const lead = Object.values(D.byDriver).sort((a, b) => b.length - a.length)[0] || [];
-  for (const l of lead) if (l.n % 10 === 0) out.push(`<span style="left:${x(l.start)}">L${l.n}</span>`);
-  $("rMarks").innerHTML = out.join("");
+  const every = D.totalLaps > 40 ? 10 : 5;
+  $("rLaps").innerHTML = D.sess.session_type === "Race" ? lead.filter(l => l.n % every === 0).map(l => `<span class="lapmark" style="left:${x(l.start).toFixed(2)}%">L${l.n}</span>`).join("") : "";
+  $("rTitle").textContent = `${(D.meet.meeting_name || D.sess.country_name || "").replace("Grand Prix", "GP")} · ${D.sess.session_name}`;
 }
 
 // ---------- header ----------
@@ -968,14 +1021,7 @@ function drawCircuit() {
 let flagKey = "";
 function renderFlags() {   // yellow and double-yellow sectors, lit up on the track; the whole track under a red flag or safety car
   const g = $("flags"); if (!g || !circuit) return;
-  const yellow = {};
-  for (const m of list((S.RaceControlMessages || {}).Messages)) {
-    const text = (m.Message || "").toUpperCase(), n = m.Sector || (/SECTOR (\d+)/.exec(text) || [])[1];
-    if (/TRACK CLEAR/.test(text) || (m.Flag === "GREEN" && m.Scope === "Track")) for (const k in yellow) delete yellow[k];
-    if (!n || !/SECTOR/.test(text)) continue;
-    if (/^(DOUBLE )?YELLOW/.test(m.Flag || "") || /^(DOUBLE )?YELLOW IN TRACK SECTOR/.test(text)) yellow[n] = /DOUBLE/.test(m.Flag || text) ? 2 : 1;
-    else if (m.Flag === "CLEAR" || /^CLEAR IN TRACK SECTOR/.test(text)) delete yellow[n];
-  }
+  const { yellow } = flagState(list((S.RaceControlMessages || {}).Messages));
   const st = (S.TrackStatus || {}).Status;
   const key = JSON.stringify(yellow) + st;
   if (key === flagKey) return; flagKey = key;
@@ -1047,14 +1093,22 @@ function setTheme(pick) {
   store.set("f1.theme", pick);
   const dark = pick === "dark" || (pick === "device" && matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.dataset.mode = dark ? "dark" : "light";
-  document.querySelector('meta[name="theme-color"]').content = dark ? "#000000" : "#eef0f4";
+  document.querySelector('meta[name="theme-color"]').content = dark ? "#0b0b10" : "#eef0f4";
   for (const b of document.querySelectorAll("#themeBtns button")) b.setAttribute("aria-pressed", String(b.dataset.t === pick));
   dirty = true;
 }
 matchMedia("(max-width: 900px)").addEventListener("change", () => circuit && drawCircuit());   // phone <-> wide: refit the map
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => store.get("f1.theme", "dark") === "device" && setTheme("device"));
 $("themeBtns").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setTheme(b.dataset.t); });
-$("colPicks").innerHTML = COLS.map(([k, label]) => `<label><input type="checkbox" data-k="${k}" ${hiddenCols.has(k) ? "" : "checked"}>${label}</label>`).join("");
+const COL_NOTES = { int: "Time to the car ahead", gap: "Time to the leader", mini: "The coloured bars under each sector", speed: "Top speed at the speed trap",
+                    tyres: "Every set of tyres and how many laps", moved: "Places gained or lost since the start (races)" };
+function fillColumns() {
+  $("colPicks").innerHTML = COLS.map(([k, label]) => `<label><span>${label}${COL_NOTES[k] ? `<small>${COL_NOTES[k]}</small>` : ""}</span>
+    <span class="switch"><input type="checkbox" data-k="${k}" ${hiddenCols.has(k) ? "" : "checked"}></span></label>`).join("");
+}
+fillColumns();
+$("colAll").addEventListener("click", () => { hiddenCols.clear(); store.set("f1.hide", []); applyColumns(); fillColumns(); });
+$("colFew").addEventListener("click", () => { for (const k of ["s1", "s2", "s3", "mini", "speed", "pit"]) hiddenCols.add(k); store.set("f1.hide", [...hiddenCols]); applyColumns(); fillColumns(); });
 $("colPicks").addEventListener("change", e => {
   const k = e.target.dataset.k; if (!k) return;
   if (e.target.checked) hiddenCols.delete(k); else hiddenCols.add(k);
@@ -1065,8 +1119,10 @@ for (const sheet of document.querySelectorAll(".sheet")) sheet.addEventListener(
 document.addEventListener("keydown", e => { if (e.key === "Escape") for (const s of document.querySelectorAll(".sheet")) s.hidden = true; });
 
 // ---------- the replay picker and controls ----------
+const SHORT = { "Practice 1": "FP1", "Practice 2": "FP2", "Practice 3": "FP3", "Sprint Qualifying": "Sprint Quali", "Sprint Shootout": "Sprint Quali", "Qualifying": "Quali" };
+let pickYear = new Date().getFullYear();
 async function fillPicker() {
-  const y = +$("pYear").value, box = $("pList");
+  const y = pickYear, box = $("pList");
   box.innerHTML = `<p class="loading">Loading the season…</p>`;
   try {
     const sessions = await of1(`sessions?year=${y}`); await sleep(350);
@@ -1075,21 +1131,40 @@ async function fillPicker() {
     const byMeet = {};
     for (const s of sessions.filter(s => Date.parse(s.date_end) < Date.now() && !s.is_cancelled)) (byMeet[s.meeting_key] = byMeet[s.meeting_key] || []).push(s);
     const meets = Object.entries(byMeet).sort((a, b) => Date.parse(b[1][0].date_start) - Date.parse(a[1][0].date_start));
-    box.innerHTML = meets.length ? meets.map(([mk, ss]) => `<div class="meet"><b>${esc(names[mk] || ss[0].country_name)}</b><div class="sess">
-        ${ss.sort((a, b) => Date.parse(a.date_start) - Date.parse(b.date_start)).map(s => `<button class="btn" type="button" data-key="${s.session_key}">${esc(s.session_name)}</button>`).join("")}</div></div>`).join("")
-      : `<p class="loading">No finished sessions this season yet.</p>`;
+    const meta = Object.fromEntries(meetings.map(m => [m.meeting_key, m]));
+    const date = s => new Date(s).toLocaleDateString([], { day: "numeric", month: "short" });
+    box.innerHTML = meets.length ? meets.map(([mk, ss]) => {
+      const m = meta[mk] || {}; ss.sort((a, b) => Date.parse(a.date_start) - Date.parse(b.date_start));
+      return `<div class="meet">${m.country_flag ? `<img src="${esc(m.country_flag)}" alt="" loading="lazy">` : `<span></span>`}
+        <b>${esc(names[mk] || ss[0].country_name)}</b><small>${esc(m.circuit_short_name || ss[0].location || "")} · ${date(ss[0].date_start)} – ${date(ss[ss.length - 1].date_start)}</small>
+        <div class="sess">${ss.map(s => `<button type="button" class="${s.session_name === "Race" ? "race" : ""}" data-key="${s.session_key}">${esc(SHORT[s.session_name] || s.session_name)}</button>`).join("")}</div></div>`;
+    }).join("") : `<p class="loading">No finished sessions this season yet.</p>`;
   } catch (e) { box.innerHTML = `<p class="loading">Couldn't load the season (OpenF1 didn't answer). Try again in a minute.</p>`; }
 }
 const thisYear = new Date().getFullYear();
-$("pYear").innerHTML = Array.from({ length: thisYear - 2022 }, (_, i) => thisYear - i).map(y => `<option>${y}</option>`).join("");
-$("pYear").addEventListener("change", fillPicker);
+$("pYear").innerHTML = Array.from({ length: thisYear - 2022 }, (_, i) => thisYear - i).map(y => `<button type="button" data-y="${y}" aria-pressed="${y === thisYear}">${y}</button>`).join("");
+$("pYear").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  pickYear = +b.dataset.y; for (const x of $("pYear").children) x.setAttribute("aria-pressed", String(x === b)); fillPicker();
+});
 $("replayBtn").addEventListener("click", () => { $("picker").hidden = false; if (!$("pList").dataset.loaded) { $("pList").dataset.loaded = "1"; fillPicker(); } });
 $("pList").addEventListener("click", e => { const b = e.target.closest("[data-key]"); if (!b) return; $("picker").hidden = true; startReplay(+b.dataset.key); });
 $("rPlay").addEventListener("click", () => { if (!R.data) return; if (R.t >= R.end) R.t = R.start; R.playing = !R.playing; R.last = 0; syncReplayBar(); });
 $("rBack").addEventListener("click", () => { R.t = Math.max(R.start, R.t - 30000); R.dirty = true; resetCars(); });
 $("rFwd").addEventListener("click", () => { R.t = Math.min(R.end, R.t + 30000); R.dirty = true; resetCars(); });
-$("rSeek").addEventListener("input", e => { if (!R.data) return; R.t = R.start + (R.end - R.start) * e.target.value / 1000; R.dirty = true; resetCars(); syncReplayBar(); });
-$("rSpeed").addEventListener("change", e => { R.speed = +e.target.value; });
+$("rSeek").addEventListener("input", e => {
+  if (!R.data) return;
+  seeking = true; R.t = R.start + (R.end - R.start) * e.target.value / 1000; R.dirty = true; resetCars(); syncReplayBar();
+  const tip = $("rTip"), race = R.data.sess.session_type === "Race";   // a bubble over the thumb: the time and lap you're dragging to
+  tip.hidden = false; tip.style.left = (e.target.value / 10) + "%";
+  tip.textContent = `${clock(R.t - R.start)}${race ? " · Lap " + Math.max(1, lapAt(R.t)) : ""}`;
+});
+for (const ev of ["change", "pointerup", "touchend", "blur"]) $("rSeek").addEventListener(ev, () => { seeking = false; $("rTip").hidden = true; });
+$("rSpeed").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  R.speed = +b.dataset.s; store.set("f1.speed", R.speed);
+  for (const x of $("rSpeed").children) x.setAttribute("aria-pressed", String(x === b));
+});
 $("rExit").addEventListener("click", exitReplay);
 $("champTabs").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
