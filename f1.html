@@ -88,6 +88,11 @@
   th:first-child { z-index: 2; background: var(--panel2); }
   tr.out td { color: var(--dim); } tr.out td > * { opacity: .45; }
   tr.cut > td { border-bottom: 2px solid var(--red) !important; }   /* qualifying: the drop zone starts below this row */
+  #tower tr[data-n] { cursor: pointer; }
+  tr.fol td, tr.fol td:first-child { background: color-mix(in srgb, var(--tc) 20%, var(--panel)) !important; }
+  tr.bat td:first-child { background-image: linear-gradient(var(--amber), var(--amber)); background-size: 3px 100%; background-repeat: no-repeat; }   /* within 1 s of each other */
+  .pill.bat { box-shadow: 0 0 0 1.5px var(--amber) inset; color: var(--amber); }
+  .dim { opacity: .3; }
   .tags { display: inline-flex; gap: 4px; margin-left: 6px; vertical-align: middle; }
   .tag { font-size: 9.5px; font-weight: 900; padding: 2px 5px; border-radius: 4px; color: #fff; letter-spacing: .3px; }
   .tag.pit { background: var(--blue); } .tag.outlap { background: #6b6b78; } .tag.ko { background: var(--chip); color: var(--dim); }
@@ -108,7 +113,19 @@
   .mapwrap { position: relative; background: var(--map); }
   #map { display: block; width: 100%; height: auto; max-height: 72vh; }   /* in the wide column, not taller than the screen */
   .car { transition: none; }
-  .car .dot { stroke: #fff; stroke-width: 1.5; }
+  .car { cursor: pointer; }
+  .car .dot { stroke: #fff; stroke-width: 1.5; } .car.bat .dot { stroke: var(--amber); stroke-width: 2.4; }
+  #bats line { stroke: var(--amber); stroke-width: 3.2; stroke-linecap: round; opacity: .75; }
+  .fhead { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: linear-gradient(100deg, color-mix(in srgb, var(--tc) 32%, var(--panel)), var(--panel) 75%); }
+  .fhead .ph { width: 64px; height: 64px; border-radius: 12px; background: color-mix(in srgb, var(--tc) 55%, #000); object-fit: cover; flex: 0 0 64px; }
+  .fhead .nm { flex: 1; min-width: 0; } .fhead .nm b { display: block; font-size: 17px; font-weight: 900; line-height: 1.2; }
+  .fhead .nm span { color: var(--dim); font-weight: 700; font-size: 12px; display: flex; align-items: center; gap: 6px; margin-top: 3px; } .fhead .nm .tl { height: 18px; width: auto; }
+  .fhead .pos { font-size: 30px; font-weight: 900; }
+  .fstats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border-top: 1px solid var(--line); }
+  .fstats > div { background: var(--panel); padding: 8px 10px; min-width: 0; }
+  .fstats small { display: block; color: var(--dim); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; }
+  .fstats b { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .panel h2 .x { width: 24px; height: 24px; font-size: 12px; }
   .car .lead { stroke-width: 1.2; opacity: .8; }
   .car .tbg { fill: var(--tag-bg); stroke: var(--tag-line); stroke-width: .8; }
   .car text { font-weight: 900; text-anchor: middle; letter-spacing: .3px; }
@@ -366,7 +383,7 @@
   </section>
   <div class="col">
     <section class="panel" id="p-tower">
-      <h2><span>Timing <small id="part"></small></span><span class="live" id="live">OFFLINE</span></h2>
+      <h2><span>Timing <small id="part"></small> <small id="batN"></small> <small id="followHint">· tap a driver to follow</small></span><span class="live" id="live">OFFLINE</span></h2>
       <div class="scroll"><table id="tower"></table></div>
     </section>
     <section class="panel" id="p-pos" hidden>
@@ -398,6 +415,8 @@
       <h2><span>Live championship</span><span class="tabs" id="champTabs"><button type="button" data-k="d" aria-pressed="true">Drivers</button><button type="button" data-k="t" aria-pressed="false">Teams</button></span></h2>
       <ol class="champ" id="champ"></ol>
     </section>
+      <section class="panel" id="p-follow" hidden><h2><span>Following</span><button class="x" id="fClose" type="button" aria-label="Stop following">✕</button></h2>
+        <div class="fhead" id="fHead"></div><div class="fstats" id="fStats"></div></section>
       <section class="panel" id="p-pits" hidden><h2><span>Pit stops</span><small id="pitBest"></small></h2><ol class="pits" id="pits"></ol></section>
       <section class="panel" id="p-pen"><h2>Penalties</h2><div id="pens"></div></section>
       <section class="panel" id="p-rc"><h2><span>Race control</span></h2><div class="chips" id="rcKinds"></div><ol class="feed" id="rc"></ol></section>
@@ -897,7 +916,7 @@ const hiddenCols = new Set(store.get("f1.hide", []));
 function applyColumns() {
   $("colcss").textContent = [...hiddenCols].map(k => k === "mini" ? "#tower .segs{display:none}" : `#tower [data-c="${k}"]{display:none}`).join("");
 }
-let towerRows = {}, towerHead = "";
+let towerRows = {}, towerHead = "", battleSet = new Set(), battlePairs = [];
 function renderTower() {
   const td = S.TimingData, lines = td && td.Lines;
   const table = $("tower");
@@ -913,6 +932,15 @@ function renderTower() {
               <th data-c="best">Best lap</th><th data-c="s1">Sector 1</th><th data-c="s2">Sector 2</th><th data-c="s3">Sector 3</th><th data-c="speed">Speed</th><th data-c="tyres">Tyres</th><th data-c="pit">Pit</th>${race ? `<th data-c="moved">+/-</th>` : ""}</tr>`;
   if (head !== towerHead) { table.innerHTML = head; towerHead = head; towerRows = {}; }   // a different session: start over
   const body = table.tBodies[0] || table;
+  // battles: a car within 1 s of the one ahead (racing, not in the pits)
+  battleSet = new Set(); battlePairs = [];
+  if (race) rows.forEach(([n, l], i) => {
+    if (!i) return;
+    const v = String((l.IntervalToPositionAhead || {}).Value || ""), [m, a] = rows[i - 1];
+    if (/^\+?\d+\.\d+$/.test(v) && parseFloat(v.replace("+", "")) < 1 && !l.InPit && !a.InPit && !l.Retired && !a.Retired && !l.Stopped && !a.Stopped) { battleSet.add(n); battleSet.add(m); battlePairs.push([m, n]); }
+  });
+  $("batN").textContent = battlePairs.length ? `· ${battlePairs.length} battle${battlePairs.length > 1 ? "s" : ""} within 1s` : "";
+  $("followHint").hidden = !!follow;
   for (const [num, l] of rows) {
     const d = driver(num), c = colour(d), stats = list(l.Stats)[part ? part - 1 : 0] || {};
     let gap = l.GapToLeader != null ? l.GapToLeader : l.TimeDiffToFastest != null ? l.TimeDiffToFastest : stats.TimeDiffToFastest;
@@ -940,7 +968,8 @@ function renderTower() {
     const lastV = (l.LastLapTime || {}).Value || "", lastC = timeClass(l.LastLapTime);
     const cells = [
       ["", "", `<span class="posn">${esc(pos || "–")}</span>${dtag(num)}<span class="tags">${tags}${owed ? `<span class="pen" title="Penalty not yet served">${esc(owed)}</span>` : ""}</span>`],
-      ["int", "", race && catching && intv && intv !== "—" ? `<span class="pill ring">${esc(intv)}</span>` : esc(race ? intv : gap) || "–"],
+      ["int", "", race && battleSet.has(num) && battlePairs.some(p => p[1] === num) ? `<span class="pill bat">${esc(intv)}</span>`
+                : race && catching && intv && intv !== "—" ? `<span class="pill ring">${esc(intv)}</span>` : esc(race ? intv : gap) || "–"],
       ["gap", "", esc(race ? gap : intv) || ""],
       ["last", lastC, lastC === "t-purple" ? `<span class="pill purple">${esc(lastV)}</span>` : esc(lastV)],
       ["best", "", l.BestLapTime && l.BestLapTime.Position === 1 ? `<span class="pill purple">${esc(best)}</span>` : esc(best)],
@@ -951,8 +980,8 @@ function renderTower() {
       ...(race ? [["moved", moved > 0 ? "up" : moved < 0 ? "down" : "same", moved > 0 ? "▲" + moved : moved < 0 ? "▼" + -moved : "–"]] : [])
     ];
     let tr = towerRows[num];
-    if (!tr) { tr = towerRows[num] = document.createElement("tr"); cells.forEach(([k]) => { const td = document.createElement("td"); if (k) td.dataset.c = k; tr.appendChild(td); }); }
-    tr.className = (out ? "out" : "") + (+l.Position === cutAt && !out ? " cut" : "");
+    if (!tr) { tr = towerRows[num] = document.createElement("tr"); tr.dataset.n = num; tr.style.setProperty("--tc", c); cells.forEach(([k]) => { const td = document.createElement("td"); if (k) td.dataset.c = k; tr.appendChild(td); }); }
+    tr.className = (out ? "out" : "") + (+l.Position === cutAt && !out ? " cut" : "") + (num === follow ? " fol" : "") + (battleSet.has(num) ? " bat" : "");
     cells.forEach(([, cls, html], i) => {   // rewrite a cell only when it changed
       const cell = tr.cells[i];
       if (cell.className !== cls) cell.className = cls;
@@ -1129,7 +1158,11 @@ function renderPenalties() {
 }
 
 // ---------- race positions ----------
-let posPick = null, posKey = "";
+let follow = store.get("f1.follow", null), posPick = follow, posKey = "", fKey = "";
+function setFollow(n) {   // tap a driver anywhere: highlight them everywhere; tap again to stop
+  follow = n && n !== follow ? n : null; posPick = follow; store.set("f1.follow", follow);
+  posKey = ""; fKey = ""; dirty = true;
+}
 function renderPositions() {
   const series = S.LapSeries, race = (S.SessionInfo || {}).Type === "Race";
   const rows = race && series ? Object.entries(series).map(([n, x]) => [n, list(x.LapPosition).map(Number)]).filter(([, p]) => p.length > 1) : [];
@@ -1156,7 +1189,45 @@ function renderPositions() {
   for (let k = 0; k <= laps; k += step) grid += `<line x1="${x(k)}" x2="${x(k)}" y1="${T - 4}" y2="${H - 18}" stroke="var(--line)"/><text x="${x(k)}" y="${H - 5}" font-size="9.5" font-weight="700" fill="var(--dim)" text-anchor="middle">${k ? "L" + k : "Grid"}</text>`;
   $("posChart").innerHTML = `<svg viewBox="0 0 ${W} ${H}">${grid}${lines}</svg>`;
 }
-$("posChart").addEventListener("click", e => { const g = e.target.closest(".who"); posPick = g && g.dataset.n !== posPick ? g.dataset.n : null; renderPositions(); });
+$("posChart").addEventListener("click", e => { const g = e.target.closest(".who"); setFollow(g ? g.dataset.n : null); });
+
+// ---------- following a driver ----------
+function renderFollow() {
+  const lines = (S.TimingData || {}).Lines || {}, l = follow && lines[follow];
+  show("p-follow", !!l);
+  if (!l) return;
+  const d = driver(follow), c = colour(d), race = (S.SessionInfo || {}).Type === "Race";
+  const key = follow + "|" + d.TeamName + "|" + d.LastName;
+  if (key !== fKey) {   // the photo and name only when the driver changes, so the picture doesn't reload
+    fKey = key; $("p-follow").style.setProperty("--tc", c);
+    $("fHead").innerHTML = `<img class="ph" src="${photo(d, 128)}" alt="">
+      <div class="nm"><b>${esc(d.FirstName || "")} ${esc(d.LastName || d.Tla || follow)}</b>
+        <span><img class="tl lg-light" src="${teamLogo(d.TeamName)}" alt="" onerror="this.remove()"><img class="tl lg-dark" src="${teamLogo(d.TeamName, true)}" alt="" onerror="this.remove()">${esc(d.TeamName || "")}</span></div>
+      <div class="pos" id="fPos"></div>`;
+  }
+  const out = l.Retired || l.Stopped || l.KnockedOut;
+  $("fPos").textContent = out ? (l.KnockedOut ? "KO" : "OUT") : "P" + (l.Position || "–");
+  const rows = Object.entries(lines).sort((a, b) => (+a[1].Line || 99) - (+b[1].Line || 99)), i = rows.findIndex(([n]) => n === follow);
+  const behind = rows[i + 1] && rows[i + 1][1], app = ((S.TimingAppData || {}).Lines || {})[follow] || {}, stints = list(app.Stints), tyre = stints[stints.length - 1];
+  const val = x => esc(x) || "–", ivl = x => x && x.IntervalToPositionAhead ? x.IntervalToPositionAhead.Value : x && x.TimeDiffToPositionAhead;
+  const moved = race && app.GridPos && l.Position ? +app.GridPos - +l.Position : null, owed = penaltyOwed(follow);
+  const cell = (label, html, cls = "") => `<div><small>${label}</small><b class="${cls}">${html}</b></div>`;
+  $("fStats").innerHTML = [
+    cell(race ? "Gap to leader" : "Gap to fastest", val(race ? l.GapToLeader : l.TimeDiffToFastest)),
+    cell("Car ahead", val(ivl(l))),
+    cell("Car behind", val(ivl(behind))),
+    cell(race ? "Places" : "Laps", race ? (moved == null ? "–" : moved > 0 ? `▲${moved}` : moved < 0 ? `▼${-moved}` : "=") : val(l.NumberOfLaps), race && moved > 0 ? "t-green" : ""),
+    cell("Last lap", val((l.LastLapTime || {}).Value), timeClass(l.LastLapTime)),
+    cell("Best lap", val((l.BestLapTime || {}).Value), (l.BestLapTime || {}).Position === 1 ? "t-purple" : ""),
+    cell("Tyre", tyre ? `${tyreIcon(tyre.Compound)} ${esc(tyre.TotalLaps)} laps` : "–"),
+    cell(owed ? "Penalty" : "Pit stops", owed ? esc(owed) : val(l.NumberOfPitStops != null ? l.NumberOfPitStops : Math.max(0, stints.length - 1))),
+    ...list(l.Sectors).slice(0, 3).map((sec, k) => cell("Sector " + (k + 1), val(sec.Value), timeClass(sec))),
+    cell("Top speed", (l.Speeds || {}).ST && l.Speeds.ST.Value ? esc(l.Speeds.ST.Value) + " km/h" : "–", timeClass((l.Speeds || {}).ST))
+  ].join("");
+}
+$("fClose").addEventListener("click", () => setFollow(null));
+$("tower").addEventListener("click", e => { const tr = e.target.closest("tr[data-n]"); if (tr) setFollow(tr.dataset.n); });
+$("map").addEventListener("click", e => { const g = e.target.closest("g.car"); if (g) setFollow(g.dataset.n); });
 
 // ---------- pit stops ----------
 const tyreIcon = c => { const [ltr, ring] = TYRES[c] || ["?", "#777"]; return `<span class="stint"><span style="border-color:${ring};color:${ring}">${ltr}</span></span>`; };
@@ -1221,7 +1292,8 @@ function renderStrategy() {
   show("p-strat", rows.length > 0);
   if (!rows.length) return;
   const total = Math.max(((S.LapCount || {}).TotalLaps) || 0, ...rows.map(([, st]) => st.reduce((a, b) => a + b.laps, 0)), 1);
-  $("strat").innerHTML = rows.map(([n, st]) => `${dtag(n, true)}<div class="bar">${st.map(x => {
+  const dim = n => follow && follow !== n ? " dim" : "";
+  $("strat").innerHTML = rows.map(([n, st]) => `<span class="${dim(n)}">${dtag(n, true)}</span><div class="bar${dim(n)}">${st.map(x => {
     const [ltr, col] = TYRES[x.c] || ["?", "#777"], w = 100 * x.laps / total;
     return `<span class="${x.used ? "used" : ""}" style="width:${w.toFixed(2)}%;background-color:${col};${x.c === "WET" ? "color:#fff" : ""}" title="${esc(x.c || "")}${x.used ? " (used)" : ""}, ${x.laps} laps">${w > 6 ? ltr + " " + x.laps : ""}</span>`;
   }).join("")}</div>`).join("") + `<div class="axis"><span>Lap 0</span><span>${Math.round(total / 2)}</span><span>${total}</span></div>`;
@@ -1368,7 +1440,7 @@ function drawCircuit() {
     <g id="secs"></g><g id="flags"></g>${corners}
     <g transform="translate(${sx.toFixed(1)},${sy.toFixed(1)}) rotate(${(ang + 90).toFixed(1)})"><rect x="-7" y="-2" width="14" height="4" fill="#fff"/>
       ${[0, 1, 2, 3, 4, 5, 6].map(i => `<rect x="${-7 + i * 2}" y="${i % 2 ? 0 : -2}" width="2" height="2" fill="#000"/>`).join("")}</g>
-    <g id="cars"></g>`;
+    <g id="bats"></g><g id="cars"></g>`;
   flagKey = ""; secKey = ""; resetCars();
 }
 const SECTOR_COLOURS = ["#ff3b5c", "#3b9eff", "#ffd60a"];
@@ -1438,7 +1510,7 @@ function animateCars(ts) {   // each car: a dot on the racing line, and its tag 
     let c = cars[num];
     if (!c) {
       const d = driver(num), tc = colour(d), no = String(d.RacingNumber || num), nw = no.length > 1 ? 15 : 11, tw = 23;
-      const el = document.createElementNS(SVGNS, "g"); el.setAttribute("class", "car");
+      const el = document.createElementNS(SVGNS, "g"); el.setAttribute("class", "car"); el.dataset.n = num;
       el.innerHTML = `<line class="lead" stroke="${tc}"/><circle class="dot" r="4.4" fill="${tc}"/>
         <g class="tag"><rect class="tbg" width="${nw + tw}" height="12" rx="3"/><rect width="${nw}" height="12" rx="3" fill="${tc}"/><rect x="${nw - 3}" width="3" height="12" fill="${tc}"/>
         <text class="tn" x="${nw / 2}" y="8.7" fill="${ink(tc)}">${esc(no)}</text><text class="tt" x="${nw + tw / 2}" y="8.8">${esc(d.Tla || num)}</text></g>`;
@@ -1497,8 +1569,15 @@ function animateCars(ts) {   // each car: a dot on the racing line, and its tag 
     c.lead.setAttribute("x2", (c.lx + w / 2).toFixed(2)); c.lead.setAttribute("y2", (c.ly + H / 2).toFixed(2));
     c.tag.setAttribute("transform", `translate(${c.lx.toFixed(2)},${c.ly.toFixed(2)})`);
   }
-  const key = order.map(o => o[0]).join();   // the leader drawn on top
-  if (key !== g.dataset.order) { g.dataset.order = key; [...order].reverse().forEach(([, c]) => g.appendChild(c.el)); }
+  for (const [n, c] of order) {   // following: the others fade, the followed car's dot grows; battling cars ringed in amber
+    const look = (follow && follow !== n ? "f" : "") + (follow === n ? "F" : "") + (battleSet.has(n) ? "b" : "");
+    if (look !== c.look) { c.look = look; c.el.style.opacity = look.includes("f") ? 0.3 : 1; c.dot.setAttribute("r", look.includes("F") ? 6.5 : 4.4); c.el.classList.toggle("bat", look.includes("b")); }
+  }
+  const bats = battlePairs.filter(([a, b]) => cars[a] && cars[b]).map(([a, b]) =>
+    `<line x1="${cars[a].x.toFixed(1)}" y1="${cars[a].y.toFixed(1)}" x2="${cars[b].x.toFixed(1)}" y2="${cars[b].y.toFixed(1)}"/>`).join("");
+  const bg = $("bats"); if (bg && bg._html !== bats) { bg.innerHTML = bats; bg._html = bats; }
+  const key = order.map(o => o[0]).join() + follow;   // the leader drawn on top, and whoever you follow above all
+  if (key !== g.dataset.order) { g.dataset.order = key; [...order].reverse().forEach(([, c]) => g.appendChild(c.el)); if (follow && cars[follow]) g.appendChild(cars[follow].el); }
 }
 requestAnimationFrame(animateCars);
 
@@ -1531,7 +1610,7 @@ $("colPicks").addEventListener("change", e => {
 $("settingsBtn").addEventListener("click", () => { $("settings").hidden = false; });
 
 // ---------- panels: order, column, shown ----------
-const PANELS = [["p-tower", "Timing", "L"], ["p-map", "Track map", "R"], ["p-bests", "Fastest sectors", "R"], ["p-pos", "Race positions", "L"], ["p-strat", "Tyre strategy", "L"],
+const PANELS = [["p-follow", "Followed driver", "R"], ["p-tower", "Timing", "L"], ["p-map", "Track map", "R"], ["p-bests", "Fastest sectors", "R"], ["p-pos", "Race positions", "L"], ["p-strat", "Tyre strategy", "L"],
                 ["p-champ", "Live championship", "R"], ["p-pits", "Pit stops", "R"], ["p-pen", "Penalties", "R"], ["p-radio", "Team radio", "L"], ["p-rc", "Race control", "R"]];
 let layout = store.get("f1.layout", {});
 const panelOrder = () => { const ids = PANELS.map(x => x[0]), saved = (layout.order || []).filter(id => ids.includes(id)); return saved.concat(ids.filter(id => !saved.includes(id))); };
@@ -1626,7 +1705,7 @@ let tick = 0;
 function frame() {
   replayTick();
   renderNext();
-  if (dirty) { dirty = false; renderHeader(); renderTower(); renderBests(); renderRaceControl(); renderPenalties(); renderPositions(); renderStrategy(); renderPits(); renderRadio(); renderChampionship(); renderSectors(); renderFlags(); }
+  if (dirty) { dirty = false; renderHeader(); renderTower(); renderBests(); renderRaceControl(); renderPenalties(); renderPositions(); renderStrategy(); renderPits(); renderFollow(); renderRadio(); renderChampionship(); renderSectors(); renderFlags(); }
   else if (++tick % 8 === 0) renderRadio();   // "x min ago"
   renderClock();
 }
