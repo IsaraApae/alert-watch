@@ -723,7 +723,8 @@ function buildReplay() {   // the session as it stood at R.t, in the live feed's
     order = everyone.sort((a, b) => (pos[a] || 99) - (pos[b] || 99));
   } else if (D.parts.length) {   // qualifying: ranked within the part running now; those knocked out sit below, by their own part's time
     quali = qualiAt(D, done, everyone, at);
-    order = everyone.sort((a, b) => quali.out[a] - quali.out[b] || quali.best[a] - quali.best[b] || a - b);
+    const timed = n => isFinite(quali.best[n]) ? 0 : 1;
+    order = everyone.sort((a, b) => quali.out[a] - quali.out[b] || timed(a) - timed(b) || (timed(a) ? (quali.prev[a] ?? 99) - (quali.prev[b] ?? 99) : quali.best[a] - quali.best[b]) || a - b);
   } else order = everyone.sort((a, b) => fastest(done[a] || []) - fastest(done[b] || []) || a - b);
   const grid = {}; for (const p of D.positions) if (!(p.n in grid)) grid[p.n] = p.p;
   const lapEnd = (n, k) => { const l = (D.byDriver[n] || []).find(x => x.n === k); return l && l.end <= at ? l.end : null; };
@@ -806,7 +807,9 @@ function qualiAt(D, done, everyone, at) {   // which part (Q1-Q3) is running, ev
     for (const n of still.slice(still.length - drop)) { out[n] = 3 - k; best[n] = bestIn(n, k); }   // Q2's knockouts rank above Q1's
   }
   for (const n of everyone) if (!out[n]) best[n] = bestIn(n, part);
-  return { part, out, best };
+  const before = part > 1 ? everyone.slice().sort((a, b) => bestIn(a, part - 1) - bestIn(b, part - 1) || a - b) : [];
+  const prev = Object.fromEntries(before.map((n, i) => [n, i]));   // until they set a time, drivers keep their place from the last part
+  return { part, out, best, prev };
 }
 function flagState(msgs) {   // the track's state from race control's messages so far, in F1's codes: 1 clear, 2 yellow,
   let st = "1"; const yellow = {};   // 4 safety car, 5 red flag, 6 VSC, 7 VSC ending; and which marshal sectors are yellow (2: double)
@@ -1413,16 +1416,6 @@ function drawCircuit() {
   const ox = (w - (maxX - minX) * k) / 2, oy = (h - (maxY - minY) * k) / 2;
   mapBox = ([x, y]) => [ox + (x - minX) * k, h - (oy + (y - minY) * k)];
   circuit.screen = pts.map(mapBox); circuit.w = w; circuit.h = h;
-  const P = circuit.screen, np = P.length;
-  const gw = Math.ceil(w / 4), gh = Math.ceil(h / 4), grid = new Uint8Array(gw * gh);   // which 4px cells the track covers, so tags can keep off it
-  for (let i = 0; i < P.length; i++) {
-    const a = P[i], b = P[(i + 1) % P.length], steps = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 2) || 1;
-    for (let k = 0; k < steps; k++) {
-      const cx = Math.floor((a[0] + (b[0] - a[0]) * k / steps) / 4), cy = Math.floor((a[1] + (b[1] - a[1]) * k / steps) / 4);
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const x = cx + dx, y = cy + dy; if (x >= 0 && y >= 0 && x < gw && y < gh) grid[y * gw + x] = 1; }
-    }
-  }
-  circuit.grid = grid; circuit.gw = gw; circuit.gh = gh;
   const times = circuit.trackPositionTime || [];   // when a real car reached each point: place cars by time through the lap
   const t0 = times[0] || 0, t1 = times[times.length - 1] || 1;
   trackLen = times.length === pts.length ? times.map(t => (t - t0) / (t1 - t0 || 1)) : pts.map((_, i) => i / (pts.length - 1));
@@ -1482,9 +1475,9 @@ function pointAt(f) {   // a fraction of the lap -> a point on the outline (bina
   const i = lo, a = trackLen[i - 1], b = trackLen[i], u = b > a ? (f - a) / (b - a) : 0, p = circuit.screen[i - 1], q = circuit.screen[i];
   return [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u, i];
 }
-function lapFraction(num, l) {
+function lapFraction(num, l, t = now()) {
   if (mode === "replay") {   // where in its lap the car is, from the lap's start and length; between laps, the next lap
-    const t = now(), L = l._lap || (l._laps || []).find(x => x.start <= t && t < x.end);
+    const L = (l._laps || []).find(x => x.start <= t && t < x.end) || l._lap;
     return L && L.dur ? (t - L.start) / (L.dur * 1000) : null;
   }
   const p = prog[num]; if (!p || !p.total) return null;
@@ -1497,16 +1490,17 @@ const cars = {};   // one drawn tag per car, moved smoothly every frame
 function resetCars() { for (const k in cars) delete cars[k]; const g = $("cars"); if (g) g.innerHTML = ""; }
 let lastFrame = 0;
 const SVGNS = "http://www.w3.org/2000/svg";
-function animateCars(ts) {   // each car: a dot on the racing line, and its tag beside the track, kept apart from the others
+function animateCars(ts) {   // each car: a dot on the racing line, with its tag just above it
   requestAnimationFrame(animateCars);
   const g = $("cars"), dt = Math.min(0.1, lastFrame ? (ts - lastFrame) / 1000 : 0); lastFrame = ts;
-  if (!g || !circuit || !trackLen.length || !circuit.grid) return;
+  if (!g || !circuit || !trackLen.length) return;
+  const at = mode === "replay" && R.playing && R.last ? Math.min(R.end, R.t + (performance.now() - R.last) * R.speed) : now();   // replay: the moment this frame shows
   const lines = (S.TimingData || {}).Lines || {};
   const over = mode === "live" && ["Finished", "Finalised", "Ends", "Inactive"].includes((S.SessionStatus || {}).Status);
   const seen = new Set();
   for (const [num, l] of over ? [] : Object.entries(lines)) {
     if (l.Retired || l.Stopped || l.InPit) continue;
-    const target = lapFraction(num, l); if (target == null) continue;
+    const target = lapFraction(num, l, at); if (target == null) continue;
     let c = cars[num];
     if (!c) {
       const d = driver(num), tc = colour(d), no = String(d.RacingNumber || num), nw = no.length > 1 ? 15 : 11, tw = 23;
@@ -1516,57 +1510,23 @@ function animateCars(ts) {   // each car: a dot on the racing line, and its tag 
         <text class="tn" x="${nw / 2}" y="8.7" fill="${ink(tc)}">${esc(no)}</text><text class="tt" x="${nw + tw / 2}" y="8.8">${esc(d.Tla || num)}</text></g>`;
       g.appendChild(el); c = cars[num] = { el, f: target, w: nw + tw, lead: el.firstChild, dot: el.children[1], tag: el.children[2] };
     }
-    // ease toward where the car should be: no jumps when a timing mark comes early or late
+    // replay: exactly where its lap timing puts it. Live: ease toward the estimate, so a timing mark that comes early or late isn't a jump
     let diff = target - c.f; diff -= Math.round(diff);
-    c.f += Math.abs(diff) > 0.25 ? diff : diff * Math.min(1, dt * 4);
+    c.f += mode === "replay" || Math.abs(diff) > 0.25 ? diff : diff * Math.min(1, dt * 4);
     const [x, y] = pointAt(c.f);
     c.x = x; c.y = y;
     c.line = +l.Line || 99; seen.add(num);
   }
   for (const [num, c] of Object.entries(cars)) if (!seen.has(num)) { c.el.remove(); delete cars[num]; }
-  const order = Object.entries(cars).sort((a, b) => a[1].line - b[1].line);   // the leader's tag is placed first
-  const placed = [], H = 12, W0 = circuit.w, H0 = circuit.h, { grid, gw } = circuit;
-  const hit = (x, y, w) => placed.some(b => x < b[0] + b[2] + 2 && x + w + 2 > b[0] && y < b[1] + H + 2 && y + H + 2 > b[1]);
-  const onTrack = (x, y, w) => {   // the share of the tag's box that covers the track
-    let n = 0, m = 0;
-    for (let cy = Math.floor(y / 4); cy <= Math.floor((y + H) / 4); cy++) for (let cx = Math.floor(x / 4); cx <= Math.floor((x + w) / 4); cx++) { m++; n += grid[cy * gw + cx] || 0; }
-    return n / m;
-  };
+  const order = Object.entries(cars).sort((a, b) => a[1].line - b[1].line);
+  const H = 12, W0 = circuit.w, H0 = circuit.h;
   for (const [, c] of order) {
-    const w = c.w;
-    const box = k => {   // slot k: one of 8 directions from the car (0 = up-right, going round), 12px out; 8-15 and 16-23: further out, for crowds
-      const a = Math.PI / 4 - (k % 8) * Math.PI / 4, r = 12 + 18 * (k >> 3), ux = Math.cos(a), uy = -Math.sin(a);
-      const cx = c.x + ux * (r + w / 2 * Math.abs(ux)), cy = c.y + uy * (r + H / 2 * Math.abs(uy));
-      return [Math.max(1, Math.min(W0 - w - 1, cx - w / 2)), Math.max(1, Math.min(H0 - H - 1, cy - H / 2))];
-    };
-    // keep its slot: move at once only if another tag is in the way; off the track only once it has sat on it for 2 s
-    let move = c.slot == null;
-    if (!move) {
-      const [x, y] = box(c.slot);
-      c.onFor = onTrack(x, y, w) > 0.45 ? (c.onFor || 0) + dt : 0;
-      move = hit(x, y, w) || c.onFor > 2;
-    }
-    if (move) {
-      c.onFor = 0;
-      let best = c.slot == null ? 0 : c.slot, score = Infinity;
-      for (let k = 0; k < 24; k++) {
-        const [x, y] = box(k); if (hit(x, y, w)) continue;
-        const turn = c.slot == null ? 0 : Math.min((k - c.slot + 8) % 8, (c.slot - k + 8) % 8);
-        const sc = onTrack(x, y, w) + 0.04 * turn + 0.7 * (k >> 3);
-        if (sc < score) { score = sc; best = k; }
-      }
-      c.slot = best;
-    }
-    const spot = box(c.slot);
-    placed.push([spot[0], spot[1], w]);
-    // the tag rides with its car; only its offset glides, when it changes slot
-    const ox = spot[0] - c.x, oy = spot[1] - c.y;
-    if (c.ox == null) { c.ox = ox; c.oy = oy; }
-    else { const k = Math.min(1, dt * 6); c.ox += (ox - c.ox) * k; c.oy += (oy - c.oy) * k; }
-    c.lx = c.x + c.ox; c.ly = c.y + c.oy;
+    const w = c.w;   // the tag sits straight above its car, always the same: it never moves on its own (below, at the top edge of the map)
+    c.lx = Math.max(1, Math.min(W0 - w - 1, c.x - w / 2));
+    c.ly = c.y - H - 8 >= 1 ? c.y - H - 8 : c.y + 8;
     c.dot.setAttribute("cx", c.x.toFixed(2)); c.dot.setAttribute("cy", c.y.toFixed(2));
     c.lead.setAttribute("x1", c.x.toFixed(2)); c.lead.setAttribute("y1", c.y.toFixed(2));
-    c.lead.setAttribute("x2", (c.lx + w / 2).toFixed(2)); c.lead.setAttribute("y2", (c.ly + H / 2).toFixed(2));
+    c.lead.setAttribute("x2", c.x.toFixed(2)); c.lead.setAttribute("y2", (c.ly < c.y ? c.ly + H : c.ly).toFixed(2));
     c.tag.setAttribute("transform", `translate(${c.lx.toFixed(2)},${c.ly.toFixed(2)})`);
   }
   for (const [n, c] of order) {   // following: the others fade, the followed car's dot grows; battling cars ringed in amber
