@@ -983,86 +983,6 @@ def library(state):
         path.write_text(json.dumps({"manga": out}, ensure_ascii=False, indent=1))
 
 
-RADIO = HERE / "radio.json"   # team radio transcripts for the F1 page: {clip address: text}
-LIVETIMING = "https://livetiming.formula1.com/static/"
-
-
-def radio_sessions(now):
-    """[(session path, start)] from F1's archive for this season, newest first, started already."""
-    year = datetime.fromtimestamp(now, timezone.utc).year
-    index = json.loads(get(f"{LIVETIMING}{year}/Index.json").lstrip("\ufeff"))
-    out = []
-    for m in index.get("Meetings", []):
-        for s in m.get("Sessions", []):
-            if not s.get("Path") or not s.get("StartDate"):
-                continue
-            off = re.match(r"(-?)(\d+):(\d+)", s.get("GmtOffset") or "0:0")
-            shift = (int(off[2]) * 3600 + int(off[3]) * 60) * (-1 if off[1] else 1) if off else 0
-            start = datetime.fromisoformat(s["StartDate"]).replace(tzinfo=timezone.utc).timestamp() - shift
-            if start <= now:
-                out.append((s["Path"], start))
-    return sorted(out, key=lambda x: -x[1])
-
-
-def transcribe_radio(state, budget=360):
-    """Write text for F1 team radio clips into radio.json, for the F1 page: the newest sessions first (a session
-    from the last 3 days is checked again each time, as clips arrive), then the season's older sessions, within
-    `budget` seconds. Speech-to-text runs on the GitHub runner (faster-whisper, English "small" model)."""
-    now, began = time.time(), time.time()
-    texts = json.loads(RADIO.read_text()) if RADIO.exists() else {}
-    done = state.setdefault("radio_done", [])   # older sessions already fully transcribed
-    todo = []
-    for path, start in radio_sessions(now):
-        if path in done:
-            continue
-        try:
-            stream = get(f"{LIVETIMING}{path}TeamRadio.jsonStream")
-        except Exception:
-            stream = ""
-        clips = [f"{LIVETIMING}{path}{c}" for c in dict.fromkeys(re.findall(r'"Path":"(TeamRadio/[^"]+)"', stream))]
-        new = [c for c in clips if c not in texts]
-        recent = now - start < 3 * 86400
-        if not new and not recent and clips:
-            done.append(path)   # finished and fully transcribed: not fetched again
-        todo += [(c, path, recent) for c in new]
-        if len(todo) > 400:
-            break
-    if not todo:
-        return
-    model = whisper_model()
-    if not model:
-        return
-    import tempfile
-    count = 0
-    for clip, path, recent in todo:
-        if time.time() - began > budget:
-            break
-        try:
-            audio = urllib.request.urlopen(urllib.request.Request(clip, headers={"User-Agent": UA}), timeout=30).read()
-            with tempfile.NamedTemporaryFile(suffix=".mp3") as f:
-                f.write(audio); f.flush()
-                segs, _ = model.transcribe(f.name, language="en", beam_size=5, vad_filter=True)   # no prompt: it leaked into the text
-                texts[clip] = " ".join(x.text.strip() for x in segs).strip()
-            count += 1
-        except Exception as e:
-            print(f"FAIL radio {clip}: {e}", file=sys.stderr)
-    RADIO.write_text(json.dumps(texts, ensure_ascii=False, indent=0))
-    print(f"radio: {count} transcribed, {len(todo) - count} left for later")
-
-
-def whisper_model():
-    """faster-whisper's English "small" model, installed on first use (only runs that have clips to transcribe pay for it)."""
-    try:
-        from faster_whisper import WhisperModel
-    except ImportError:
-        r = subprocess.run([sys.executable, "-m", "pip", "install", "-q", "faster-whisper", "av<16"], capture_output=True, text=True)
-        if r.returncode:
-            print(f"FAIL installing speech-to-text: {r.stderr[-300:]}", file=sys.stderr)
-            return None
-        from faster_whisper import WhisperModel
-    return WhisperModel("small.en", device="cpu", compute_type="int8")
-
-
 def main():
     state = json.loads(STATE.read_text()) if STATE.exists() else {}
     try:
@@ -1114,12 +1034,6 @@ def main():
         library(state)
     except Exception as e:  # the LINE list cards must never stop the alerts
         print(f"FAIL library: {e}", file=sys.stderr)
-    if os.environ.get("GITHUB_ACTIONS"):   # last, after every alert is out: speech-to-text takes a while
-        try:
-            transcribe_radio(state)
-        except Exception as e:
-            print(f"FAIL radio transcripts: {e}", file=sys.stderr)
-        STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1))
 
 
 if __name__ == "__main__":
