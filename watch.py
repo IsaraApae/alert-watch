@@ -150,9 +150,10 @@ def f1_photo(d, px):
 
 
 def f1_logo(team, year):
-    """A team's full-colour logo for the season as PNG, from formula1.com (Red Bull Racing: .../2026/redbullracing/2026redbullracinglogo)."""
+    """A team's white logo for the season as PNG, for the cards' dark background (as the F1 Live page uses in dark mode),
+    from formula1.com (Red Bull Racing: .../2026/redbullracing/2026redbullracinglogowhite)."""
     slug = re.sub(r"[^a-z0-9]", "", (team or "").lower())
-    return f"https://media.formula1.com/image/upload/c_fit,w_96,h_96/common/f1/{year}/{slug}/{year}{slug}logo.png" if slug else None
+    return f"https://media.formula1.com/image/upload/c_fit,w_96,h_96/common/f1/{year}/{slug}/{year}{slug}logowhite.png" if slug else None
 
 
 def f1_name(d):
@@ -163,72 +164,107 @@ def f1_name(d):
     return f"{first[0][0]}. " * bool(first) + " ".join(last).title()
 
 
-def f1_card(meeting, session, when, rows):
-    """A LINE card: dark header with the Grand Prix and session, the top 3 with photos on their team colour,
-    then every other driver with a team-colour stripe, a small photo, name, team and time."""
-    dark, red, grey = "#15151E", "#E10600", "#777777"
+# the F1 Live page's look: navy, team-colour driver tags (car number on the team colour, the name tinted with it)
+F1C = {"bg": "#0B0B10", "panel": "#15151E", "row": "#181821", "line": "#262633", "text": "#F2F2F6", "dim": "#8D8D9C",
+       "red": "#E10600", "green": "#22C55E", "purple": "#B14CF0"}
+
+
+def f1_mix(a, b, share):
+    """a mixed into b: share of a (0-1), like the page's color-mix."""
+    a, b = a.lstrip("#"), b.lstrip("#")
+    return "#" + "".join(f"{round(int(a[i:i + 2], 16) * share + int(b[i:i + 2], 16) * (1 - share)):02X}" for i in (0, 2, 4))
+
+
+def f1_ink(hexc):
+    """Black or white text on a team colour, as the page picks it."""
+    h = hexc.lstrip("#"); r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+    return "#000000" if (r * 299 + g * 587 + b * 114) / 1000 > 165 else "#FFFFFF"
+
+
+def f1_tag(d, size="xs"):
+    """The page's driver tag: [ 81 | PIA ], the number on the team colour, the name tinted with it."""
+    c = "#" + (d.get("team_colour") or "777777")
+    num = str(d.get("driver_number") or "")
+    t = lambda text, **k: {"type": "text", "text": text or "?", "size": size, "weight": "bold", "align": "center", "gravity": "center", **k}
+    return {"type": "box", "layout": "horizontal", "flex": 0, "cornerRadius": "4px", "height": "20px", "contents": [
+        {"type": "box", "layout": "vertical", "backgroundColor": c, "width": "26px", "contents": [t(num, color=f1_ink(c))]},
+        {"type": "box", "layout": "vertical", "backgroundColor": f1_mix(c, F1C["panel"], .24), "width": "38px",
+         "contents": [t(d.get("name_acronym"), color=f1_mix(c, "#FFFFFF", .55))]}]}
+
+
+def f1_head(meeting, title, sub):
+    """The dark header: F1 logo, the Grand Prix and its flag, a big title, a dim line under it."""
     t = lambda text, **k: {"type": "text", "text": text, **k}
-    colour = lambda d: "#" + (d.get("team_colour") or "999999")
-    photo = lambda d, res: f1_photo(d, 300 if res == "3col" else 96)
-    face = lambda d, res, **k: ({"type": "image", "url": photo(d, res), "aspectMode": "cover", "aspectRatio": "1:1",
-                                 "backgroundColor": colour(d), **k} if photo(d, res) else
-                                 {"type": "box", "layout": "vertical", "backgroundColor": colour(d), "contents": [], **k})
+    return {"type": "box", "layout": "vertical", "backgroundColor": F1C["bg"], "spacing": "xs", "paddingAll": "16px", "contents": [
+        {"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "center", "contents": [
+            F1_LOGO_IMAGE,
+            t(meeting.get("meeting_name") or "Formula 1", size="xs", color=F1C["dim"], flex=1, wrap=True),
+            *([{"type": "image", "url": meeting["country_flag"], "size": "xxs", "aspectRatio": "16:9", "flex": 0}]
+              if (meeting.get("country_flag") or "").endswith(".png") else [])]},
+        t(title, size="xl", weight="bold", color=F1C["text"], wrap=True), t(sub, size="xxs", color=F1C["dim"], wrap=True)]}
+
+
+def f1_button(label, uri):
+    return {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": [
+        {"type": "button", "style": "primary", "color": F1C["red"], "height": "sm", "action": {"type": "uri", "label": label, "uri": uri}}]}
+
+
+def f1_card(meeting, session, when, rows, replay_key=None):
+    """A results card in the F1 Live page's style: the top 3 with faces on their team colour, then the timing table:
+    position, driver tag, name and time, rows striped like the page; a button opens the session's replay."""
+    t = lambda text, **k: {"type": "text", "text": text, **k}
+    colour = lambda d: "#" + (d.get("team_colour") or "777777")
 
     def podium(pos, d, val):
-        return {"type": "box", "layout": "vertical", "flex": 1, "spacing": "xs", "contents": [
-            face(d, "3col", size="full"),
-            {"type": "box", "layout": "vertical", "height": "4px", "backgroundColor": colour(d), "contents": []},
-            t(f"P{pos}", size="sm", weight="bold", align="center", color=red if pos == "1" else dark),
-            t(f1_name(d), size="xs", weight="bold", align="center", wrap=True),
-            t(val, size="xxs", color=grey, align="center")]}
+        photo = f1_photo(d, 300)
+        return {"type": "box", "layout": "vertical", "flex": 1, "spacing": "xs", "alignItems": "center", "contents": [
+            {"type": "box", "layout": "vertical", "cornerRadius": "8px", "backgroundColor": colour(d), "width": "100%", "contents": [
+                {"type": "image", "url": photo, "aspectMode": "cover", "aspectRatio": "1:1", "size": "full"} if photo else
+                {"type": "box", "layout": "vertical", "height": "80px", "contents": []}]},
+            t(f"P{pos}", size="sm", weight="bold", color=F1C["red"] if pos == "1" else F1C["text"], margin="sm"),
+            f1_tag(d), t(val, size="xxs", color=F1C["dim"], align="center", wrap=True)]}
 
-    def row(pos, d, val):
-        return {"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "center", "contents": [
-            {"type": "box", "layout": "vertical", "width": "26px", "contents": [t(pos, size="xs", weight="bold", align="end")]},
-            {"type": "box", "layout": "vertical", "width": "3px", "height": "28px", "backgroundColor": colour(d), "contents": []},
-            face(d, "1col", size="28px", flex=0),
-            {"type": "box", "layout": "vertical", "flex": 1, "contents": [
-                t(f1_name(d), size="xs", weight="bold"), t(d.get("team_name") or "", size="xxs", color=grey)]},
-            t(val, size="xs", color=grey, align="end", flex=0)]}
+    def row(i, pos, d, val):
+        return {"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "center", "paddingAll": "5px",
+                **({"backgroundColor": F1C["row"]} if i % 2 else {}), "contents": [
+            t(pos, size="xs", weight="bold", color=F1C["text"], align="end", flex=0, gravity="center"),
+            f1_tag(d),
+            t(f1_name(d), size="xxs", color=F1C["dim"], flex=1, gravity="center"),
+            t(val, size="xs", weight="bold", color=F1C["text"], align="end", flex=0, gravity="center")]}
 
-    head = [{"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "center", "contents": [
-        F1_LOGO_IMAGE,
-        t(meeting.get("meeting_name") or "Formula 1", size="xs", color="#FFFFFF", flex=1),
-        *([{"type": "image", "url": meeting["country_flag"], "size": "xxs", "aspectRatio": "16:9", "flex": 0}]
-          if meeting.get("country_flag", "").endswith(".png") else [])]},
-        t(session, size="xl", weight="bold", color="#FFFFFF"), t(when, size="xxs", color="#AAAAAA")]
+    table = [{"type": "box", "layout": "horizontal", "paddingStart": "8px", "paddingEnd": "8px", "paddingBottom": "4px", "contents": [
+        t("POS · DRIVER", size="xxs", weight="bold", color=F1C["dim"], flex=1), t("TIME", size="xxs", weight="bold", color=F1C["dim"], flex=0)]}]
+    table += [row(i, *r) for i, r in enumerate(rows[3:])]
     body = [{"type": "box", "layout": "horizontal", "spacing": "md", "contents": [podium(*r) for r in rows[:3]]},
-            {"type": "separator", "margin": "lg"}]
-    for r in rows[3:]:
-        body += [row(*r)]
-    return {"type": "bubble", "size": "mega",
-            "header": {"type": "box", "layout": "vertical", "backgroundColor": dark, "spacing": "xs", "contents": head},
-            "body": {"type": "box", "layout": "vertical", "spacing": "sm", "contents": body}}
+            {"type": "separator", "margin": "lg", "color": F1C["line"]},
+            {"type": "box", "layout": "vertical", "margin": "md", "contents": table}]
+    return {"type": "bubble", "size": "mega", "header": f1_head(meeting, session, when),
+            "body": {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "contents": body},
+            **({"footer": f1_button("Watch replay", f"{F1_PAGE}?replay={replay_key}")} if replay_key else {})}
 
 
 def f1_standings_card(title, sub_title, rows, colour_of):
-    """A championship table: position, change since before the race (+1 green, -1 red), photo or colour, name, points."""
-    dark, red, grey, up, down = "#15151E", "#E10600", "#777777", "#1E9E4A", "#E10600"
+    """A championship table in the page's style: position, change since before the race (+1 green, -1 red),
+    face or team logo, name and team, points and points gained."""
     t = lambda text, **k: {"type": "text", "text": text, **k}
 
-    def row(pos, move, colour, photo, name, team, points, gained):
-        mark = (t(f"+{move}", color=up) if move > 0 else t(str(move), color=down) if move < 0 else t("–", color=grey))
-        return {"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "center", "contents": [
-            {"type": "box", "layout": "vertical", "width": "22px", "contents": [t(str(pos), size="xs", weight="bold", align="end")]},
-            {"type": "box", "layout": "vertical", "width": "26px", "contents": [{**mark, "size": "xxs", "weight": "bold", "align": "center"}]},
-            {"type": "box", "layout": "vertical", "width": "3px", "height": "28px", "backgroundColor": colour, "contents": []},
-            *([{"type": "image", "url": photo, "size": "28px", "aspectRatio": "1:1", "flex": 0,
-                **({"aspectMode": "fit"} if "logo" in photo else {"aspectMode": "cover", "backgroundColor": colour})}] if photo else []),  # a logo whole, a face on its team colour
-            {"type": "box", "layout": "vertical", "flex": 1, "contents": [t(name, size="xs", weight="bold"), *([t(team, size="xxs", color=grey)] if team else [])]},
-            {"type": "box", "layout": "vertical", "flex": 0, "contents": [
-                t(f"{points:g}", size="xs", weight="bold", align="end"), t(f"+{gained:g}" if gained else "–", size="xxs", color=grey, align="end")]}]}
+    def row(i, pos, move, colour, photo, name, team, points, gained):
+        mark = t(f"+{move}", color=F1C["green"]) if move > 0 else t(str(move), color=F1C["red"]) if move < 0 else t("–", color=F1C["dim"])
+        return {"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "center", "paddingAll": "4px",
+                **({"backgroundColor": F1C["row"]} if i % 2 else {}), "contents": [
+            t(str(pos), size="xs", weight="bold", color=F1C["text"], align="end", flex=2),
+            {**mark, "size": "xxs", "weight": "bold", "align": "center", "flex": 2},
+            {"type": "box", "layout": "vertical", "width": "3px", "height": "26px", "backgroundColor": colour, "contents": []},
+            *([{"type": "image", "url": photo, "size": "26px", "aspectRatio": "1:1", "flex": 0,
+                **({"aspectMode": "fit"} if "logo" in photo else {"aspectMode": "cover", "backgroundColor": colour})}] if photo else []),
+            {"type": "box", "layout": "vertical", "flex": 12, "contents": [t(name, size="xs", weight="bold", color=F1C["text"]),
+                                                                         *([t(team, size="xxs", color=F1C["dim"])] if team else [])]},
+            {"type": "box", "layout": "vertical", "flex": 4, "contents": [
+                t(f"{points:g}", size="xs", weight="bold", color=F1C["text"], align="end"),
+                t(f"+{gained:g}" if gained else "–", size="xxs", color=F1C["green"] if gained else F1C["dim"], align="end")]}]}
 
-    return {"type": "bubble", "size": "mega",
-            "header": {"type": "box", "layout": "vertical", "backgroundColor": dark, "spacing": "xs", "contents": [
-                {"type": "box", "layout": "horizontal", "spacing": "sm", "contents": [
-                    F1_LOGO_IMAGE, t(sub_title, size="xs", color="#FFFFFF")]},
-                t(title, size="xl", weight="bold", color="#FFFFFF"), t("Points after the race · change since before it", size="xxs", color="#AAAAAA")]},
-            "body": {"type": "box", "layout": "vertical", "spacing": "sm", "contents": [row(*r) for r in rows]}}
+    return {"type": "bubble", "size": "mega", "header": f1_head({"meeting_name": sub_title}, title, "Points after the race · change since before it"),
+            "body": {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "contents": [row(i, *r) for i, r in enumerate(rows)]}}
 
 
 def f1_standings(state, token, s, meeting):
@@ -269,9 +305,11 @@ def f1_standings(state, token, s, meeting):
         print(f"F1 standings after {name} | drivers: {top(drows)} | teams: {top(trows)}")
         sent.append(key)
         return
+    dcard = f1_standings_card("Drivers' Championship", f"After the {name}", drows, colour)
+    if len(json.dumps(dcard, separators=(",", ":"))) > 29000:  # LINE takes at most 30 KB a card: without faces it always fits
+        dcard = f1_standings_card("Drivers' Championship", f"After the {name}", [r[:3] + (None,) + r[4:] for r in drows], colour)
     card = {"type": "flex", "altText": f"F1 standings after {name}: {top(drows)}"[:400], "contents": {"type": "carousel", "contents": [
-        f1_standings_card("Drivers' Championship", f"After the {name}", drows, colour),
-        f1_standings_card("Teams' Championship", f"After the {name}", trows, colour)]}}
+        dcard, f1_standings_card("Teams' Championship", f"After the {name}", trows, colour)]}}
     plain = {"type": "text", "text": f"F1 standings after the {name}\n\nDrivers\n" + "\n".join(
         f"{r[0]} ({'+' if r[1] > 0 else ''}{r[1] or '–'}) {r[4]} {r[6]:g}" for r in drows) + "\n\nTeams\n" + "\n".join(
         f"{r[0]} ({'+' if r[1] > 0 else ''}{r[1] or '–'}) {r[4]} {r[6]:g}" for r in trows)}
@@ -284,18 +322,15 @@ F1_PAGE = "https://isaraapae.github.io/alert-watch/f1.html"
 
 
 def f1_live_card(meeting, session, when, live):
-    """A LINE card when a session starts: tap to open the F1 Live page."""
+    """A LINE card when a session starts, in the F1 Live page's style: tap to open the page."""
     t = lambda text, **k: {"type": "text", "text": text, **k}
-    badge = {"type": "box", "layout": "baseline", "spacing": "sm", "contents": [
-        t("●", size="sm", color="#E10600", flex=0), t("LIVE NOW" if live else "STARTING SOON", size="sm", weight="bold", color="#E10600")]}
+    badge = {"type": "box", "layout": "horizontal", "flex": 0, "cornerRadius": "999px", "backgroundColor": F1C["red"] if live else F1C["row"],
+             "paddingStart": "10px", "paddingEnd": "10px", "paddingTop": "3px", "paddingBottom": "3px", "contents": [
+        t("● LIVE NOW" if live else "STARTING SOON", size="xxs", weight="bold", color="#FFFFFF")]}
     return {"type": "bubble", "size": "kilo", "action": {"type": "uri", "label": "Open F1 Live", "uri": F1_PAGE},
-            "header": {"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "center", "backgroundColor": "#15151E", "contents": [
-                F1_LOGO_IMAGE, t(meeting.get("meeting_name") or "Formula 1", size="xs", color="#FFFFFF", flex=1, wrap=True)]},
-            "body": {"type": "box", "layout": "vertical", "spacing": "sm", "contents": [
-                badge, t(session, size="xl", weight="bold"), t(when, size="xs", color="#777777")]},
-            "footer": {"type": "box", "layout": "vertical", "contents": [
-                {"type": "button", "style": "primary", "color": "#E10600", "height": "sm",
-                 "action": {"type": "uri", "label": "Open F1 Live", "uri": F1_PAGE}}]}}
+            "header": f1_head(meeting, session, when),
+            "body": {"type": "box", "layout": "horizontal", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": [badge, {"type": "filler"}]},
+            "footer": f1_button("Open F1 Live", F1_PAGE)}
 
 
 def f1_live(state, token, sessions, now):
@@ -370,7 +405,7 @@ def f1(state):
             sent.append(key)
             continue
         plain = {"type": "text", "text": f"F1 {session} · {name}\n{when}\n" + "\n".join(f"{p} {f1_name(d)} ({d.get('team_name', '')}) {v}" for p, d, v in rows)}
-        card = {"type": "flex", "altText": f"F1 {session} · {name}: {top}"[:400], "contents": f1_card(meeting, session, when, rows)}
+        card = {"type": "flex", "altText": f"F1 {session} · {name}: {top}"[:400], "contents": f1_card(meeting, session, when, rows, key)}
         if line_send(token, card) or line_send(token, plain):
             sent.append(key)
             if session == "Race":
@@ -1137,5 +1172,29 @@ if __name__ == "__main__":
             notify(f"New chapter: {title} (test: {kind})", f"EP.{ep}", text, image, tap)
     elif sys.argv[1:] == ["richmenu"]:
         setup_richmenu()
+    elif sys.argv[1:] == ["f1check"]:
+        # LINE checks the F1 cards (the latest race's results, standings and a live card) without sending anything
+        token = os.environ["LINE_TOKEN"]
+        s = [x for x in json.loads(get(f"{OPENF1}/sessions?session_name=Race&year={datetime.now(THAI).year}"))
+             if datetime.fromisoformat(x["date_end"]) < datetime.now(THAI)][-1]
+        key = s["session_key"]
+        drivers = {d["driver_number"]: {**d, "year": s.get("year")} for d in json.loads(get(f"{OPENF1}/drivers?session_key={key}"))}
+        meeting = json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}"))[0]
+        when = datetime.fromisoformat(s["date_start"]).astimezone(THAI).strftime("%a %d %b %Y · %H:%M")
+        rows = f1_rows(json.loads(get(f"{OPENF1}/session_result?session_key={key}")), drivers)
+        cards = {"results": {"type": "flex", "altText": "check", "contents": f1_card(meeting, "Race", when, rows, key)},
+                 "live": {"type": "flex", "altText": "check", "contents": f1_live_card(meeting, "Race", when, True)}}
+        captured, line_send = [], lambda token, message: captured.append(message) or True   # module level: f1_standings now captures instead of sending
+        f1_standings({}, token, s, meeting)
+        cards["standings"] = captured[0]
+        for name, message in cards.items():
+            req = urllib.request.Request("https://api.line.me/v2/bot/message/validate/broadcast",
+                                         data=json.dumps({"messages": [message]}, separators=(",", ":")).encode(),
+                                         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+            try:
+                urllib.request.urlopen(req, timeout=30)
+                print(f"f1check {name}: LINE accepts it ({len(json.dumps(message, separators=(',', ':')))} bytes)")
+            except urllib.error.HTTPError as e:
+                print(f"f1check {name}: LINE refused it: {e.read()[:600]}")
     else:
         main()
