@@ -675,9 +675,15 @@ site_name = lambda url: "suba-anime" if "suba-anime.com" in url else "animegojo"
 FEEDS = {"anime-waku": "https://anime-waku.com/feed/?post_type=episodes", "animeruka": "https://animeruka.com/feed/?post_type=episodes"}
 
 
+FEED_PROXY = os.environ.get("FEED_PROXY", "")  # a Cloudflare Worker that fetches the feeds: the sites refuse GitHub's own addresses
+
+
 def read_feed(url):
     """A site's RSS feed; an error when the site answers with anything else."""
-    if _scraper:  # these sites sit behind Cloudflare: cloudscraper passes its browser check, plain urllib does not
+    if FEED_PROXY:
+        site = next(n for n, u in FEEDS.items() if u == url)
+        page, status = get(f"{FEED_PROXY}&site={site}"), "proxy"
+    elif _scraper:
         r = _scraper.get(quote(url, safe=":/%?&="), timeout=20)
         page, status = r.text, r.status_code
     else:
