@@ -3022,7 +3022,8 @@
   "198727:1",
   "176314:2",
   "152677:2",
-  "159042:3"
+  "159042:3",
+  "213657:1"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3480,6 +3481,16 @@
    "published": 1791991810,
    "scheduled": 1791991800,
    "notified": true
+  },
+  "213657:1": {
+   "title": "Mission: Yozakura Family Season 2 Cour 2",
+   "episode": 1,
+   "version": "ซับไทย",
+   "first": "suba-anime",
+   "url": "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/ep-13",
+   "detected": 1792051221,
+   "published": null,
+   "notified": true
   }
  },
  "watch_links": {
@@ -3515,7 +3526,8 @@
   "198727:1": "https://isaraapae.github.io/alert-watch/b.html?v=L9FhKX7WXME",
   "176314:2": "https://isaraapae.github.io/alert-watch/b.html?v=TjGM9bk2_ro",
   "152677:2": "https://isaraapae.github.io/alert-watch/b.html?v=Kj9JqWmvY1U",
-  "159042:3": "https://isaraapae.github.io/alert-watch/b.html?v=orvbliz0Yis"
+  "159042:3": "https://isaraapae.github.io/alert-watch/b.html?v=orvbliz0Yis",
+  "213657:1": "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/ep-13"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -3553,66 +3565,6 @@
   ]
  },
  "gojo_search": {
-  "213657": {
-   "/list/2927/": [
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
-    12
-   ],
-   "/list/1820/": [
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
-    12,
-    13,
-    14,
-    15,
-    16,
-    17,
-    18,
-    19,
-    20,
-    21,
-    22,
-    23,
-    24,
-    25,
-    26,
-    27
-   ],
-   "/list/71/": [
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
-    12,
-    13
-   ]
-  },
   "195539": {
    "/list/1870/": [],
    "/list/1869/": [
