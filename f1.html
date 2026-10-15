@@ -18,13 +18,13 @@
 <style>
   :root, [data-mode="dark"] {
     --bg: #0b0b10; --panel: #15151e; --panel2: #1b1b26; --row: #181821; --line: #262633; --text: #f2f2f6; --dim: #8d8d9c; --seg: #34343f;
-    --chip: #2a2a38; --input: #0e0e14; --map: #101018; --track: #e8e8ee; --track-edge: #2c2c3a; --corner: #2a2a38; --corner-text: #a0a0ae; --tag-bg: rgba(8, 8, 14, .94); --tag-fg: #fff; --tag-line: rgba(255, 255, 255, .14); --pit-lane: #3d4558; --pit-line: rgba(255, 255, 255, .55);
+    --chip: #2a2a38; --input: #0e0e14; --map: #101018; --track: #e8e8ee; --track-edge: #2c2c3a; --corner: #2a2a38; --corner-text: #a0a0ae; --tag-bg: rgba(8, 8, 14, .94); --tag-fg: #fff; --tag-line: rgba(255, 255, 255, .14); --pit-lane: #8d93a8;
     --purple: #b14cf0; --green: #22c55e; --yellow: #facc15; --red: #e10600; --blue: #3b82f6; --amber: #f59e0b; --shadow: rgba(0, 0, 0, .7);
     --tag-mix: 24%; --tag-ink: #fff; --tag-ink-mix: 55%; color-scheme: dark;
   }
   [data-mode="light"] {
     --bg: #eef0f4; --panel: #fff; --panel2: #f5f6f9; --row: #fafbfc; --line: #e4e6ec; --text: #111118; --dim: #6b6f7c; --seg: #dfe1e8;
-    --chip: #eceef3; --input: #f3f4f7; --map: #f7f8fa; --track: #22232b; --track-edge: #d5d8e0; --corner: #e9ebf0; --corner-text: #6b6f7c; --tag-bg: #fff; --tag-fg: #111118; --tag-line: rgba(0, 0, 0, .18); --pit-lane: #b9c0cf; --pit-line: rgba(255, 255, 255, .95);
+    --chip: #eceef3; --input: #f3f4f7; --map: #f7f8fa; --track: #22232b; --track-edge: #d5d8e0; --corner: #e9ebf0; --corner-text: #6b6f7c; --tag-bg: #fff; --tag-fg: #111118; --tag-line: rgba(0, 0, 0, .18); --pit-lane: #9aa1b2;
     --purple: #9333ea; --green: #16a34a; --yellow: #ca8a04; --red: #e10600; --blue: #2563eb; --amber: #d97706; --shadow: rgba(0, 0, 0, .12);
     --tag-mix: 14%; --tag-ink: #000; --tag-ink-mix: 78%; color-scheme: light;
   }
@@ -114,8 +114,13 @@
   #map { display: block; width: 100%; height: auto; max-height: 72vh; }   /* in the wide column, not taller than the screen */
   .car { transition: none; }
   .car { cursor: pointer; }
+  .toasts { position: fixed; left: 50%; transform: translateX(-50%); top: 80px; width: min(560px, calc(100% - 24px)); z-index: 45; display: grid; gap: 8px; pointer-events: none; }
+  .toast { pointer-events: auto; display: flex; gap: 11px; align-items: flex-start; padding: 10px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px var(--shadow); animation: toastin .25s ease-out; }
+  .toast.out { opacity: 0; transform: translateY(-6px); transition: opacity .3s, transform .3s; }
+  .toast .x { width: 24px; height: 24px; font-size: 12px; flex: 0 0 24px; }
+  @keyframes toastin { from { opacity: 0; transform: translateY(-8px); } }
   #pit .road { stroke: var(--pit-lane); }
-  .car.inpit .dot { stroke: #fff; stroke-width: 2.4; } .car.inpit .tbg { stroke: var(--blue); stroke-width: 1.4; }
+
   .car .dot { stroke: #fff; stroke-width: 1.5; } .car.bat .dot { stroke: var(--amber); stroke-width: 2.4; }
   #bats line { stroke: var(--amber); stroke-width: 3.2; stroke-linecap: round; opacity: .75; }
   .fhead { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: linear-gradient(100deg, color-mix(in srgb, var(--tc) 32%, var(--panel)), var(--panel) 75%); }
@@ -310,18 +315,30 @@
   /* replay controls */
   .rbar { position: sticky; bottom: 0; z-index: 25; background: color-mix(in srgb, var(--panel) 95%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
           border-top: 1px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); display: grid; gap: 8px; }
-  .timeline { position: relative; height: 30px; }
-  .timeline .rail { position: absolute; left: 0; right: 0; top: 11px; height: 8px; border-radius: 999px; background: var(--chip); overflow: hidden; }
+  .timeline { position: relative; height: 44px; }
+  .timeline .rail { position: absolute; left: 0; right: 0; top: 19px; height: 8px; border-radius: 999px; background: var(--chip); overflow: hidden; }
+  .timeline .seg { position: absolute; top: 0; bottom: 0; }
+  .seg.form { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--text) 30%, transparent) 0 3px, transparent 3px 6px); }
+  .seg.q { background: color-mix(in srgb, var(--blue) 30%, transparent); } .seg.q2 { background: color-mix(in srgb, var(--purple) 30%, transparent); } .seg.q3 { background: color-mix(in srgb, var(--red) 30%, transparent); }
+  #rEvents { position: absolute; left: 0; right: 0; top: 0; height: 18px; pointer-events: none; }
+  #rEvents span { position: absolute; top: 2px; transform: translateX(-50%); font-size: 9.5px; font-weight: 800; color: var(--dim); white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; }
+  #rEvents .seglabel { color: var(--text); }
+  #rEvents .ev.go { transform: translateX(-1px); padding-left: 5px; } #rEvents .ev.chq { transform: translateX(calc(-100% + 3px)); padding-right: 7px; }
+  #rEvents .ev.go i { left: 0; transform: none; } #rEvents .ev.chq i { left: auto; right: 0; transform: none; }
+  .timeline .formlabel { position: absolute; top: 30px; font-size: 9.5px; font-weight: 800; color: var(--dim); white-space: nowrap; }
+  #rEvents .ev i { width: 2px; height: 26px; position: absolute; left: 50%; top: 11px; transform: translateX(-50%); border-radius: 1px; background: var(--dim); }
+  #rEvents .ev.go i { background: var(--green); } #rEvents .ev.go { color: var(--green); }
+  #rEvents .ev.chq i { width: 6px; height: 12px; top: 15px; background: repeating-conic-gradient(#fff 0 25%, #111 0 50%) 0 0 / 4px 4px; }
   .timeline .done { position: absolute; left: 0; top: 0; bottom: 0; background: var(--blue); opacity: .55; }
   .timeline .band { position: absolute; top: 0; bottom: 0; }
   .band.sc { background: var(--amber); } .band.vsc { background: repeating-linear-gradient(90deg, var(--amber) 0 4px, transparent 4px 7px); } .band.red { background: var(--red); }
-  .timeline .lapmark { position: absolute; top: 22px; transform: translateX(-50%); font-size: 9.5px; color: var(--dim); font-weight: 800; }
-  .timeline input { position: absolute; left: 0; right: 0; top: 4px; width: 100%; height: 22px; margin: 0; background: transparent; appearance: none; -webkit-appearance: none; cursor: pointer; }
+  .timeline .lapmark { position: absolute; top: 30px; transform: translateX(-50%); font-size: 9.5px; color: var(--dim); font-weight: 800; }
+  .timeline input { position: absolute; left: 0; right: 0; top: 12px; width: 100%; height: 22px; margin: 0; background: transparent; appearance: none; -webkit-appearance: none; cursor: pointer; }
   .timeline input::-webkit-slider-runnable-track { height: 22px; background: transparent; }
   .timeline input::-moz-range-track { height: 22px; background: transparent; }
   .timeline input::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: 2px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px var(--blue), 0 2px 6px rgba(0, 0, 0, .4); }
   .timeline input::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px var(--blue); }
-  .tip { position: absolute; bottom: 30px; transform: translateX(-50%); background: var(--text); color: var(--bg); font-size: 11px; font-weight: 800; padding: 3px 7px; border-radius: 6px; white-space: nowrap; pointer-events: none; }
+  .tip { position: absolute; bottom: 38px; transform: translateX(-50%); background: var(--text); color: var(--bg); font-size: 11px; font-weight: 800; padding: 3px 7px; border-radius: 6px; white-space: nowrap; pointer-events: none; }
   .rctl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .ico { all: unset; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; background: var(--chip); display: grid; place-items: center; }
   .ico svg { width: 16px; height: 16px; fill: currentColor; }
@@ -377,6 +394,7 @@
   </div>
 </header>
 
+<div class="toasts" id="toasts" aria-live="polite"></div>
 <main>
   <section class="panel next" id="next" hidden>
     <div class="what"><small>NEXT SESSION</small><b id="nextName"></b><span id="nextWhen"></span></div>
@@ -427,7 +445,8 @@
 
 <div class="rbar" id="rbar" hidden>
   <div class="timeline" id="rLine">
-    <div class="rail"><div class="done" id="rDone"></div><div id="rBands"></div></div>
+    <div id="rEvents"></div>
+    <div class="rail"><div class="done" id="rDone"></div><div id="rSegs"></div><div id="rBands"></div></div>
     <div id="rLaps"></div>
     <input type="range" id="rSeek" min="0" max="1000" value="0" aria-label="Replay position">
     <div class="tip" id="rTip" hidden></div>
@@ -452,6 +471,8 @@
       <button type="button" data-t="device"><svg viewBox="0 0 24 24"><path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 3v14h10V5H7zm5 15.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>Device</button>
     </div>
   </section>
+  <section><h4>Pop-up alerts</h4><div class="toggles"><label><span>Race control and stewards<small>Safety car, red flag, penalties, investigations and other announcements pop up at the top</small></span>
+    <span class="switch"><input type="checkbox" id="alertsOn"></span></label></div></section>
   <section><h4><span>Panels</span><span><button type="button" id="panelReset">Reset</button></span></h4><div class="toggles" id="panelPicks"></div>
     <p class="note">Move panels up or down, choose the left or right column on a computer, and hide the ones you don't need.</p></section>
   <section><h4><span>Timing columns</span><span><button type="button" id="colAll">Show all</button><button type="button" id="colFew">Hide extras</button></span></h4><div class="toggles" id="colPicks"></div></section>
@@ -581,7 +602,7 @@ function connect() {
         continue;
       }
       if (m.type === 3 && m.result) {  // the full state, then changes as they happen
-        S = {}; radioSeen = null;
+        S = {}; radioSeen = null; rcSeen = null;
         for (const [topic, data] of Object.entries(m.result)) apply(topic, data, now());
       } else if (m.type === 1 && Array.isArray(m.arguments)) {
         const [topic, data, ts] = m.arguments;
@@ -619,7 +640,7 @@ async function of1(path) {   // OpenF1 allows 3 requests a second and 30 a minut
 let replayToken = 0;
 async function startReplay(key) {
   const token = ++replayToken;
-  mode = "replay"; R.playing = false; R.data = null; S = {}; radioSeen = null; towerHead = ""; dirty = true; resetCars();
+  mode = "replay"; R.playing = false; R.data = null; S = {}; radioSeen = null; rcSeen = null; towerHead = ""; dirty = true; resetCars();
   if (ws) ws.close();
   setLive("loading"); $("rbar").hidden = false; $("event").textContent = "Loading the replay…"; $("sub").textContent = "";
   try {
@@ -656,7 +677,7 @@ async function startReplay(key) {
 }
 function exitReplay() {
   replayToken++;
-  mode = "live"; R.playing = false; R.data = null; $("rbar").hidden = true; S = {}; radioSeen = null; towerHead = ""; dirty = true; resetCars();
+  mode = "live"; R.playing = false; R.data = null; $("rbar").hidden = true; S = {}; radioSeen = null; rcSeen = null; towerHead = ""; dirty = true; resetCars();
   history.replaceState(null, "", location.pathname);
   connect();   // reconnecting brings the full live state back
 }
@@ -676,9 +697,11 @@ function prepare(sess, meet, g) {
   const all = Object.values(byDriver);
   const firstLap = Math.min(...all.map(l => l[0] ? l[0].start : Infinity));
   const lastEnd = Math.max(0, ...all.map(l => l.length ? l[l.length - 1].end : 0));
-  const start = isFinite(firstLap) ? firstLap - 60000 : t(sess.date_start);
+  // races: the scheduled time is when the formation lap begins; lights out is lap 1's start
+  const sched = t(sess.date_start), form = sess.session_type === "Race" && isFinite(firstLap) && firstLap - sched > 60000 && firstLap - sched < 20 * 60000 ? { from: sched, to: firstLap } : null;
+  const start = form ? form.from - 30000 : isFinite(firstLap) ? firstLap - 60000 : sched;
   return {
-    sess, meet, byDriver, start, end: Math.max(lastEnd + 60000, start + 60000),
+    sess, meet, byDriver, start, form, end: Math.max(lastEnd + 60000, start + 60000),
     totalLaps: Math.max(0, ...g.laps.map(l => l.lap_number || 0)),
     drivers: g.drivers, positions: g.position.map(p => ({ at: t(p.date), n: String(p.driver_number), p: p.position })).sort((a, b) => a.at - b.at),
     stints: g.stints, pits: g.pit.map(p => ({ at: t(p.date), n: String(p.driver_number), lap: p.lap_number, lane: p.lane_duration || p.pit_duration, dur: p.lane_duration || p.pit_duration || 25 })),
@@ -898,6 +921,42 @@ function drawMarks() {   // the replay timeline: safety car, VSC and red flag pe
   const every = D.totalLaps > 40 ? 10 : 5;
   $("rLaps").innerHTML = D.sess.session_type === "Race" ? lead.filter(l => l.n % every === 0).map(l => `<span class="lapmark" style="left:${x(l.start).toFixed(2)}%">L${l.n}</span>`).join("") : "";
   $("rTitle").textContent = `${(D.meet.meeting_name || D.sess.country_name || "").replace("Grand Prix", "GP")} · ${D.sess.session_name}`;
+  // what happened when: stretches on the rail (formation lap, Q1-Q3) and labelled markers above it
+  const segs = [], evs = [], said = re => D.rc.filter(r => re.test(r.m.message)).map(r => r.at);
+  const starts = said(/^SESSION STARTED/), flags = said(/CHEQUERED FLAG/);
+  if (D.sess.session_type === "Race") {
+    const lap1 = Math.min(...Object.values(D.byDriver).map(l => (l.find(x => x.n === 1) || {}).start || Infinity));
+    if (D.form) segs.push({ cls: "form", from: D.form.from, to: D.form.to, label: "Formation lap", pri: 1 });
+    if (isFinite(lap1)) evs.push({ at: lap1, label: "Start", cls: "go", pri: 3 });
+    const aborted = said(/^SESSION ABORTED|^RED FLAG/);
+    for (const r of starts.filter(t => t > lap1 + 60000 && aborted.some(a => a < t))) evs.push({ at: r, label: "Restart", cls: "go", pri: 2 });
+    const fin = flags.find(t => t > lap1); if (fin) evs.push({ at: fin, label: "Finish", cls: "chq", pri: 3 });
+  } else if (D.parts.length) {
+    for (const k of [1, 2, 3]) {
+      const from = (D.parts.find(x => x.p === k) || {}).at; if (!from) continue;
+      const to = (D.qflags.find(x => x.p === k && x.at >= from) || {}).at || R.end;
+      segs.push({ cls: "q q" + k, from, to, label: "Q" + k, pri: 3 });
+      if (to < R.end) evs.push({ at: to, label: "", cls: "chq", pri: 2 });
+    }
+  } else {
+    if (starts[0]) evs.push({ at: starts[0], label: "Start", cls: "go", pri: 3 });
+    if (flags[0]) evs.push({ at: flags[0], label: "Finish", cls: "chq", pri: 3 });
+  }
+  $("rSegs").innerHTML = segs.map(g => `<i class="seg ${g.cls}" style="left:${x(g.from).toFixed(2)}%;width:${(x(g.to) - x(g.from)).toFixed(2)}%" title="${esc(g.label)}"></i>`).join("");
+  // labels above the rail; one that would overlap a more important one is left out (its marker stays)
+  // the formation lap's label goes in the row below (with the lap numbers, which start at lap 10)
+  $("rLaps").innerHTML += segs.filter(g => g.cls === "form").map(g => `<span class="formlabel" style="left:${x(g.from).toFixed(2)}%">Formation lap</span>`).join("");
+  const W = $("rLine").clientWidth || 600, labels = [
+    ...segs.filter(g => g.cls !== "form").map(g => ({ at: (g.from + g.to) / 2, label: g.label, cls: "seglabel " + g.cls, pri: g.pri })),
+    ...evs.map(e => ({ ...e, cls: "ev " + e.cls }))];
+  const kept = [];
+  for (const L of labels.slice().sort((a, b) => b.pri - a.pri)) {
+    // starts read rightwards from their marker, finishes leftwards; part labels sit centred
+    const wd = L.label.length * 6 + 14, px = x(L.at) / 100 * W, lo = /go/.test(L.cls) ? px : /chq/.test(L.cls) ? px - wd : px - wd / 2;
+    if (!L.label || !kept.some(k => lo < k.lo + k.wd && k.lo < lo + wd)) kept.push({ ...L, px, lo, wd });
+  }
+  $("rEvents").innerHTML = kept.map(L => `<span class="${L.cls}" style="left:${x(L.at).toFixed(2)}%">${L.cls.startsWith("ev") ? "<i></i>" : ""}${esc(L.label)}</span>`).join("")
+    + evs.filter(e => !kept.some(k => k.at === e.at && k.label === e.label)).map(e => `<span class="ev ${e.cls}" style="left:${x(e.at).toFixed(2)}%"><i></i></span>`).join("");
 }
 
 // ---------- header ----------
@@ -1171,6 +1230,36 @@ function renderRaceControl() {
     : `<li class="empty">No messages yet</li>`;
 }
 $("rcKinds").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { rcFilter = b.dataset.g; renderRaceControl(); } });
+
+// ---------- pop-up alerts: new race control messages ----------
+let rcSeen = null;
+const alertable = m => {   // what's worth a pop-up; the rest is in the race control panel (and the map)
+  const t = (m.Message || "").toUpperCase(), f = (m.Flag || "").toUpperCase();
+  if (f === "BLUE" || /WAVED BLUE/.test(t)) return false;                       // many, every race
+  if (m.Scope === "Sector" || /IN TRACK SECTOR/.test(t)) return false;          // one sector's yellow: lit up on the map
+  if (/DELETED/.test(t) && /TRACK LIMITS/.test(t)) return false;                // deleted laps: counted in Penalties
+  return true;
+};
+function notifyRaceControl() {
+  const msgs = list((S.RaceControlMessages || {}).Messages);
+  if (rcSeen == null || msgs.length < rcSeen) { rcSeen = msgs.length; return; }   // just opened, or a replay went back: nothing old pops up
+  const fresh = msgs.slice(rcSeen); rcSeen = msgs.length;
+  if (!fresh.length || !store.get("f1.alerts", true) || (mode === "replay" && fresh.length > 8)) return;   // a replay jumped ahead: skip
+  for (const m of fresh.filter(alertable).slice(-3)) toast(m);
+}
+function toast(m) {
+  const box = $("toasts"), [cls, icon, label] = rcKind(m), el = document.createElement("div");
+  box.style.top = (document.querySelector(".top").getBoundingClientRect().bottom + 8) + "px";
+  el.className = "toast";
+  el.innerHTML = `<span class="rc-ico ${cls}">${RC_ICON[icon]}</span><div class="rc-body"><div class="rc-kind">${label}${m.Lap ? " · Lap " + esc(m.Lap) : ""}</div>
+    <div class="rc-msg">${withTags(m.Message)}</div></div><button class="x" type="button" aria-label="Dismiss">✕</button>`;
+  el.querySelector(".x").addEventListener("click", () => el.remove());
+  box.prepend(el);
+  while (box.children.length > 3) box.lastChild.remove();
+  setTimeout(() => el.classList.add("out"), 8000); setTimeout(() => el.remove(), 8400);
+}
+$("alertsOn").checked = store.get("f1.alerts", true);
+$("alertsOn").addEventListener("change", e => store.set("f1.alerts", e.target.checked));
 
 // ---------- penalties ----------
 let penCache = { key: null, v: null };
@@ -1507,55 +1596,38 @@ async function pitLaneFrom(sk) {   // one ordinary pit stop's path: the stretch 
   const seg = pts.slice(Math.max(0, best[0] - 3), best[1] + 4), t0 = Date.parse(seg[0].date), t1 = Date.parse(seg[seg.length - 1].date);
   return { raw: seg.map(q => [q.x, q.y]), tf: seg.map(q => (Date.parse(q.date) - t0) / (t1 - t0 || 1)) };
 }
-function drawPit() {   // the pit lane, under the track, labelled PIT
+function drawPit() {   // the pit lane: drawn alongside the stretch of track it runs beside, merging in at the entry and exit
   const g = $("pit"); if (!g || !circuit || !pitLane) return;
-  const rot = circuit.rotation || 0;
+  const rot = circuit.rotation || 0, T = circuit.screen, n = T.length;
   const real = pitLane.raw.map(([x, y]) => mapBox(rotate(x, y, rot)));
-  // the pit lane is only ~20 m beside the track, a couple of pixels on the map: push it out (keeping its shape) so it shows
-  const near = real.map(([x, y]) => { let b = null, bd = Infinity; for (const q of circuit.screen) { const d = (q[0] - x) ** 2 + (q[1] - y) ** 2; if (d < bd) { bd = d; b = q; } } return [b, Math.sqrt(bd)]; });
-  const far = Math.max(...near.map(n => n[1])) || 1;
-  pitLane.screen = real.map(([x, y], i) => {   // 11 px out along the lane, tapering in at the entry and exit
-    const [q, d] = near[i]; if (d < 0.01) return [x, y];
-    const want = 15 * Math.min(1, d / (0.35 * far));
-    return [q[0] + (x - q[0]) * want / d, q[1] + (y - q[1]) * want / d];
-  });
-  // the recorded car's points wobble and bunch up where it slowed and stopped: smooth them well,
-  // measure along the line, and draw it through equally spaced points so every dash is the same
-  let sm = pitLane.screen;
-  for (let pass = 0; pass < 3; pass++) sm = sm.map((q, i, a) => {
-    if (!i || i === a.length - 1) return q;
-    let x = 0, y = 0, n = 0; for (let k = Math.max(0, i - 4); k <= Math.min(a.length - 1, i + 4); k++) { x += a[k][0]; y += a[k][1]; n++; }
-    return [x / n, y / n];
-  });
-  const cum = [0]; for (let i = 1; i < sm.length; i++) cum.push(cum[i - 1] + Math.hypot(sm[i][0] - sm[i - 1][0], sm[i][1] - sm[i - 1][1]));
-  const total = cum[cum.length - 1] || 1, along = dist => {   // the point at a distance along the smoothed line
+  const nearest = ([x, y]) => { let bi = 0, bd = Infinity; T.forEach((q, i) => { const d = (q[0] - x) ** 2 + (q[1] - y) ** 2; if (d < bd) { bd = d; bi = i; } }); return bi; };
+  const ie = nearest(real[0]), ix = nearest(real[real.length - 1]), span = (ix - ie + n) % n;   // entry -> exit, the way the cars go
+  if (span < 3 || span > n / 2) { pitLane.even = pitLane.screen = null; g.innerHTML = ""; return; }   // the trace doesn't fit: no pit lane
+  // which side: where the recorded car was, relative to the track's direction, halfway down the lane
+  const mid = real[real.length >> 1], im = nearest(mid), tA = T[(im - 2 + n) % n], tB = T[(im + 2) % n];
+  const side = Math.sign((tB[0] - tA[0]) * (mid[1] - T[im][1]) - (tB[1] - tA[1]) * (mid[0] - T[im][0])) || 1;
+  const pts = [];
+  for (let k = 0; k <= span; k++) {
+    const i = (ie + k) % n, a = T[(i - 3 + n) % n], b = T[(i + 3) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const u = k / span, ease = Math.min(1, Math.min(u, 1 - u) / 0.18), off = 9.5 * ease * ease * (3 - 2 * ease);   // smooth in and out
+    pts.push([T[i][0] - (b[1] - a[1]) / L * side * off, T[i][1] + (b[0] - a[0]) / L * side * off]);
+  }
+  for (let pass = 0; pass < 3; pass++) for (let k = 1; k < pts.length - 1; k++)   // smooth out the outline's little kinks
+    pts[k] = [(pts[k - 1][0] + 2 * pts[k][0] + pts[k + 1][0]) / 4, (pts[k - 1][1] + 2 * pts[k][1] + pts[k + 1][1]) / 4];
+  // evenly spaced points, so the dashes are even
+  const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const total = cum[cum.length - 1] || 1, along = dist => {
     let i = 1; while (i < cum.length - 1 && cum[i] < dist) i++;
-    const u = cum[i] > cum[i - 1] ? (dist - cum[i - 1]) / (cum[i] - cum[i - 1]) : 0;
-    return [sm[i - 1][0] + (sm[i][0] - sm[i - 1][0]) * u, sm[i - 1][1] + (sm[i][1] - sm[i - 1][1]) * u];
+    const v = cum[i] > cum[i - 1] ? (dist - cum[i - 1]) / (cum[i] - cum[i - 1]) : 0;
+    return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * v, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * v];
   };
   const P = []; for (let dist = 0; dist < total; dist += 1.5) P.push(along(dist)); P.push(along(total));
-  pitLane.along = along; pitLane.df = cum.map(c => c / total); pitLane.total = total; pitLane.even = P;
+  // how far along the lane the recorded car was at each moment (so pitting cars slow down and stop where it did)
+  const rc = [0]; for (let i = 1; i < real.length; i++) rc.push(rc[i - 1] + Math.hypot(real[i][0] - real[i - 1][0], real[i][1] - real[i - 1][1]));
+  pitLane.df = rc.map(c => c / (rc[rc.length - 1] || 1)); pitLane.along = along; pitLane.total = total; pitLane.even = P; pitLane.screen = P;
   const d = pathOf(P);
-  const out = i => {   // the direction away from the track at point i, for labels outside the lane
-    const [x, y] = P[i]; let b = circuit.screen[0], bd = Infinity;
-    for (const q of circuit.screen) { const e = (q[0] - x) ** 2 + (q[1] - y) ** 2; if (e < bd) { bd = e; b = q; } }
-    const L = Math.hypot(x - b[0], y - b[1]) || 1; return [(x - b[0]) / L, (y - b[1]) / L];
-  };
-  // the badge: beside the lane, wherever there's most room (away from any track and from the lane itself)
-  const room = (x, y) => { let m = Infinity; for (const q of circuit.screen) m = Math.min(m, (q[0] - x) ** 2 + (q[1] - y) ** 2); for (const q of P) m = Math.min(m, (q[0] - x) ** 2 + (q[1] - y) ** 2); return m; };
-  let bx = P[P.length >> 1][0], by = P[P.length >> 1][1], best = -1;
-  for (let f = 0.3; f <= 0.7; f += 0.1) {
-    const i = Math.round((P.length - 1) * f), a = P[Math.max(0, i - 2)], b = P[Math.min(P.length - 1, i + 2)], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
-    for (const sgn of [1, -1]) { const x = P[i][0] - (b[1] - a[1]) / L * 16 * sgn, y = P[i][1] + (b[0] - a[0]) / L * 16 * sgn, r = room(x, y); if (r > best) { best = r; bx = x; by = y; } }
-  }
-  const end = (i, txt) => { const j = Math.min(P.length - 1, Math.max(0, i)), [vx, vy] = out(Math.round((P.length - 1) * (i ? 0.85 : 0.15))), [x, y] = P[j];
-    return `<text x="${(x + vx * 9).toFixed(1)}" y="${(y + vy * 9 + 2.4).toFixed(1)}" font-size="6.8" font-weight="900" text-anchor="middle" fill="var(--corner-text)" stroke="var(--map)" stroke-width="2.2" paint-order="stroke" letter-spacing=".4">${txt}</text>`; };
-  g.innerHTML = `<path d="${d}" fill="none" stroke="var(--map)" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
-    <path class="road" d="${d}" fill="none" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
-    <path d="${d}" fill="none" stroke="var(--pit-line)" stroke-width="0.9" stroke-dasharray="2.5 3" stroke-linejoin="round"/>
-`;
-  $("pitTop").innerHTML = `${end(0, "IN")}${end(P.length - 1, "OUT")}
-    <g transform="translate(${(bx - 11).toFixed(1)},${(by - 5.5).toFixed(1)})"><rect width="22" height="11" rx="3" fill="var(--blue)" stroke="var(--map)" stroke-width="1.5"/><text x="11" y="8" font-size="7.2" font-weight="900" text-anchor="middle" fill="#fff" letter-spacing=".5">PIT</text></g>`;
+  g.innerHTML = `<path class="road" d="${d}" fill="none" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`;   // a thin solid line beside the track
+  $("pitTop").innerHTML = "";
 }
 function pitPointAt(f) {   // a fraction of the time through the pit lane -> how far along it the recorded car was -> a point on the drawn line
   const L = pitLane.tf, D = pitLane.df; f = Math.max(0, Math.min(1, f));
@@ -1639,6 +1711,11 @@ function pointAt(f) {   // a fraction of the lap -> a point on the outline (bina
 }
 function lapFraction(num, l, t = now()) {
   if (mode === "replay") {   // where in its lap the car is, from the lap's start and length; between laps, the next lap
+    const D = R.data, first = (l._laps || [])[0];
+    if (D && D.form && first && t < first.start) {   // before the start: on the grid, and round the formation lap together
+      const slot = ((D.lapPos[0] || {})[num] || 20) * 0.0035, go = Math.min(1, Math.max(0, (t - D.form.from) / (D.form.to - D.form.from - 45000)));
+      return go - slot;
+    }
     const L = (l._laps || []).find(x => x.start <= t && t < x.end) || l._lap;
     return L && L.dur ? (t - L.start) / (L.dur * 1000) : null;
   }
@@ -1707,17 +1784,18 @@ function animateCars(ts) {   // each car: a dot on the racing line, with its tag
   const order = Object.entries(cars).sort((a, b) => a[1].line - b[1].line);
   const H = 12, W0 = circuit.w, H0 = circuit.h;
   for (const [, c] of order) {
-    const w = c.w;   // the tag sits straight above its car, always the same: it never moves on its own (below, at the top edge of the map)
+    const sc = c.inPit ? 0.7 : 1, w = c.w * sc, h = H * sc, gap = c.inPit ? 5 : 8;   // in the pit lane: smaller
+    // the tag sits straight above its car, always the same: it never moves on its own (below, at the top edge of the map)
     c.lx = Math.max(1, Math.min(W0 - w - 1, c.x - w / 2));
-    c.ly = c.y - H - 8 >= 1 ? c.y - H - 8 : c.y + 8;
+    c.ly = c.y - h - gap >= 1 ? c.y - h - gap : c.y + gap;
     c.dot.setAttribute("cx", c.x.toFixed(2)); c.dot.setAttribute("cy", c.y.toFixed(2));
     c.lead.setAttribute("x1", c.x.toFixed(2)); c.lead.setAttribute("y1", c.y.toFixed(2));
-    c.lead.setAttribute("x2", c.x.toFixed(2)); c.lead.setAttribute("y2", (c.ly < c.y ? c.ly + H : c.ly).toFixed(2));
-    c.tag.setAttribute("transform", `translate(${c.lx.toFixed(2)},${c.ly.toFixed(2)})`);
+    c.lead.setAttribute("x2", c.x.toFixed(2)); c.lead.setAttribute("y2", (c.ly < c.y ? c.ly + h : c.ly).toFixed(2));
+    c.tag.setAttribute("transform", `translate(${c.lx.toFixed(2)},${c.ly.toFixed(2)})${sc < 1 ? ` scale(${sc})` : ""}`);
   }
   for (const [n, c] of order) {   // following: the others fade, the followed car's dot grows; battling cars ringed in amber
     const look = (follow && follow !== n ? "f" : "") + (follow === n ? "F" : "") + (battleSet.has(n) ? "b" : "") + (c.inPit ? "p" : "");
-    if (look !== c.look) { c.look = look; c.el.style.opacity = look.includes("f") ? 0.3 : 1; c.dot.setAttribute("r", look.includes("F") ? 6.5 : 4.4); c.el.classList.toggle("bat", look.includes("b")); c.el.classList.toggle("inpit", look.includes("p")); }
+    if (look !== c.look) { c.look = look; c.el.style.opacity = look.includes("f") ? 0.3 : 1; c.dot.setAttribute("r", look.includes("F") ? 6.5 : look.includes("p") ? 3 : 4.4); c.el.classList.toggle("bat", look.includes("b")); c.el.classList.toggle("inpit", look.includes("p")); }
   }
   const bats = battlePairs.filter(([a, b]) => cars[a] && cars[b]).map(([a, b]) =>
     `<line x1="${cars[a].x.toFixed(1)}" y1="${cars[a].y.toFixed(1)}" x2="${cars[b].x.toFixed(1)}" y2="${cars[b].y.toFixed(1)}"/>`).join("");
@@ -1851,7 +1929,7 @@ let tick = 0;
 function frame() {
   replayTick();
   renderNext();
-  if (dirty) { dirty = false; renderHeader(); renderTower(); renderBests(); renderRaceControl(); renderPenalties(); renderPositions(); renderStrategy(); renderPits(); renderFollow(); renderRadio(); renderChampionship(); renderSectors(); renderFlags(); }
+  if (dirty) { dirty = false; renderHeader(); renderTower(); renderBests(); renderRaceControl(); renderPenalties(); renderPositions(); renderStrategy(); renderPits(); renderFollow(); notifyRaceControl(); renderRadio(); renderChampionship(); renderSectors(); renderFlags(); }
   else if (++tick % 8 === 0) renderRadio();   // "x min ago"
   renderClock();
 }
