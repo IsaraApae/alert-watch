@@ -17,7 +17,7 @@ Sends a LINE message (official account **Alert Watch**) when a tracked manga cha
 
 Manga and anime cards use the anime website's look: a white rounded card on its soft lavender background, the cover tall with rounded corners, a small red label (NEW EPISODE, NEW CHAPTER, WATCH NOW, NEW SPECIAL), the title, the details in grey, and a **Watch** (anime) or **Read** (manga) button. If LINE ever refuses a card, the alert is sent as plain text instead.
 
-Anime alerts use the time the **Thai-sub** episode comes out (never dubbed, never พากย์ไทย), with the platform name and the episode count ("Episode 03/12"; when AniList hasn't set a count, the last episode on its airing schedule, updated every check). If a YouTube channel posts late, the alert waits up to an hour; if the video still isn't up, a "Watch now" card follows when it is.
+Anime alerts use the time the **Thai-sub** episode comes out (never dubbed, never พากย์ไทย), with the platform name and the episode count from AniList ("Episode 03/12"; no count until AniList sets one, then it appears by itself). If a YouTube channel posts late, the alert waits up to an hour; if the video still isn't up, a "Watch now" card follows when it is.
 
 ## F1 Live page
 
