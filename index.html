@@ -227,8 +227,16 @@ let shows = [], episodes = [], selected = null;
 
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const pad = n => String(n).padStart(2, "0");
-const epText = (ep, total) => typeof ep === "string" ? `Special · EP ${ep}`  // specials: "0", "13.5"
-  : `EP ${pad(ep)}` + (total ? `/${pad(total)}` : "");
+const epText = (ep, total, end) => typeof ep === "string" ? `Special · EP ${ep}`  // specials: "0", "13.5"
+  : `EP ${pad(ep)}` + (end ? `-${pad(end)}` : "") + (total ? `/${pad(total)}` : "");  // end: a batch released together, "EP 01-10/10"
+// episodes of a show released at the same moment (a whole Netflix season) are one row: "EP 01-10"
+const together = eps => eps.reduce((out, e) => {
+  const last = out[out.length - 1];
+  if (last && last.at === e.at && typeof e.ep === "number" && typeof last.ep === "number" && e.ep === (last.epEnd || last.ep) + 1) {
+    last.epEnd = e.ep; last.watch = last.watch || e.watch;
+  } else out.push({ ...e });
+  return out;
+}, []);
 const on = show => show.where ? ` · ${show.where}` : "";  // where to watch: Netflix, Bilibili, Muse Thailand...
 
 function parts(ms) {
@@ -264,7 +272,7 @@ function renderNext() {
   const top = el("div", "next");
   const info = el("div", "info");
   info.append(el("div", "name", next.show.name),
-              el("div", "meta", `${epText(next.ep, next.show.total)} · ${dateLong.format(next.at)} · ${hhmm.format(next.at)}${on(next.show)}`));
+              el("div", "meta", `${epText(next.ep, next.show.total, next.epEnd)} · ${dateLong.format(next.at)} · ${hhmm.format(next.at)}${on(next.show)}`));
   top.append(cover(next.show, "", true), info);
   const count = el("div", "count");
   count.dataset.at = next.at;
@@ -289,7 +297,7 @@ const WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 function episodeRow(e) {
   const row = el("div", "row");
   const info = el("div", "info");
-  info.append(el("div", "name", e.show.name), el("div", "meta", epText(e.ep, e.show.total) + on(e.show)));
+  info.append(el("div", "name", e.show.name), el("div", "meta", epText(e.ep, e.show.total, e.epEnd) + on(e.show)));
   const side = el("div", "side");
   const u = el("div", "until" + (e.at <= Date.now() ? " aired" : ""), until(e.at)); u.dataset.at = e.at;
   side.append(el("div", "time", hhmm.format(e.at)), u);
@@ -339,7 +347,7 @@ function renderTimetable() {  // timetable view: each show under the weekday it 
     const rows = slots[day].sort((a, b) => hhmm.format(a.next.at).localeCompare(hhmm.format(b.next.at))).map(({ s, next }) => {
       const row = el("div", "row");
       const info = el("div", "info");
-      info.append(el("div", "name", s.name), el("div", "meta", `Next ${epText(next.ep, s.total)} · ${dayDate.format(next.at)}${on(s)}`));
+      info.append(el("div", "name", s.name), el("div", "meta", `Next ${epText(next.ep, s.total, next.epEnd)} · ${dayDate.format(next.at)}${on(s)}`));
       const side = el("div", "side");
       const u = el("div", "until", until(next.at)); u.dataset.at = next.at;
       side.append(el("div", "time", hhmm.format(next.at)), u);
@@ -387,7 +395,7 @@ async function load() {
     const r = await fetch(DATA + "?t=" + Date.now(), { cache: "no-store" });
     if (!r.ok) throw new Error(r.status);
     const data = await r.json();
-    shows = data.shows.map(s => ({ ...s, eps: s.episodes.map(e => ({ ...e, at: e.at * 1000 })) }));
+    shows = data.shows.map(s => ({ ...s, eps: together(s.episodes.map(e => ({ ...e, at: e.at * 1000 }))) }));
     episodes = shows.flatMap(s => s.eps.map(e => ({ ...e, show: s }))).sort((a, b) => a.at - b.at);
     season = ((shows.find(s => s.label) || {}).label || "").split(", ")[0];
     updateHeader();
