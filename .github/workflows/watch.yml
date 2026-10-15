@@ -12,6 +12,10 @@ on:
         description: Install the Alert Watch menu in the LINE chat
         type: boolean
         default: false
+      f1check:
+        description: Have LINE check the F1 cards (nothing is sent)
+        type: boolean
+        default: false
 permissions:
   contents: write
 concurrency: watch
@@ -21,7 +25,7 @@ jobs:
     timeout-minutes: 9  # a stuck run must end before the next one starts
     steps:
       - uses: actions/checkout@v4
-      - run: python3 watch.py ${{ inputs.ping && 'ping' || '' }}${{ inputs.richmenu && 'richmenu' || '' }}
+      - run: python3 watch.py ${{ inputs.ping && 'ping' || '' }}${{ inputs.richmenu && 'richmenu' || '' }}${{ inputs.f1check && 'f1check' || '' }}
         env:
           MANGA_STATE: ci-state.json
           LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
