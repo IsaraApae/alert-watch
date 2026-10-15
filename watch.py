@@ -677,12 +677,13 @@ FEEDS = {"anime-waku": "https://anime-waku.com/feed/?post_type=episodes", "anime
 
 def read_feed(url):
     """A site's RSS feed; an error when the site answers with anything else."""
-    if _scraper:
-        page = _scraper.get(quote(url, safe=":/%?&="), timeout=20).text
+    if _scraper:  # these sites sit behind Cloudflare: cloudscraper passes its browser check, plain urllib does not
+        r = _scraper.get(quote(url, safe=":/%?&="), timeout=20)
+        page, status = r.text, r.status_code
     else:
-        page = get(url)
+        page, status = get(url), "urllib"
     if "<rss" not in page[:1000]:
-        raise RuntimeError("answered with something that is not its feed")
+        raise RuntimeError(f"HTTP {status}, not its feed: {' '.join(page[:200].split())!r}")
     return page
 
 
