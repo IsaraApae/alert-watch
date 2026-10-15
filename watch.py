@@ -728,12 +728,6 @@ def anime_list():
     return shows
 
 
-def episode_count(m):
-    """AniList's episode count; while it has none (Yozakura Season 2 Cour 2), the last episode on its airing schedule, which AniList
-    fills in as episodes are announced, so it updates itself."""
-    return m.get("episodes") or max((n["episode"] for n in (m.get("airingSchedule") or {}).get("nodes") or []), default=None)
-
-
 def season_label(m):
     """AniList media -> "Fall 2026, TV"."""
     parts = [f"{m['season'].title()} {m['seasonYear']}" if m.get("season") and m.get("seasonYear") else "", (m.get("format") or "").replace("_", " ")]
@@ -806,7 +800,7 @@ def schedule(state=None):
                              **({"where": site_name(watch)} if watch and i in OTHER_PAGES and urlparse(watch).netloc == urlparse(OTHER_PAGES[i]).netloc else {})})
         rows += [{"ep": n, "at": p, "watch": in_brave(link)} for link, (a, n, p) in kept.items() if a == i]
         rows.sort(key=lambda r: r["at"])
-        total = episode_count(m)
+        total = m.get("episodes")
         out.append({"name": s["name"], "label": season_label(m), "cover": (m.get("coverImage") or {}).get("large"),
                     "total": total and total + s["offset"], "where": thai[i][0] if i in thai else None,
                     "episodes": rows})
@@ -903,7 +897,7 @@ def anime(state):
     | first episode number in the TV schedule | episodes before this AniList entry (added to the count)."""
     shows = anime_list()
     now = int(time.time())
-    query = ("query($ids:[Int],$web:[Int],$a:Int,$b:Int){info:Page(perPage:50){media(id_in:$ids){id episodes season seasonYear format coverImage{large} airingSchedule(perPage:50){nodes{episode}}}}"
+    query = ("query($ids:[Int],$web:[Int],$a:Int,$b:Int){info:Page(perPage:50){media(id_in:$ids){id episodes season seasonYear format coverImage{large}}}"
              " web:Page(perPage:50){airingSchedules(mediaId_in:$web,airingAt_greater:$a,airingAt_lesser:$b){episode airingAt media{id}}}}")
     web_only = [i for i, s in shows.items() if not s["tid"]]
     body = json.dumps({"query": query, "variables": {"ids": list(shows), "web": web_only or [0], "a": now - 8 * 86400, "b": now + 8 * 86400}}).encode()
@@ -1046,7 +1040,7 @@ def anime(state):
         batch = [e for (j, e), d in sorted(due.items()) if j == i and d == due[(i, ep)] and f"{i}:{e}" not in seen and e in on_site]
         if not batch:
             continue
-        total = episode_count(m)
+        total = m.get("episodes")
         tot = f"{total + s['offset']:02d}" if total else "?"
         a, b = batch[0] + s["offset"], batch[-1] + s["offset"]
         link = on_site[batch[0]][0]
@@ -1067,7 +1061,7 @@ def anime(state):
             s, m = shows[i], info.get(i, {})
             if gojo_only(i):
                 continue  # wait for animegojo (handled above): no card at the scheduled time, no video link exists
-            total = episode_count(m)
+            total = m.get("episodes")
             line = episode_line(ep + s["offset"], total and total + s["offset"], t, thai[i][0] if i in thai else None)
             label = f" ({season_label(m)})" if season_label(m) else ""  # e.g. "Fall 2026, TV"
             # if an official channel already has this episode up with Thai subs, the card opens that video; otherwise no link
@@ -1289,8 +1283,6 @@ if __name__ == "__main__":
         x = ('<ProgItem><TID>8</TID><Count>15</Count><StTime>2026-10-02 00:26:00</StTime><Deleted>0</Deleted></ProgItem>'
              '<ProgItem><TID>8</TID><Count>15</Count><StTime>2026-10-02 02:00:00</StTime><Deleted>0</Deleted></ProgItem>'
              '<ProgItem><TID>8</TID><Count>16</Count><StTime>2026-10-08 23:56:00</StTime><Deleted>0</Deleted></ProgItem>')
-        assert episode_count({"episodes": None, "airingSchedule": {"nodes": [{"episode": 1}, {"episode": 12}]}}) == 12  # AniList has no count yet
-        assert episode_count({"episodes": 24, "airingSchedule": {"nodes": [{"episode": 3}]}}) == 24 and episode_count({}) is None
         assert tv_aired(x, {8: [15]}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: [15]}, 1790868600)  # earliest channel, season numbering, nothing future
         x2 = ('<ProgItem><TID>9</TID><Count>1</Count><StTime>2026-10-04 16:30:00</StTime></ProgItem>'
               '<ProgItem><TID>9</TID><Count>26</Count><StTime>2026-10-06 20:00:00</StTime></ProgItem>')
