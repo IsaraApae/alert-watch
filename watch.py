@@ -1230,7 +1230,8 @@ if __name__ == "__main__":
     elif sys.argv[1:] == ["sites"]:
         # can this machine read each anime source? (ordinary requests; a bot check counts as unreadable)
         for name, url in (("animegojo", GOJO + "/"), ("suba-anime", OTHER_PAGES[213657]), ("animeruka", "https://animeruka.com/"),
-                          ("anime-waku", "https://anime-waku.com/")):
+                          ("anime-waku", "https://anime-waku.com/"),
+                          ("animeruka feed", "https://animeruka.com/feed/?post_type=episodes"), ("anime-waku feed", "https://anime-waku.com/feed/?post_type=episodes")):
             try:
                 page = get(url)
                 title = (re.search(r"<title>([^<]*)", page) or [None, "?"])[1].strip()
