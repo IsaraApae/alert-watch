@@ -3023,7 +3023,8 @@
   "176314:2",
   "152677:2",
   "159042:3",
-  "213657:1"
+  "213657:1",
+  "206401:3"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3491,6 +3492,17 @@
    "detected": 1792051221,
    "published": null,
    "notified": true
+  },
+  "206401:3": {
+   "title": "FX Senshi Kurumi-chan",
+   "episode": 3,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=Q_mbTgUGAxI",
+   "detected": 1792068023,
+   "published": 1792067410,
+   "scheduled": 1792067400,
+   "notified": true
   }
  },
  "watch_links": {
@@ -3649,6 +3661,6 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792067419,
+ "anime_checked": 1792068023,
  "suba_dropped": {}
 }
