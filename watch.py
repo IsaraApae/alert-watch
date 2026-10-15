@@ -647,6 +647,7 @@ GOJO_SHIFT = {213657: 12}
 # shows also followed on another site: {AniList id: its series page}, only until anime-waku, animeruka or animegojo
 # carries the show (suba_dropped in the state); from then on those three compete for it. suba-anime was the only place to
 # watch Yozakura Season 2 in Thailand; its page numbers the season 1-24, so Cour 2's episode 1 is its 13 (GOJO_SHIFT).
+# Read with ordinary requests only: if the site ever answers with a bot check, it's reported as a failure, not worked around.
 OTHER_PAGES = {213657: "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/"}
 
 
@@ -659,6 +660,8 @@ def site_episodes(url):
     """{episode number: link} for a series page on animegojo (ซับไทย only) or suba-anime."""
     page = get(url)
     if "suba-anime.com" in url:
+        if "<title>Just a moment" in page:
+            raise RuntimeError("suba-anime answered with a bot check")
         return suba_episodes(page)
     return {n: f"{url.split('#')[0]}#ep-{n}" for n in gojo_sub_episodes(page)}
 
@@ -666,7 +669,8 @@ def site_episodes(url):
 site_name = lambda url: "suba-anime" if "suba-anime.com" in url else "animegojo"
 
 # anime-waku and animeruka: each site's RSS feed of new episodes, which (unlike animegojo) gives every upload's time.
-# If a site can't be read, the run reports it and carries on with the other sites.
+# Read with ordinary requests only: when Cloudflare answers with its bot check (as it has for GitHub's servers), the
+# run reports it and carries on with the other sites; it is never worked around.
 FEEDS = {"anime-waku": "https://anime-waku.com/feed/?post_type=episodes", "animeruka": "https://animeruka.com/feed/?post_type=episodes"}
 
 
@@ -674,14 +678,18 @@ FEED_PROXY = os.environ.get("FEED_PROXY", "")  # a Cloudflare Worker that fetche
 
 
 def read_feed(url):
-    """A site's RSS feed; an error when the site answers with anything else."""
-    if FEED_PROXY:
-        site = next(n for n, u in FEEDS.items() if u == url)
-        page, status = get(f"{FEED_PROXY}&site={site}"), "proxy"
-    else:
-        page, status = get(url), "urllib"
+    """A site's RSS feed; an error when the site answers with anything else (a bot check, a block page)."""
+    try:
+        if FEED_PROXY:
+            site = next(n for n, u in FEEDS.items() if u == url)
+            page, status = get(f"{FEED_PROXY}&site={site}"), "proxy"
+        else:
+            page, status = get(url), "urllib"
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"HTTP {e.code}{' (Cloudflare bot check)' if e.code in (403, 503) else ''}") from None
     if "<rss" not in page[:1000]:
-        raise RuntimeError(f"HTTP {status}, not its feed: {' '.join(page[:200].split())!r}")
+        raise RuntimeError("answered with a bot check, not its feed" if "Just a moment" in page
+                           else f"HTTP {status}, not its feed: {' '.join(page[:200].split())!r}")
     return page
 
 
@@ -1294,20 +1302,23 @@ if __name__ == "__main__":
     elif sys.argv[1:] == ["richmenu"]:
         setup_richmenu()
     elif sys.argv[1:] == ["sites"]:
-        # can this machine read each anime source?
-        for name, url in (("animegojo", GOJO + "/"), ("suba-anime", OTHER_PAGES[213657])):
+        # can this machine read each anime source? (ordinary requests; a bot check counts as unreadable)
+        for name, url in (("animegojo", GOJO + "/"), ("suba-anime", OTHER_PAGES[213657]), ("animeruka", "https://animeruka.com/"),
+                          ("anime-waku", "https://anime-waku.com/"),
+                          ("animeruka feed", "https://animeruka.com/feed/?post_type=episodes"), ("anime-waku feed", "https://anime-waku.com/feed/?post_type=episodes")):
             try:
                 page = get(url)
                 title = (re.search(r"<title>([^<]*)", page) or [None, "?"])[1].strip()
-                print(f"sites {name}: readable ({len(page)} bytes) {title[:60]}")
+                check = "Just a moment" in page or "cf-browser-verification" in page
+                print(f"sites {name}: {'BOT CHECK' if check else 'readable'} ({len(page)} bytes) {title[:60]}")
             except Exception as e:
                 print(f"sites {name}: FAILED {e}")
         for name, url in FEEDS.items():
             try:
                 page = read_feed(url)
-                print(f"sites {name}: readable feed ({len(page)} bytes)")
+                print(f"sites {name} via read_feed: readable feed ({len(page)} bytes)")
             except Exception as e:
-                print(f"sites {name}: FAILED {type(e).__name__}: {e}")
+                print(f"sites {name} via read_feed: FAILED {type(e).__name__}: {e}")
     elif sys.argv[1:] == ["f1check"]:
         # LINE checks the F1 cards (the latest race's results, standings and a live card) without sending anything
         token = os.environ["LINE_TOKEN"]
