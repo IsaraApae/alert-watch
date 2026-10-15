@@ -12,7 +12,7 @@
 :root {
   --bg: #F5F3F7;
   --strip: #F7DBD8;  /* the background's top edge as one solid colour (measured on a phone): status bar, theme-color, page top */
-  --edge: #F4E4EC;   /* its bottom edge (measured on an iPhone): what Safari's bottom bar meets */
+  --edge: #F4E4EC;   /* its bottom edge (measured on an iPhone): what Safari's bottom bar meets; the top's colour comes from the fixed layer at the top edge */
   --wash: 0.17;
   --card: rgba(255, 255, 255, 0.75);
   --text: #1C1C1E;
@@ -75,7 +75,7 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 .past-head { font-size: 15px; font-weight: 650; margin: 28px 4px 4px; opacity: .75; }  /* sections set display: grid, which would otherwise override hiding */
-html { -webkit-text-size-adjust: 100%; background-color: var(--strip); }
+html { -webkit-text-size-adjust: 100%; background-color: var(--edge); }  /* Safari paints the space behind its bottom bar, past the page's end, with this */
 body {
   margin: 0;
   position: relative;
