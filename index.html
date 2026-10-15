@@ -94,9 +94,12 @@ a { color: var(--accent); }
 #strip { position: absolute; inset: 0; z-index: -2; background: linear-gradient(var(--strip), var(--edge) 120px); }
 /* the fixed background, bottom to top: the base colour, the wash, a fade to --edge at the bottom (.floor), then a fade from --strip at the very top */
 body::before, body::after { content: ""; position: fixed; z-index: -1; pointer-events: none; }
-/* the base and .floor run 50vh past the bottom: when Safari's full bottom bar shows, it draws the page below the fixed layers' edge, and the glow there must stay covered */
+/* the base runs 50vh past the bottom: when Safari's full bottom bar shows, it draws the page below the fixed layers' edge */
 body::before { inset: 0 0 -50vh; background: var(--bg); }
-.floor { position: fixed; inset: 0 0 -50vh; z-index: -1; pointer-events: none; background: linear-gradient(to top, var(--edge) 50vh, transparent calc(50vh + 120px)); }
+/* the bottom mirrors the top: a 120px layer on the edge, solid --edge at the edge (Safari takes its bar colour from it);
+   its shadow is solid --edge everywhere below the screen, so the glow there stays covered */
+.floor { position: fixed; left: 0; right: 0; bottom: 0; height: 120px; z-index: -1; pointer-events: none;
+  background: linear-gradient(to top, var(--edge), transparent 120px); box-shadow: 0 60vh 0 60vh var(--edge); }
 body::after { top: 0; left: 0; right: 0; height: 120px; background: linear-gradient(var(--strip), transparent 120px); }
 /* fixed colour wash for the glass to blur */
 .wash { position: fixed; inset: -20vmax; z-index: -1; pointer-events: none; filter: blur(70px); opacity: var(--wash); }
