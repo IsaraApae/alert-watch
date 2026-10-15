@@ -3024,7 +3024,8 @@
   "152677:2",
   "159042:3",
   "213657:1",
-  "206401:3"
+  "206401:3",
+  "213805:3"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3505,6 +3506,17 @@
    "published": 1792067410,
    "scheduled": 1792067400,
    "notified": true
+  },
+  "213805:3": {
+   "title": "The Ramparts of Ice Season 2",
+   "episode": 3,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/3165/#ep-3",
+   "detected": 1792080025,
+   "published": null,
+   "notified": true,
+   "order": "estimated"
   }
  },
  "watch_links": {
@@ -3542,7 +3554,8 @@
   "152677:2": "https://isaraapae.github.io/alert-watch/b.html?v=Kj9JqWmvY1U",
   "159042:3": "https://isaraapae.github.io/alert-watch/b.html?v=orvbliz0Yis",
   "213657:1": "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/ep-13",
-  "206401:3": "https://isaraapae.github.io/alert-watch/b.html?v=Q_mbTgUGAxI"
+  "206401:3": "https://isaraapae.github.io/alert-watch/b.html?v=Q_mbTgUGAxI",
+  "213805:3": "https://animegojos.com/list/3165/#ep-3"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -3663,6 +3676,6 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792079412,
+ "anime_checked": 1792080025,
  "suba_dropped": {}
 }
