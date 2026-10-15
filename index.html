@@ -90,7 +90,8 @@ input, textarea { caret-color: var(--accent); }
 a { color: var(--accent); }
 
 /* in-app browsers (LINE, Facebook, Instagram) colour the status bar strip from theme-color or the page background, so the page's top edge is one solid colour: --strip */
-#strip { position: absolute; inset: 0; z-index: -2; background: var(--strip); }
+/* only its top is --strip: Safari briefly shows this layer behind its bottom bar while the bar grows, so the rest is --edge */
+#strip { position: absolute; inset: 0; z-index: -2; background: linear-gradient(var(--strip), var(--edge) 120px); }
 /* the fixed background, bottom to top: the base colour, the wash, then fades to one solid colour at each edge, so the browser's bars (which take one colour) meet it without a seam: --strip at the top, --edge at the bottom */
 body::before, body::after { content: ""; position: fixed; z-index: -1; pointer-events: none; }
 body::before { inset: 0; background: var(--bg); }
