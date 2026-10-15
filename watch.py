@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Notify (macOS) when a watched manga page lists a chapter it didn't list last run."""
-import email.utils, html, json, os, re, shutil, subprocess, sys, time, unicodedata, urllib.error, urllib.request
+import html, json, os, re, shutil, subprocess, sys, time, unicodedata, urllib.error, urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote, unquote, urlparse
@@ -618,7 +618,7 @@ def specials(videos, shows, since):
     return out
 
 
-GOJO = "https://animegojos.com"  # anime-waku and animeruka are read from their feeds (FEEDS) when they let this machine in
+GOJO = "https://animegojos.com"
 
 
 def gojo_latest(page, shows):
@@ -644,10 +644,9 @@ def gojo_sub_episodes(page):
 # animegojo may carry a new cour on an older page: Yozakura Season 2 Cour 1 was its 1-12, so its 13 would be Cour 2's 1
 GOJO_SHIFT = {213657: 12}
 
-# shows also followed on another site: {AniList id: its series page}, only until anime-waku, animeruka or animegojo
-# carries the show (suba_dropped in the state); from then on those three compete for it. suba-anime was the only place to
-# watch Yozakura Season 2 in Thailand; its page numbers the season 1-24, so Cour 2's episode 1 is its 13 (GOJO_SHIFT).
-# Read with ordinary requests only: if the site ever answers with a bot check, it's reported as a failure, not worked around.
+# shows also followed on another site: {AniList id: its series page}, only until animegojo carries the show
+# (suba_dropped in the state). suba-anime was the only place to watch Yozakura Season 2 in Thailand; its page numbers
+# the season 1-24, so Cour 2's episode 1 is its 13 (GOJO_SHIFT).
 OTHER_PAGES = {213657: "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/"}
 
 
@@ -660,48 +659,11 @@ def site_episodes(url):
     """{episode number: link} for a series page on animegojo (ซับไทย only) or suba-anime."""
     page = get(url)
     if "suba-anime.com" in url:
-        if "<title>Just a moment" in page:
-            raise RuntimeError("suba-anime answered with a bot check")
         return suba_episodes(page)
     return {n: f"{url.split('#')[0]}#ep-{n}" for n in gojo_sub_episodes(page)}
 
 
 site_name = lambda url: "suba-anime" if "suba-anime.com" in url else "animegojo"
-
-# anime-waku and animeruka: each site's RSS feed of new episodes, which (unlike animegojo) gives every upload's time.
-# Read with ordinary requests only: when Cloudflare answers with its bot check (as it has for GitHub's servers), the
-# run reports it and carries on with the other sites; it is never worked around.
-FEEDS = {"anime-waku": "https://anime-waku.com/feed/?post_type=episodes", "animeruka": "https://animeruka.com/feed/?post_type=episodes"}
-
-
-def read_feed(url):
-    """A site's RSS feed; an error when the site answers with anything else (a bot check, a block page)."""
-    try:
-        page = get(url)
-    except urllib.error.HTTPError as e:
-        raise RuntimeError(f"HTTP {e.code}{' (Cloudflare bot check)' if e.code in (403, 503) else ''}") from None
-    if "<rss" not in page[:1000]:
-        raise RuntimeError("answered with a bot check, not its feed" if "Just a moment" in page else "answered with something that is not its feed")
-    return page
-
-
-def feed_episodes(xml, shows):
-    """[(AniList id, episode, link, upload time)] for tracked shows in a site's episode feed, ซับไทย posts only.
-    Titles look like "Tensei shitara Ken deshita II ... (ภาค2) ตอนที่ 3 ซับไทย"; a post of several is "ตอนที่ 1-12"."""
-    out = []
-    for item in re.findall(r"<item>(.*?)</item>", xml, re.S):
-        tag = lambda name: (re.search(rf"<{name}>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</{name}>", item, re.S) or [None, ""])[1].strip()
-        title, link, pub = html.unescape(tag("title")).lower(), html.unescape(tag("link")), tag("pubDate")
-        num = re.search(r"ตอนที่\s*(\d+)(?:\s*-\s*(\d+))?", title)
-        if not (num and link and pub) or "ซับไทย" not in title or "พากย์ไทย" in title:
-            continue
-        name = title[:num.start()]
-        aid = next((i for i, s in shows.items() if s["yt"] and re.search(s["yt"], name)), None)
-        if aid:
-            ts = int(email.utils.parsedate_to_datetime(pub).timestamp())
-            out += [(aid, n, link, ts) for n in range(int(num[1]), int(num[2] or num[1]) + 1)]
-    return out
-
 
 def anime_list():
     """anime.txt: name | AniList id | TV-schedule id (0 = none) | first episode number(s) in the TV schedule, comma-separated when channels count differently
@@ -781,7 +743,7 @@ def schedule(state=None):
             if now - 8 * 86400 <= t <= now + 60 * 86400:
                 yt = t <= now and s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
                 rec = state.get("first_source", {}).get(f"{i}:{ep}", {})  # the animegojo episode page, if that's where it was found first
-                watch = (in_brave(yt) if yt else None) or links.get(f"{i}:{ep}") or (rec["url"] if rec.get("first") in ("animegojo", "suba-anime", *FEEDS) else None)
+                watch = (in_brave(yt) if yt else None) or links.get(f"{i}:{ep}") or (rec["url"] if rec.get("first") in ("animegojo", "suba-anime") else None)
                 if not watch and t <= now and (str(i) in pages or i in OTHER_PAGES) and not (i in thai and thai[i][0] in YT_CHANNELS.values()):
                     shift, have = on_gojo(i)  # aired, no button yet: the episode on its animegojo (or suba-anime) page, if it's up there
                     watch = have.get(ep + s["offset"] + shift)
@@ -970,20 +932,14 @@ def anime(state):
                 state.setdefault("gojo_pages", {})[str(i)] = [path, shift]
                 found += [(i, e + s["offset"] + shift, f"{GOJO}{path}#ep-{e + s['offset'] + shift}") for e, t in due_eps if e + s["offset"] + shift in added]
                 break
-    # every site that has an episode competes, and the fastest one gets the episode's one card: anime-waku and animeruka
-    # by their feeds' upload times; animegojo and suba-anime show none, so an episode first seen on them in this check is
-    # taken as uploaded halfway between the last check and this one
+    # every site that has an episode competes, and the first one to have it gets the episode's one card; the sites show no
+    # upload times, so an episode first seen in this check is taken as uploaded halfway between the last check and this one
     last = state.get("anime_checked")
     mid = (last + now) // 2 if last and 0 < now - last <= 2 * 3600 else now
     state["anime_checked"] = now
     hits = [(mid, "animegojo", i, n, link) for i, n, link in found]
-    for site, url in (FEEDS.items() if not seed else []):
-        try:
-            hits += [(ts, site, i, n, link) for i, n, link, ts in feed_episodes(read_feed(url), shows)]
-        except Exception as e:
-            print(f"FAIL {site}: {e}", file=sys.stderr)
     to_ep = lambda i, n: next((e for e in (n - shows[i]["offset"], n - shows[i]["offset"] - GOJO_SHIFT.get(i, 0)) if (i, e) in due), None)
-    # suba-anime is for Yozakura only, and only until one of the three sites carries it: from then on those three compete
+    # suba-anime is for Yozakura only, and only until animegojo carries it
     dropped = state.setdefault("suba_dropped", {})  # {AniList id: the site that had it}
     for t, site, i, n, link in hits:
         if i in OTHER_PAGES and str(i) not in dropped and to_ep(i, n) is not None:
@@ -1009,20 +965,18 @@ def anime(state):
         if ep is None or f"{i}:{ep}" in seen or not gojo_only(i) or not due[(i, ep)] - 8 * 86400 <= t <= now:
             continue  # shows on Muse/Ani-One are alerted from there only; an old post is an earlier season's
         # every episode of the show on this site, by this cour's numbering
-        if site in FEEDS:
-            on_site = {to_ep(j, k): (l, ts) for ts, w, j, k, l in sorted(hits, key=lambda h: h[0], reverse=True) if w == site and j == i}
-        else:  # animegojo or suba-anime: read the series page (checks animegojo's is ซับไทย)
-            page_url = OTHER_PAGES[i] if site == "suba-anime" else link.split("#")[0]
-            try:
-                if page_url not in pages_read:
-                    pages_read[page_url] = site_episodes(page_url)
-            except Exception as e:
-                print(f"FAIL {site} {link}: {e}", file=sys.stderr)
-                continue
-            shift = n - s["offset"] - ep
-            on_site = {k - s["offset"] - shift: (l, None) for k, l in pages_read[page_url].items()}
-            if site == "animegojo":
-                state.setdefault("gojo_pages", {})[str(i)] = [page_url[len(GOJO):], shift]  # for the website's Watch buttons
+        # animegojo or suba-anime: read the series page (checks animegojo's is ซับไทย)
+        page_url = OTHER_PAGES[i] if site == "suba-anime" else link.split("#")[0]
+        try:
+            if page_url not in pages_read:
+                pages_read[page_url] = site_episodes(page_url)
+        except Exception as e:
+            print(f"FAIL {site} {link}: {e}", file=sys.stderr)
+            continue
+        shift = n - s["offset"] - ep
+        on_site = {k - s["offset"] - shift: (l, None) for k, l in pages_read[page_url].items()}
+        if site == "animegojo":
+            state.setdefault("gojo_pages", {})[str(i)] = [page_url[len(GOJO):], shift]  # for the website's Watch buttons
         # every not-yet-alerted episode due at the same time as this one: a whole season released at once gets one card
         batch = [e for (j, e), d in sorted(due.items()) if j == i and d == due[(i, ep)] and f"{i}:{e}" not in seen and e in on_site]
         if not batch:
@@ -1249,15 +1203,6 @@ if __name__ == "__main__":
         series = '<title>Tensei Kizoku 3rd Season (ซับไทย) ตอนที่ 1-2</title><a href="#ep-1">1</a><a href="#ep-2">2</a>'
         assert gojo_sub_episodes(series) == {1, 2}
         assert gojo_sub_episodes(series.replace("ซับไทย", "พากย์ไทย")) == set()  # dubbed page
-        feed = ('<rss version="2.0"><channel><item><title>Tensei shitara Ken deshita II Season 2 ซวยเหลือหลายเกิดใหม่กลายเป็นดาบ (ภาค2) ตอนที่ 3 ซับไทย</title>'
-                '<link>https://anime-waku.com/ep/113639/</link><pubDate>Wed, 14 Oct 2026 15:51:01 +0000</pubDate></item>'
-                '<item><title>Tensei shitara Ken deshita II ตอนที่ 3 พากย์ไทย</title><link>https://anime-waku.com/ep/1/</link><pubDate>Wed, 14 Oct 2026 16:00:00 +0000</pubDate></item>'
-                '<item><title>Edgerunners 2 ตอนที่ 1-3 ซับไทย</title><link>https://animeruka.com/ep/e/</link><pubDate>Thu, 15 Oct 2026 04:30:27 +0000</pubDate></item>'
-                '<item><title>Black Clover ตอนที่ 2 ซับไทย</title><link>https://anime-waku.com/ep/2/</link><pubDate>Thu, 15 Oct 2026 04:00:00 +0000</pubDate></item></channel></rss>')
-        fs = {7: {"yt": "กลายเป็นดาบ|tensei shitara ken"}, 8: {"yt": "edgerunners"}}
-        wed = int(datetime(2026, 10, 14, 15, 51, 1, tzinfo=timezone.utc).timestamp())
-        thu = int(datetime(2026, 10, 15, 4, 30, 27, tzinfo=timezone.utc).timestamp())
-        assert feed_episodes(feed, fs) == [(7, 3, "https://anime-waku.com/ep/113639/", wed)] + [(8, n, "https://animeruka.com/ep/e/", thu) for n in (1, 2, 3)]
         assert specials(vids, sp, 50) == [(1, "13.5", "a", 100, "Ani-One Thailand"), (1, "0", "b", 100, "Ani-One Thailand")]
         assert in_brave("https://www.youtube.com/watch?v=j7zFyWX6t8M") == BRAVE + "j7zFyWX6t8M"
         T = datetime(2026, 10, 4, 21, 30, tzinfo=THAI).timestamp()
@@ -1294,15 +1239,12 @@ if __name__ == "__main__":
     elif sys.argv[1:] == ["richmenu"]:
         setup_richmenu()
     elif sys.argv[1:] == ["sites"]:
-        # can this machine read each anime source? (ordinary requests; a bot check counts as unreadable)
-        for name, url in (("animegojo", GOJO + "/"), ("suba-anime", OTHER_PAGES[213657]), ("animeruka", "https://animeruka.com/"),
-                          ("anime-waku", "https://anime-waku.com/"),
-                          ("animeruka feed", "https://animeruka.com/feed/?post_type=episodes"), ("anime-waku feed", "https://anime-waku.com/feed/?post_type=episodes")):
+        # can this machine read each anime source?
+        for name, url in (("animegojo", GOJO + "/"), ("suba-anime", OTHER_PAGES[213657])):
             try:
                 page = get(url)
                 title = (re.search(r"<title>([^<]*)", page) or [None, "?"])[1].strip()
-                check = "Just a moment" in page or "cf-browser-verification" in page
-                print(f"sites {name}: {'BOT CHECK' if check else 'readable'} ({len(page)} bytes) {title[:60]}")
+                print(f"sites {name}: readable ({len(page)} bytes) {title[:60]}")
             except Exception as e:
                 print(f"sites {name}: FAILED {e}")
     elif sys.argv[1:] == ["f1check"]:
