@@ -50,13 +50,31 @@ def get(url):
         raise
 
 
+CARD_KIND = {"New episode": ("NEW EPISODE", "Watch"), "Watch now": ("WATCH NOW", "Watch"), "New special": ("NEW SPECIAL", "Watch"),
+             "New chapter": ("NEW CHAPTER", "Read")}
+
+
 def card(title, msg, image, uri=None):
-    """A small LINE card: cover on the left, title and chapter on the right; tapping anywhere opens uri, if given."""
-    text = lambda t, **k: {"type": "text", "text": t, "size": "sm", "wrap": True, **k}
+    """A LINE card in the anime website's style: a white rounded card on its soft lavender background, the cover tall
+    with rounded corners, a small red label (NEW EPISODE, NEW CHAPTER), the title, the details in grey, and a Watch or
+    Read pill. Tapping anywhere opens uri, if given."""
+    kind, _, name = title.partition(": ")
+    label, verb = CARD_KIND.get(kind, (kind.upper(), "Open")) if name else ("", "Open")
+    t = lambda x, **k: {"type": "text", "text": x, "wrap": True, **k}
+    info = ([t(label, size="xxs", weight="bold", color="#DF1B2B")] if label else []) + [
+        t(name or title, size="sm", weight="bold", color="#1C1C1E"), t(msg, size="xs", color="#636366")]
+    if uri:
+        info.append({"type": "box", "layout": "horizontal", "margin": "md", "contents": [
+            {"type": "box", "layout": "horizontal", "flex": 0, "cornerRadius": "999px", "backgroundColor": "#FDE8EA", "paddingTop": "6px",
+             "paddingBottom": "6px", "paddingStart": "14px", "paddingEnd": "14px", "action": {"type": "uri", "label": verb, "uri": uri},
+             "contents": [t(f"▶ {verb}", size="xs", weight="bold", color="#DF1B2B", flex=0, wrap=False)]}]})
     return {"type": "bubble", "size": "kilo", **({"action": {"type": "uri", "label": "open", "uri": uri}} if uri else {}),
-            "body": {"type": "box", "layout": "horizontal", "spacing": "md", "contents": [
-                {"type": "image", "url": image, "size": "sm", "aspectMode": "cover", "aspectRatio": "1:1", "flex": 0},
-                {"type": "box", "layout": "vertical", "contents": [text(title, weight="bold"), text(msg, color="#777777")]}]}}
+            "body": {"type": "box", "layout": "vertical", "backgroundColor": "#F5F3F7", "paddingAll": "10px", "contents": [
+                {"type": "box", "layout": "horizontal", "backgroundColor": "#FFFFFF", "cornerRadius": "20px", "paddingAll": "12px",
+                 "spacing": "md", "alignItems": "flex-start", "contents": [
+                    {"type": "box", "layout": "vertical", "width": "64px", "flex": 0, "cornerRadius": "12px", "backgroundColor": "#E9E6EE", "contents": [
+                        {"type": "image", "url": image, "aspectMode": "cover", "aspectRatio": "2:3", "size": "full"}]},
+                    {"type": "box", "layout": "vertical", "spacing": "xs", "contents": info}]}]}}
 
 
 def notify(title, msg, links, image=None, uri=None):
@@ -1182,7 +1200,11 @@ if __name__ == "__main__":
         meeting = json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}"))[0]
         when = datetime.fromisoformat(s["date_start"]).astimezone(THAI).strftime("%a %d %b %Y · %H:%M")
         rows = f1_rows(json.loads(get(f"{OPENF1}/session_result?session_key={key}")), drivers)
-        cards = {"results": {"type": "flex", "altText": "check", "contents": f1_card(meeting, "Race", when, rows, key)},
+        sample = "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-ELSYx3yMPcKM.jpg"
+        cards = {"anime card": {"type": "flex", "altText": "check", "contents": card("New episode: One Piece (Fall 2026, TV)",
+                                                                                   "Episode 01/?\nNetflix · 15 Oct 2026 22:30", sample, "https://www.youtube.com/")},
+                 "manga card": {"type": "flex", "altText": "check", "contents": card("New chapter: Reality Quest", "ตอนที่ 225", sample, "https://example.com/")},
+                 "results": {"type": "flex", "altText": "check", "contents": f1_card(meeting, "Race", when, rows, key)},
                  "live": {"type": "flex", "altText": "check", "contents": f1_live_card(meeting, "Race", when, True)}}
         captured, line_send = [], lambda token, message: captured.append(message) or True   # module level: f1_standings now captures instead of sending
         f1_standings({}, token, s, meeting)
