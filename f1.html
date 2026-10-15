@@ -704,7 +704,10 @@ function prepare(sess, meet, g) {
     sess, meet, byDriver, start, form, end: Math.max(lastEnd + 60000, start + 60000),
     totalLaps: Math.max(0, ...g.laps.map(l => l.lap_number || 0)),
     drivers: g.drivers, positions: g.position.map(p => ({ at: t(p.date), n: String(p.driver_number), p: p.position })).sort((a, b) => a.at - b.at),
-    stints: g.stints, pits: g.pit.map(p => ({ at: t(p.date), n: String(p.driver_number), lap: p.lap_number, lane: p.lane_duration || p.pit_duration, dur: p.lane_duration || p.pit_duration || 25 })),
+    stints: g.stints, // OpenF1's pit time is near the END of the pit lane: checked against car positions (Singapore 2026), cars leave the track
+    // about (lane time + 2) s before it and rejoin about 5.5 s after it
+    pits: g.pit.map(p => { const at = t(p.date), lane = p.lane_duration || p.pit_duration || 25;
+      return { at, n: String(p.driver_number), lap: p.lap_number, lane: p.lane_duration || p.pit_duration, dur: lane, in: at - (lane + 2) * 1000, out: at + 5500 }; }),
     // qualifying parts: starts (and restarts after a red flag) and chequered flags. OpenF1 sometimes leaves Q1 unlabelled: that's Q1
     ...(() => {
       const quali = /Qualifying|Shootout/.test(sess.session_name) && g.race_control.some(m => m.qualifying_phase);
@@ -771,7 +774,7 @@ function buildReplay() {   // the session as it stood at R.t, in the live feed's
     const laps = D.byDriver[n] || [], fin = done[n] || [], cur = laps.find(l => l.start <= at && at < l.end);
     const last = fin[fin.length - 1], pb = quali ? quali.best[n] : fastest(fin), res = D.result[n] || {};
     const retired = (res.dnf || res.dns) && (!laps.length || at > laps[laps.length - 1].end + 30000);
-    const pit = D.pits.find(p => p.n === n && p.at <= at && at <= p.at + p.dur * 1000);
+    const pit = D.pits.find(p => p.n === n && p.in <= at && at <= p.out);
     const sectors = [0, 1, 2].map(k => {   // this lap's finished sectors; the running one's mini-sectors filling in
       const L = cur || last; if (!L) return { Value: "", Segments: [] };
       const startK = L.start + 1000 * L.sec.slice(0, k).reduce((a, b) => a + (b || 0), 0), endK = startK + 1000 * (L.sec[k] || 0);
@@ -819,7 +822,7 @@ function buildReplay() {   // the session as it stood at R.t, in the live feed's
       BestLapTime: isFinite(pb) ? { Value: lapText(pb), Position: pb <= bestLap ? 1 : 2 } : {},
       Sectors: sectors, Speeds: { ST: last && last.st ? { Value: String(last.st), OverallFastest: last.st >= bestST, PersonalFastest: last.st >= Math.max(...fin.map(l => l.st || 0)) } : {} },
       InPit: !!pit, PitOut: !!(cur && cur.out && !pit), Retired: !!retired, Stopped: false, KnockedOut: !!(quali && quali.out[n]),
-      NumberOfPitStops: D.pits.filter(p => p.n === n && p.at <= at).length, _stints: stints, _grid: grid[n], _lap: cur, _laps: laps
+      NumberOfPitStops: D.pits.filter(p => p.n === n && p.in <= at).length, _stints: stints, _grid: grid[n], _lap: cur, _laps: laps
     };
     stats[n] = { BestSectors: [0, 1, 2].map(k => { const v = Math.min(...fin.map(l => l.sec[k] || Infinity)); return isFinite(v) ? { Value: v.toFixed(3), _v: v } : {}; }) };
   });
@@ -1392,7 +1395,7 @@ function renderPits() {
   const race = (S.SessionInfo || {}).Type === "Race";
   show("p-pits", race);
   if (!race) return;
-  const stops = mode === "replay" ? R.data.pits.filter(p => p.lap && p.at + p.dur * 1000 <= R.t).map(p => ({ n: p.n, lap: p.lap, dur: p.lane })) : Object.values(pitLog);
+  const stops = mode === "replay" ? R.data.pits.filter(p => p.lap && p.out <= R.t).map(p => ({ n: p.n, lap: p.lap, dur: p.lane })) : Object.values(pitLog);
   const app = (S.TimingAppData || {}).Lines || {};
   const tyresAt = (n, lap) => {   // the sets before and after a stop: the stint that began nearest that lap
     const st = list((app[n] || {}).Stints); let cum = 0, best = -1, bd = Infinity;
@@ -1587,7 +1590,7 @@ async function outlineFromLap(sk) {   // the track from one ordinary lap's car p
 async function pitLaneFrom(sk) {   // one ordinary pit stop's path: the stretch where the car is off the racing line
   const stops = (await of1(`pit?session_key=${sk}`)).filter(p => p.lane_duration > 12 && p.lane_duration < 45);
   if (!stops.length) return null;
-  const p = stops[0], a = Date.parse(p.date) - 12000, b = Date.parse(p.date) + (p.lane_duration + 12) * 1000;
+  const p = stops[0], a = Date.parse(p.date) - (p.lane_duration + 15) * 1000, b = Date.parse(p.date) + 15000;   // the whole lane: it ends ~5 s after the pit time
   const pts = (await of1(`location?session_key=${sk}&driver_number=${p.driver_number}&date>=${isoAt(a)}&date<=${isoAt(b)}`)).filter(q => q.x || q.y);
   const off = pts.map(q => { let m = Infinity; for (let i = 0; i < circuit.x.length; i += 2) m = Math.min(m, (circuit.x[i] - q.x) ** 2 + (circuit.y[i] - q.y) ** 2); return Math.sqrt(m) > 45; });
   let best = [0, -1], run = null;   // the longest stretch off the track
@@ -1625,6 +1628,7 @@ function drawPit() {   // the pit lane: drawn alongside the stretch of track it 
   // how far along the lane the recorded car was at each moment (so pitting cars slow down and stop where it did)
   const rc = [0]; for (let i = 1; i < real.length; i++) rc.push(rc[i - 1] + Math.hypot(real[i][0] - real[i - 1][0], real[i][1] - real[i - 1][1]));
   pitLane.df = rc.map(c => c / (rc[rc.length - 1] || 1)); pitLane.along = along; pitLane.total = total; pitLane.even = P; pitLane.screen = P;
+  pitLane.fe = trackLen[ie]; pitLane.fx = trackLen[ix];
   const d = pathOf(P);
   g.innerHTML = `<path class="road" d="${d}" fill="none" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`;   // a thin solid line beside the track
   $("pitTop").innerHTML = "";
@@ -1717,7 +1721,16 @@ function lapFraction(num, l, t = now()) {
       return go - slot;
     }
     const L = (l._laps || []).find(x => x.start <= t && t < x.end) || l._lap;
-    return L && L.dur ? (t - L.start) / (L.dur * 1000) : null;
+    if (!L || !L.dur) return null;
+    let f = (t - L.start) / (L.dur * 1000);
+    // around a pit stop, bend the in-lap so the car reaches the pit entry as it goes in, and the out-lap so it leaves from the exit
+    const stop = pitLane && pitLane.fe != null && D.pits.find(p => p.n === num && L.start <= p.out && p.in <= L.end);
+    if (stop) {
+      const at = x => (x - L.start) / (L.dur * 1000), near = (target, v) => target + Math.round(v - target);
+      if (t < stop.in && stop.in < L.end) { const v = at(stop.in), fe = near(pitLane.fe, v); f += (fe - v) * (t - L.start) / (stop.in - L.start); }
+      else if (t > stop.out && stop.out > L.start) { const v = at(stop.out), fx = near(pitLane.fx, v); f += (fx - v) * (L.end - t) / (L.end - stop.out); }
+    }
+    return f;
   }
   const p = prog[num]; if (!p || !p.total) return null;
   const lap = (seconds((l.LastLapTime || {}).Value) || seconds((l.BestLapTime || {}).Value) || 100) * 1000;
@@ -1731,7 +1744,7 @@ let lastFrame = 0;
 const SVGNS = "http://www.w3.org/2000/svg";
 const pitSince = {};   // live: when each car was first seen in the pit lane
 function pitProgress(num, at) {   // how far through the pit lane a pitting car is (0..1)
-  if (mode === "replay") { const p = R.data.pits.find(x => x.n === num && x.at <= at && at <= x.at + x.dur * 1000); return p ? (at - p.at) / (p.dur * 1000) : 0.5; }
+  if (mode === "replay") { const p = R.data.pits.find(x => x.n === num && x.in <= at && at <= x.out); return p ? (at - p.in) / (p.out - p.in) : 0.5; }
   const since = pitSince[num] = pitSince[num] || at, lanes = Object.values(pitLog).map(s => s.dur * 1000).sort((a, b) => a - b);
   return Math.min(0.97, (at - since) / (lanes.length ? lanes[lanes.length >> 1] : 22000));   // waits near the exit if it takes longer
 }
@@ -1748,12 +1761,14 @@ function animateCars(ts) {   // each car: a dot on the racing line, with its tag
     if (l.Retired || l.Stopped) continue;
     // in the pit lane: pitting, or everyone under a red flag (parked in running order, the leader nearest the exit)
     let pf = null;
+    // in the pit lane? A replay decides it at this very frame (the timing table's flag only updates 4 times a second)
+    const inPit = mode === "replay" ? R.data.pits.some(p => p.n === num && p.in <= at && at <= p.out) : l.InPit;
     if (pitLane && pitLane.screen) {
       if (red) pf = 0.9 - 0.8 * running.indexOf(num) / Math.max(1, running.length - 1);
-      else if (l.InPit) pf = pitProgress(num, at);
+      else if (inPit) pf = pitProgress(num, at);
     }
-    if (l.InPit && pf == null) { delete pitSince[num]; continue; }
-    if (!l.InPit) delete pitSince[num];
+    if (inPit && pf == null) { delete pitSince[num]; continue; }
+    if (!inPit) delete pitSince[num];
     const target = pf != null ? null : lapFraction(num, l, at); if (pf == null && target == null) continue;
     let c = cars[num];
     if (!c) {
@@ -1767,9 +1782,11 @@ function animateCars(ts) {   // each car: a dot on the racing line, with its tag
     if (pf != null) {   // in the pit lane: glide there, then follow the lane
       const [px, py] = pitPointAt(pf);
       if (c.x == null || !c.inPit) { c.x = c.x == null ? px : c.x; c.y = c.y == null ? py : c.y; }
-      const k = c.inPit ? 1 : Math.min(1, dt * 3); c.x += (px - c.x) * k; c.y += (py - c.y) * k;
+      const far = Math.hypot(px - c.x, py - c.y), k = c.inPit || far < 6 ? 1 : Math.min(1, dt * 3);   // glide only if it was somewhere else (a red flag)
+      c.x += (px - c.x) * k; c.y += (py - c.y) * k;
       if (Math.hypot(px - c.x, py - c.y) < 0.5) c.inPit = true;
     } else {
+      if (c.inPit && mode !== "replay" && pitLane && pitLane.fx != null) c.f = pitLane.fx;   // live: just out of the pits, carry on from the exit
       c.inPit = false;
       // replay: exactly where its lap timing puts it. Live: ease toward the estimate, so a timing mark that comes early or late isn't a jump
       let diff = target - c.f; diff -= Math.round(diff);
