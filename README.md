@@ -55,15 +55,20 @@ From 15 minutes before an F1 session starts to 30 minutes after, LINE gets one c
 
 A card with the official F1 logo after every session of each Grand Prix weekend: **Practice 1, 2 and 3, Sprint Qualifying, Sprint, Qualifying and Race**, sent once each when the results come out (`f1_sessions` in `ci-state.json`).
 
-- Dark F1 header: the Grand Prix with its flag, the session, and the Thai start time.
-- The top 3 with their photos on their team colour.
-- Everyone else in order: position, team-colour stripe, photo, name, team and time.
+The cards use the F1 Live page's look: navy panels and the page's driver tags (the car number on the team colour, the three-letter name tinted with it).
+
+- Header: the F1 logo, the Grand Prix with its flag, the session, and the Thai start time.
+- The top 3 with their photos on their team colour, P1 in red, each with their driver tag and time.
+- Everyone else as the page's timing table: position, driver tag, name and time, in striped rows.
+- A red **Watch replay** button that opens the session's replay on the F1 Live page.
 - The time column shows:
   - practice: best lap, then the gap to the fastest;
   - qualifying and sprint qualifying: the lap from the last part reached (Q3 for the top 10);
   - sprint and race: total time, then the gap, laps down, or DNF/DNS/DSQ. An unclassified driver is shown as NC in the position column.
 
-After each race, the **Drivers' and Teams' Championships** follow as two swipeable cards, with driver photos and team logos. Each line shows the position, the change since before the race (+1 in green, -1 in red), and the points with how many were gained (`f1_standings` in `ci-state.json`).
+After each race, the **Drivers' and Teams' Championships** follow as two swipeable cards in the same style, with driver photos and white team logos (as on the page in dark mode). Each line shows the position, the change since before the race (+1 in green, -1 in red), and the points with how many were gained (`f1_standings` in `ci-state.json`).
+
+`python3 watch.py f1check` (the **f1check** option when running the workflow by hand) has LINE check the cards, built from the latest race, without sending anything; LINE takes at most 30 KB a card, and a drivers' standings card that would be bigger is sent without faces.
 
 Times on the cards are Thai time, and race lengths are written as "1h 42m 00.785s". Results, standings and team colours come from the free [OpenF1](https://openf1.org) API. Driver photos are formula1.com's portraits for the current season, cropped to the face. OpenF1's own photo links are last season's, in old team suits, and rookies have none.
 
