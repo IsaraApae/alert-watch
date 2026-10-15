@@ -3,14 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F5F3F7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F7DBD8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#3A1209" media="(prefers-color-scheme: dark)">
 <title>Alert Watch Anime</title>
 <script>try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
 <style>
 /* Layout: one 640px column, two views: next episode (countdown, then today and the next six days) and a Monday-to-Sunday timetable; glass only on the Watch buttons. */
 :root {
   --bg: #F5F3F7;
+  --strip: #F7DBD8;  /* the background's top edge as one solid colour (measured on a phone): status bar, theme-color, page top */
   --wash: 0.17;
   --card: rgba(255, 255, 255, 0.75);
   --text: #1C1C1E;
@@ -32,6 +33,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #000000;
+    --strip: #3A1209;
     --wash: 0.26;
     --card: rgba(28, 28, 30, 0.75);
     --text: #F2F2F7;
@@ -50,6 +52,7 @@
 }
 :root[data-theme="dark"] {
   --bg: #000000;
+  --strip: #3A1209;
   --wash: 0.26;
   --card: rgba(28, 28, 30, 0.75);
   --text: #F2F2F7;
@@ -69,10 +72,11 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 .past-head { font-size: 15px; font-weight: 650; margin: 28px 4px 4px; opacity: .75; }  /* sections set display: grid, which would otherwise override hiding */
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; background-color: var(--strip); }
 body {
   margin: 0;
-  background: var(--bg);
+  position: relative;
+  min-height: 100vh;
   color: var(--text);
   font: 17px/1.45 var(--font);
   -webkit-font-smoothing: antialiased;
@@ -82,6 +86,12 @@ input, textarea { caret-color: var(--accent); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 a { color: var(--accent); }
 
+/* in-app browsers (LINE, Facebook, Instagram) colour the status bar strip from theme-color or the page background, so the page's top edge is one solid colour: --strip */
+#strip { position: absolute; inset: 0; z-index: -2; background: var(--strip); }
+/* the fixed background, bottom to top: the base colour, the wash, then a fade from --strip at the very top */
+body::before, body::after { content: ""; position: fixed; z-index: -1; pointer-events: none; }
+body::before { inset: 0; background: var(--bg); }
+body::after { top: 0; left: 0; right: 0; height: 120px; background: linear-gradient(var(--strip), transparent 120px); }
 /* fixed colour wash for the glass to blur */
 .wash { position: fixed; inset: -20vmax; z-index: -1; pointer-events: none; filter: blur(70px); opacity: var(--wash); }
 .wash i { position: absolute; width: 60vmax; height: 60vmax; border-radius: 50%; }
@@ -94,7 +104,7 @@ a { color: var(--accent); }
   max-width: 640px;
   margin: 0 auto;
   padding-inline: 16px;
-  padding-block: calc(env(safe-area-inset-top, 0px) + 20px) calc(env(safe-area-inset-bottom, 0px) + 40px);
+  padding-block: calc(env(safe-area-inset-top, 0px) + 20px) calc(env(safe-area-inset-bottom, 0px) + 96px);  /* the end of the page scrolls clear of the bottom blur */
   display: grid;
   gap: 14px;
 }
@@ -168,6 +178,17 @@ section { display: grid; gap: 14px; scroll-margin-top: 90px; }
 }
 .label b.today { color: var(--accent); }
 
+/* progressive blur at the bottom, under the browser's toolbar: stacked layers, stronger towards the edge (no mask, no colour fade).
+   For a top blur, copy it with top: 0 instead of bottom: 0 on the container and the layers. */
+.fade-blur { position: fixed; left: 0; right: 0; bottom: 0; height: calc(env(safe-area-inset-bottom, 0px) + 96px); z-index: 1; pointer-events: none; transform: translateZ(0); }
+.fade-blur i { position: absolute; left: 0; right: 0; bottom: 0; }
+.fade-blur i:nth-child(1) { height: 100%; -webkit-backdrop-filter: blur(0.5px); backdrop-filter: blur(0.5px); }
+.fade-blur i:nth-child(2) { height: 80%; -webkit-backdrop-filter: blur(1px); backdrop-filter: blur(1px); }
+.fade-blur i:nth-child(3) { height: 62%; -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.fade-blur i:nth-child(4) { height: 45%; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.fade-blur i:nth-child(5) { height: 30%; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.fade-blur i:nth-child(6) { height: 16%; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+
 .primary {
   border: 0; border-radius: 999px; min-height: 44px; padding: 0 20px; cursor: pointer;
   background: var(--primary); color: #fff; font: 600 16px var(--font);
@@ -180,6 +201,7 @@ section { display: grid; gap: 14px; scroll-margin-top: 90px; }
 </style>
 </head>
 <body>
+<div id="strip"></div>
 <div class="wash" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
 
 <main class="page">
@@ -211,6 +233,7 @@ section { display: grid; gap: 14px; scroll-margin-top: 90px; }
     </div>
   </section>
 </main>
+<div class="fade-blur" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
 
 <script>
 // Data comes from schedule.json, which the Alert Watch cloud job rewrites whenever the schedule changes.
@@ -414,7 +437,14 @@ function setTheme(choice) {
   if (choice === "device") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = choice;
   try { choice === "device" ? localStorage.removeItem("theme") : localStorage.setItem("theme", choice); } catch (e) {}
   document.querySelectorAll("[data-choice]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.choice === choice)));
+  stripColour();
 }
+// the browser's status bar strip follows theme-color: give it --strip for the theme in use (both metas, so a chosen theme beats the device's)
+function stripColour() {
+  const c = getComputedStyle(document.documentElement).getPropertyValue("--strip").trim();
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.content = c);
+}
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", stripColour);
 document.querySelectorAll("[data-choice]").forEach(b => b.onclick = () => setTheme(b.dataset.choice));
 setTheme(document.documentElement.dataset.theme || "device");
 
