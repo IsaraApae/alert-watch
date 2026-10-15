@@ -1303,6 +1303,12 @@ if __name__ == "__main__":
                 print(f"sites {name}: readable ({len(page)} bytes) {title[:60]}")
             except Exception as e:
                 print(f"sites {name}: FAILED {e}")
+        for name, url in FEEDS.items():
+            try:
+                page = read_feed(url)
+                print(f"sites {name}: readable feed ({len(page)} bytes)")
+            except Exception as e:
+                print(f"sites {name}: FAILED {type(e).__name__}: {e}")
     elif sys.argv[1:] == ["f1check"]:
         # LINE checks the F1 cards (the latest race's results, standings and a live card) without sending anything
         token = os.environ["LINE_TOKEN"]
