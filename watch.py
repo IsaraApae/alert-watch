@@ -55,9 +55,9 @@ CARD_KIND = {"New episode": ("NEW EPISODE", "Watch"), "Watch now": ("WATCH NOW",
 
 
 def card(title, msg, image, uri=None):
-    """A LINE card in the anime website's style: a white rounded card on its soft lavender background, the cover tall
-    with rounded corners, a small red label (NEW EPISODE, NEW CHAPTER), the title, the details in grey, and a Watch or
-    Read pill. Tapping anywhere opens uri, if given."""
+    """A LINE card in the anime website's style: one white rounded card, the cover tall with rounded corners, a small
+    red label (NEW EPISODE, NEW CHAPTER), the title, the details in grey, and a Watch or Read pill. Tapping anywhere
+    opens uri, if given."""
     kind, _, name = title.partition(": ")
     label, verb = CARD_KIND.get(kind, (kind.upper(), "Open")) if name else ("", "Open")
     t = lambda x, **k: {"type": "text", "text": x, "wrap": True, **k}
@@ -69,12 +69,10 @@ def card(title, msg, image, uri=None):
              "paddingBottom": "6px", "paddingStart": "14px", "paddingEnd": "14px", "action": {"type": "uri", "label": verb, "uri": uri},
              "contents": [t(f"▶ {verb}", size="xs", weight="bold", color="#DF1B2B", flex=0, wrap=False)]}]})
     return {"type": "bubble", "size": "kilo", **({"action": {"type": "uri", "label": "open", "uri": uri}} if uri else {}),
-            "body": {"type": "box", "layout": "vertical", "backgroundColor": "#F5F3F7", "paddingAll": "10px", "contents": [
-                {"type": "box", "layout": "horizontal", "backgroundColor": "#FFFFFF", "cornerRadius": "20px", "paddingAll": "12px",
-                 "spacing": "md", "alignItems": "flex-start", "contents": [
-                    {"type": "box", "layout": "vertical", "width": "64px", "flex": 0, "cornerRadius": "12px", "backgroundColor": "#E9E6EE", "contents": [
-                        {"type": "image", "url": image, "aspectMode": "cover", "aspectRatio": "2:3", "size": "full"}]},
-                    {"type": "box", "layout": "vertical", "spacing": "xs", "contents": info}]}]}}
+            "body": {"type": "box", "layout": "horizontal", "backgroundColor": "#FFFFFF", "paddingAll": "14px", "spacing": "md", "alignItems": "flex-start", "contents": [
+                {"type": "box", "layout": "vertical", "width": "64px", "flex": 0, "cornerRadius": "12px", "backgroundColor": "#E9E6EE", "contents": [
+                    {"type": "image", "url": image, "aspectMode": "cover", "aspectRatio": "2:3", "size": "full"}]},
+                {"type": "box", "layout": "vertical", "spacing": "xs", "contents": info}]}}
 
 
 def notify(title, msg, links, image=None, uri=None):
@@ -759,7 +757,8 @@ def schedule(state=None):
         rows.sort(key=lambda r: r["at"])
         total = m.get("episodes")
         out.append({"name": s["name"], "label": season_label(m), "cover": (m.get("coverImage") or {}).get("large"),
-                    "total": total and total + s["offset"], "where": thai[i][0] if i in thai else None, "episodes": rows})
+                    "total": total and total + s["offset"], "where": thai[i][0] if i in thai else site_name(OTHER_PAGES[i]) if i in OTHER_PAGES else None,
+                    "episodes": rows})
     for k in list(links)[:-300]:
         del links[k]
     try:
