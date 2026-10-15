@@ -1030,9 +1030,9 @@ def anime(state):
         total = m.get("episodes")
         tot = f"{total + s['offset']:02d}" if total else "?"
         a, b = batch[0] + s["offset"], batch[-1] + s["offset"]
-        link, posted = on_site[batch[0]]
-        when = (f"Posted {datetime.fromtimestamp(posted, THAI):%d %b %Y %H:%M}" if posted else  # animegojo and suba-anime show no upload times
-                f"{'' if i in thai else 'Aired '}{datetime.fromtimestamp(due[(i, batch[0])], THAI):%d %b %Y %H:%M}")
+        link = on_site[batch[0]][0]
+        # when it aired on its platform (Japanese TV if none is set), not when the site posted it
+        when = f"{'' if i in thai else 'Aired '}{datetime.fromtimestamp(due[(i, batch[0])], THAI):%d %b %Y %H:%M}"
         line = f"Episode {a:02d}{f'-{b:02d}' if b != a else ''}/{tot} · {site}\n{f'{thai[i][0]} · ' if i in thai else ''}{when}"
         label = f" ({season_label(m)})" if season_label(m) else ""
         notify(f"New episode: {s['name']}{label}", line, f"{line}\n{link}", (m.get("coverImage") or {}).get("large"), link)
