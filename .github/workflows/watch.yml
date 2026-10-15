@@ -29,7 +29,6 @@ jobs:
     timeout-minutes: 9  # a stuck run must end before the next one starts
     steps:
       - uses: actions/checkout@v4
-      - run: pip install cloudscraper
       - run: python3 watch.py ${{ inputs.ping && 'ping' || '' }}${{ inputs.richmenu && 'richmenu' || '' }}${{ inputs.f1check && 'f1check' || '' }}${{ inputs.sites && 'sites' || '' }}
         env:
           MANGA_STATE: ci-state.json

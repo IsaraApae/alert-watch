@@ -116,6 +116,7 @@ You can also edit the files directly:
   - **ping** sends a test card.
   - **richmenu** installs the LINE menu.
   - **f1check** has LINE check every kind of card (anime, manga, and the F1 results, standings and live cards, built from the latest race) without sending anything.
+  - **sites** checks which anime sources GitHub can read right now (animegojo, suba-anime and the two episode feeds).
 - `python3 watch.py test` runs the self-checks.
 - [line/Code.gs](line/Code.gs) is the LINE command webhook. It runs on Google Apps Script with these script properties: `LINE_TOKEN`, `GITHUB_TOKEN`, `OWNER_ID`. After you change it, redeploy it with **Manage deployments → New version**.
 - The `gh-pages` branch holds the website:
