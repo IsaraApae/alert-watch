@@ -644,7 +644,8 @@ def gojo_sub_episodes(page):
 # animegojo may carry a new cour on an older page: Yozakura Season 2 Cour 1 was its 1-12, so its 13 would be Cour 2's 1
 GOJO_SHIFT = {213657: 12}
 
-# shows followed on another site instead of animegojo: {AniList id: its series page}. suba-anime is the only place to
+# shows also followed on another site: {AniList id: its series page}, only until anime-waku, animeruka or animegojo
+# carries the show (suba_dropped in the state); from then on those three compete for it. suba-anime was the only place to
 # watch Yozakura Season 2 in Thailand; its page numbers the season 1-24, so Cour 2's episode 1 is its 13 (GOJO_SHIFT).
 # Read with ordinary requests only: if the site ever answers with a bot check, it's reported as a failure, not worked around.
 OTHER_PAGES = {213657: "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/"}
@@ -757,7 +758,7 @@ def schedule(state=None):
 
     def on_gojo(i):  # (shift, {episode number: link} on its page): each page fetched at most once per run
         if i not in gojo:
-            url, shift = (OTHER_PAGES[i], GOJO_SHIFT.get(i, 0)) if i in OTHER_PAGES else (GOJO + pages[str(i)][0], pages[str(i)][1])
+            url, shift = (GOJO + pages[str(i)][0], pages[str(i)][1]) if str(i) in pages else (OTHER_PAGES[i], GOJO_SHIFT.get(i, 0))
             try:
                 gojo[i] = (shift, site_episodes(url))
             except Exception as e:
@@ -791,7 +792,7 @@ def schedule(state=None):
         rows.sort(key=lambda r: r["at"])
         total = m.get("episodes")
         out.append({"name": s["name"], "label": season_label(m), "cover": (m.get("coverImage") or {}).get("large"),
-                    "total": total and total + s["offset"], "where": thai[i][0] if i in thai else site_name(OTHER_PAGES[i]) if i in OTHER_PAGES else None,
+                    "total": total and total + s["offset"], "where": thai[i][0] if i in thai else site_name(OTHER_PAGES[i]) if i in OTHER_PAGES and str(i) not in state.get("suba_dropped", {}) else None,
                     "episodes": rows})
     for k in list(links)[:-300]:
         del links[k]
@@ -920,7 +921,7 @@ def anime(state):
     videos = youtube_videos() if not seed else []  # every check, for animegojo and the specials below
     log = state.setdefault("first_source", {})  # per episode: where it was first seen with Thai subs, link, times, alerted
     try:
-        found = [f for f in gojo_latest(get(GOJO + "/"), shows) if f[0] not in OTHER_PAGES] if not seed else []
+        found = gojo_latest(get(GOJO + "/"), shows) if not seed else []
     except Exception as e:
         print(f"FAIL animegojo: {e}", file=sys.stderr)
         found = []
@@ -928,7 +929,7 @@ def anime(state):
     # (learned from alerts) from a day before an episode is due
     for k, (path, shift) in (state.get("gojo_pages", {}) if not seed else {}).items():
         i = int(k)
-        if i not in shows or not gojo_only(i) or i in OTHER_PAGES:
+        if i not in shows or not gojo_only(i):
             continue
         waiting = [e for (j, e), t in due.items() if j == i and f"{i}:{e}" not in seen and now >= t - 86400]
         if not waiting:
@@ -943,7 +944,7 @@ def anime(state):
     # Season 1 already lists 1-10); a page counts once it is new or gains an episode that is due, from a day before then
     search = state.setdefault("gojo_search", {})  # {AniList id: {page: its episodes at the first look}}
     for i, s in shows.items():
-        if seed or not gojo_only(i) or not s["yt"] or str(i) in state.get("gojo_pages", {}) or i in OTHER_PAGES:
+        if seed or not gojo_only(i) or not s["yt"] or str(i) in state.get("gojo_pages", {}):
             search.pop(str(i), None)
             continue
         due_eps = [(e, t) for (j, e), t in due.items() if j == i and f"{i}:{e}" not in seen]
@@ -969,9 +970,27 @@ def anime(state):
                 state.setdefault("gojo_pages", {})[str(i)] = [path, shift]
                 found += [(i, e + s["offset"] + shift, f"{GOJO}{path}#ep-{e + s['offset'] + shift}") for e, t in due_eps if e + s["offset"] + shift in added]
                 break
-    # shows followed on another site (suba-anime): their page, from a day before an episode is due
+    # every site that has an episode competes, and the fastest one gets the episode's one card: anime-waku and animeruka
+    # by their feeds' upload times; animegojo and suba-anime show none, so an episode first seen on them in this check is
+    # taken as uploaded halfway between the last check and this one
+    last = state.get("anime_checked")
+    mid = (last + now) // 2 if last and 0 < now - last <= 2 * 3600 else now
+    state["anime_checked"] = now
+    hits = [(mid, "animegojo", i, n, link) for i, n, link in found]
+    for site, url in (FEEDS.items() if not seed else []):
+        try:
+            hits += [(ts, site, i, n, link) for i, n, link, ts in feed_episodes(read_feed(url), shows)]
+        except Exception as e:
+            print(f"FAIL {site}: {e}", file=sys.stderr)
+    to_ep = lambda i, n: next((e for e in (n - shows[i]["offset"], n - shows[i]["offset"] - GOJO_SHIFT.get(i, 0)) if (i, e) in due), None)
+    # suba-anime is for Yozakura only, and only until one of the three sites carries it: from then on those three compete
+    dropped = state.setdefault("suba_dropped", {})  # {AniList id: the site that had it}
+    for t, site, i, n, link in hits:
+        if i in OTHER_PAGES and str(i) not in dropped and to_ep(i, n) is not None:
+            dropped[str(i)] = site
+            print(f"{shows[i]['name']}: found on {site}, so suba-anime is no longer checked")
     for i, url in (OTHER_PAGES.items() if not seed else []):
-        if i not in shows or not gojo_only(i):
+        if i not in shows or not gojo_only(i) or str(i) in dropped:
             continue
         waiting = [e for (j, e), t in due.items() if j == i and f"{i}:{e}" not in seen and now >= t - 86400]
         if not waiting:
@@ -982,72 +1001,47 @@ def anime(state):
             print(f"FAIL {site_name(url)} {url}: {e}", file=sys.stderr)
             continue
         # its numbers carry on through the season (Cour 2's episode 1 is its 13): only the shifted number is this cour's
-        found += [(i, n, have[n]) for e in waiting for n in [e + shows[i]["offset"] + GOJO_SHIFT.get(i, 0)] if n in have]
-    # anime-waku and animeruka: the fastest site wins. Their feeds give upload times, so each episode's one card goes to
-    # whichever posted it first; animegojo and suba-anime (no upload times) alert only what neither feed had by then.
-    posts = []
-    for site, url in (FEEDS.items() if not seed else []):
-        try:
-            posts += [(ts, site, i, n, link) for i, n, link, ts in feed_episodes(read_feed(url), shows)]
-        except Exception as e:
-            print(f"FAIL {site}: {e}", file=sys.stderr)
-    feed_ep = lambda i, n: next((e for e in (n - shows[i]["offset"], n - shows[i]["offset"] - GOJO_SHIFT.get(i, 0)) if (i, e) in due), None)
-    for ts, site, i, n, link in sorted(posts):  # earliest upload first, across both sites
-        ep = feed_ep(i, n)
-        if ep is None or f"{i}:{ep}" in seen or not gojo_only(i) or not due[(i, ep)] - 8 * 86400 <= ts <= now:  # an older season's post: not this one
-            continue
+        hits += [(mid, "suba-anime", i, n, have[n]) for e in waiting for n in [e + shows[i]["offset"] + GOJO_SHIFT.get(i, 0)] if n in have]
+    pages_read = {}
+    for t, site, i, n, link in sorted(hits, key=lambda h: h[0]):  # fastest first
         s, m = shows[i], info.get(i, {})
-        # this site's posts of the show, and every not-yet-alerted episode due with this one: a season released at once gets one card
-        on_site = {feed_ep(j, k): (l, t) for t, w, j, k, l in sorted(posts, reverse=True) if w == site and j == i}
-        batch = [e for (j, e), t in sorted(due.items()) if j == i and t == due[(i, ep)] and f"{i}:{e}" not in seen and e in on_site]
+        ep = to_ep(i, n)
+        if ep is None or f"{i}:{ep}" in seen or not gojo_only(i) or not due[(i, ep)] - 8 * 86400 <= t <= now:
+            continue  # shows on Muse/Ani-One are alerted from there only; an old post is an earlier season's
+        # every episode of the show on this site, by this cour's numbering
+        if site in FEEDS:
+            on_site = {to_ep(j, k): (l, ts) for ts, w, j, k, l in sorted(hits, key=lambda h: h[0], reverse=True) if w == site and j == i}
+        else:  # animegojo or suba-anime: read the series page (checks animegojo's is ซับไทย)
+            page_url = OTHER_PAGES[i] if site == "suba-anime" else link.split("#")[0]
+            try:
+                if page_url not in pages_read:
+                    pages_read[page_url] = site_episodes(page_url)
+            except Exception as e:
+                print(f"FAIL {site} {link}: {e}", file=sys.stderr)
+                continue
+            shift = n - s["offset"] - ep
+            on_site = {k - s["offset"] - shift: (l, None) for k, l in pages_read[page_url].items()}
+            if site == "animegojo":
+                state.setdefault("gojo_pages", {})[str(i)] = [page_url[len(GOJO):], shift]  # for the website's Watch buttons
+        # every not-yet-alerted episode due at the same time as this one: a whole season released at once gets one card
+        batch = [e for (j, e), d in sorted(due.items()) if j == i and d == due[(i, ep)] and f"{i}:{e}" not in seen and e in on_site]
+        if not batch:
+            continue
         total = m.get("episodes")
         tot = f"{total + s['offset']:02d}" if total else "?"
         a, b = batch[0] + s["offset"], batch[-1] + s["offset"]
-        posted = datetime.fromtimestamp(on_site[batch[0]][1], THAI).strftime("%d %b %Y %H:%M")
-        line = f"Episode {a:02d}{f'-{b:02d}' if b != a else ''}/{tot} · {site}\n{f'{thai[i][0]} · ' if i in thai else ''}Posted {posted}"
+        link, posted = on_site[batch[0]]
+        when = (f"Posted {datetime.fromtimestamp(posted, THAI):%d %b %Y %H:%M}" if posted else  # animegojo and suba-anime show no upload times
+                f"{'' if i in thai else 'Aired '}{datetime.fromtimestamp(due[(i, batch[0])], THAI):%d %b %Y %H:%M}")
+        line = f"Episode {a:02d}{f'-{b:02d}' if b != a else ''}/{tot} · {site}\n{f'{thai[i][0]} · ' if i in thai else ''}{when}"
         label = f" ({season_label(m)})" if season_label(m) else ""
-        notify(f"New episode: {s['name']}{label}", line, f"{line}\n{on_site[batch[0]][0]}", (m.get("coverImage") or {}).get("large"), on_site[batch[0]][0])
+        notify(f"New episode: {s['name']}{label}", line, f"{line}\n{link}", (m.get("coverImage") or {}).get("large"), link)
         for e in batch:
             seen.append(f"{i}:{e}")
             pending.pop(f"{i}:{e}", None)
             log[f"{i}:{e}"] = {"title": s["name"], "episode": e + s["offset"], "version": "ซับไทย", "first": site, "url": on_site[e][0],
-                               "detected": now, "published": on_site[e][1], "notified": True}
-    for i, n, link in found:
-        s = shows[i]
-        if not gojo_only(i):
-            continue  # shows on Muse Thailand or Ani-One Thailand are alerted from there only
-        # animegojo's number for episode e is e + offset, or that plus GOJO_SHIFT when it continues an older page
-        ep = next((e for e in (n - s["offset"], n - s["offset"] - GOJO_SHIFT.get(i, 0)) if (i, e) in due), None)
-        if ep is None or f"{i}:{ep}" in seen:
-            continue
-        shift = n - s["offset"] - ep
-        page_url = OTHER_PAGES.get(i) or link.split("#")[0]
-        try:
-            on_page = site_episodes(page_url)
-        except Exception as e:
-            print(f"FAIL {site_name(page_url)} {link}: {e}", file=sys.stderr)
-            continue
-        # every not-yet-alerted episode due at the same time as this one: a whole season released at once gets one card
-        batch = [e for (j, e), t in sorted(due.items()) if j == i and t == due[(i, ep)] and f"{i}:{e}" not in seen and e + s["offset"] + shift in on_page]
-        if not batch:
-            continue
-        url = lambda e: on_page[e + s["offset"] + shift]
-        if i not in OTHER_PAGES:
-            state.setdefault("gojo_pages", {})[str(i)] = [link.split("#")[0][len(GOJO):], shift]  # for the website's Watch buttons
-        m = info.get(i, {})
-        total = m.get("episodes")
-        tot = f"{total + s['offset']:02d}" if total else "?"
-        a, b = batch[0] + s["offset"], batch[-1] + s["offset"]
-        # when it aired on its platform (Japanese TV if none is set): animegojo and suba-anime show no upload times
-        aired_at = datetime.fromtimestamp(due[(i, batch[0])], THAI).strftime("%d %b %Y %H:%M")
-        line = f"Episode {a:02d}{f'-{b:02d}' if b != a else ''}/{tot} · {site_name(page_url)}\n{f'{thai[i][0]} · ' if i in thai else 'Aired '}{aired_at}"
-        label = f" ({season_label(m)})" if season_label(m) else ""
-        notify(f"New episode: {s['name']}{label}", line, f"{line}\n{url(batch[0])}", (m.get("coverImage") or {}).get("large"), url(batch[0]))
-        for e in batch:
-            seen.append(f"{i}:{e}")
-            pending.pop(f"{i}:{e}", None)
-            log[f"{i}:{e}"] = {"title": s["name"], "episode": e + s["offset"], "version": "ซับไทย", "first": site_name(page_url), "url": url(e),
-                               "detected": now, "published": None, "notified": True}  # animegojo shows no publication times
+                               "detected": now, "published": on_site[e][1], "notified": True,
+                               **({} if on_site[e][1] else {"order": "estimated"})}  # no upload time: the site's place in the race is estimated
     new = sorted((t, i, ep) for (i, ep), t in aired.items() if f"{i}:{ep}" not in seen)
     for t, i, ep in new:
         if not seed:
