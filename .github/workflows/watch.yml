@@ -16,6 +16,10 @@ on:
         description: Have LINE check the cards (anime, manga and F1; nothing is sent)
         type: boolean
         default: false
+      sites:
+        description: Check which anime sites GitHub can read
+        type: boolean
+        default: false
 permissions:
   contents: write
 concurrency: watch
@@ -25,7 +29,7 @@ jobs:
     timeout-minutes: 9  # a stuck run must end before the next one starts
     steps:
       - uses: actions/checkout@v4
-      - run: python3 watch.py ${{ inputs.ping && 'ping' || '' }}${{ inputs.richmenu && 'richmenu' || '' }}${{ inputs.f1check && 'f1check' || '' }}
+      - run: python3 watch.py ${{ inputs.ping && 'ping' || '' }}${{ inputs.richmenu && 'richmenu' || '' }}${{ inputs.f1check && 'f1check' || '' }}${{ inputs.sites && 'sites' || '' }}
         env:
           MANGA_STATE: ci-state.json
           LINE_TOKEN: ${{ secrets.LINE_TOKEN }}

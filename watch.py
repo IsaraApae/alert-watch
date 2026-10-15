@@ -1227,6 +1227,17 @@ if __name__ == "__main__":
             notify(f"New chapter: {title} (test: {kind})", f"EP.{ep}", text, image, tap)
     elif sys.argv[1:] == ["richmenu"]:
         setup_richmenu()
+    elif sys.argv[1:] == ["sites"]:
+        # can this machine read each anime source? (ordinary requests; a bot check counts as unreadable)
+        for name, url in (("animegojo", GOJO + "/"), ("suba-anime", OTHER_PAGES[213657]), ("animeruka", "https://animeruka.com/"),
+                          ("anime-waku", "https://anime-waku.com/")):
+            try:
+                page = get(url)
+                title = (re.search(r"<title>([^<]*)", page) or [None, "?"])[1].strip()
+                check = "Just a moment" in page or "cf-browser-verification" in page
+                print(f"sites {name}: {'BOT CHECK' if check else 'readable'} ({len(page)} bytes) {title[:60]}")
+            except Exception as e:
+                print(f"sites {name}: FAILED {e}")
     elif sys.argv[1:] == ["f1check"]:
         # LINE checks the F1 cards (the latest race's results, standings and a live card) without sending anything
         token = os.environ["LINE_TOKEN"]
