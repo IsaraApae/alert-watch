@@ -34,9 +34,20 @@ def webtoon(url):
     return {f"EP.{n}": link.replace("&amp;", "&") for link, n in re.findall(r"<link>([^<]*episode_no=(\d+))</link>", rss)}
 
 
+SLOW = set()  # sites that timed out this run: skipped for the rest of it, so one dead site can't hold the run up for 15 minutes
+
+
 def get(url):
+    host = urlparse(url).netloc
+    if host in SLOW:
+        raise TimeoutError(f"{host} skipped: it timed out earlier in this run")
     req = urllib.request.Request(quote(url, safe=":/%?&="), headers={"User-Agent": UA})
-    return urllib.request.urlopen(req, timeout=30).read().decode("utf-8", "replace")
+    try:
+        return urllib.request.urlopen(req, timeout=20).read().decode("utf-8", "replace")
+    except (TimeoutError, urllib.error.URLError) as e:
+        if isinstance(e, TimeoutError) or isinstance(getattr(e, "reason", None), TimeoutError):
+            SLOW.add(host)
+        raise
 
 
 def card(title, msg, image, uri=None):
