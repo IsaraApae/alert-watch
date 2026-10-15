@@ -728,6 +728,23 @@ def anime_list():
     return shows
 
 
+def episode_total(m, state):
+    """AniList's episode count; while it has none, MyAnimeList's (Iceblade Season 2: 12 on MAL, nothing on AniList), read from
+    the show's MAL page at most every 6 hours until MAL has a number, which is then kept. No count anywhere: None."""
+    if m.get("episodes") or not m.get("idMal"):
+        return m.get("episodes")
+    known = state.setdefault("mal_totals", {})  # {MAL id: [episodes or None, when MAL was last asked]}
+    n, asked = known.get(str(m["idMal"]), [None, 0])
+    if n is None and time.time() - asked > 6 * 3600:
+        try:
+            found = re.search(r"Episodes:</span>\s*(\d+)", get(f"https://myanimelist.net/anime/{m['idMal']}"))
+            n = found and int(found[1])
+        except Exception as e:
+            print(f"FAIL myanimelist {m['idMal']}: {e}", file=sys.stderr)
+        known[str(m["idMal"])] = [n, int(time.time())]
+    return n
+
+
 def season_label(m):
     """AniList media -> "Fall 2026, TV"."""
     parts = [f"{m['season'].title()} {m['seasonYear']}" if m.get("season") and m.get("seasonYear") else "", (m.get("format") or "").replace("_", " ")]
@@ -744,7 +761,7 @@ def schedule(state=None):
     """Write schedule.json for the countdown page: every show's episodes from a week ago to two months ahead,
     with the same times and numbering as the alerts. Rewritten only when something changed, so it isn't committed every run."""
     shows, now = anime_list(), int(time.time())
-    q = "query($ids:[Int]){Page(perPage:50){media(id_in:$ids){id episodes season seasonYear format coverImage{large} airingSchedule(perPage:50){nodes{episode airingAt}}}}}"
+    q = "query($ids:[Int]){Page(perPage:50){media(id_in:$ids){id idMal episodes season seasonYear format coverImage{large} airingSchedule(perPage:50){nodes{episode airingAt}}}}}"
     try:
         info = {m["id"]: m for m in anilist(q, {"ids": list(shows)})["Page"]["media"]}
         by_tid = {s["tid"]: i for i, s in shows.items() if s["tid"]}
@@ -800,7 +817,7 @@ def schedule(state=None):
                              **({"where": site_name(watch)} if watch and i in OTHER_PAGES and urlparse(watch).netloc == urlparse(OTHER_PAGES[i]).netloc else {})})
         rows += [{"ep": n, "at": p, "watch": in_brave(link)} for link, (a, n, p) in kept.items() if a == i]
         rows.sort(key=lambda r: r["at"])
-        total = m.get("episodes")
+        total = episode_total(m, state)
         out.append({"name": s["name"], "label": season_label(m), "cover": (m.get("coverImage") or {}).get("large"),
                     "total": total and total + s["offset"], "where": thai[i][0] if i in thai else None,
                     "episodes": rows})
@@ -897,7 +914,7 @@ def anime(state):
     | first episode number in the TV schedule | episodes before this AniList entry (added to the count)."""
     shows = anime_list()
     now = int(time.time())
-    query = ("query($ids:[Int],$web:[Int],$a:Int,$b:Int){info:Page(perPage:50){media(id_in:$ids){id episodes season seasonYear format coverImage{large}}}"
+    query = ("query($ids:[Int],$web:[Int],$a:Int,$b:Int){info:Page(perPage:50){media(id_in:$ids){id idMal episodes season seasonYear format coverImage{large}}}"
              " web:Page(perPage:50){airingSchedules(mediaId_in:$web,airingAt_greater:$a,airingAt_lesser:$b){episode airingAt media{id}}}}")
     web_only = [i for i, s in shows.items() if not s["tid"]]
     body = json.dumps({"query": query, "variables": {"ids": list(shows), "web": web_only or [0], "a": now - 8 * 86400, "b": now + 8 * 86400}}).encode()
@@ -1040,7 +1057,7 @@ def anime(state):
         batch = [e for (j, e), d in sorted(due.items()) if j == i and d == due[(i, ep)] and f"{i}:{e}" not in seen and e in on_site]
         if not batch:
             continue
-        total = m.get("episodes")
+        total = episode_total(m, state)
         tot = f"{total + s['offset']:02d}" if total else "?"
         a, b = batch[0] + s["offset"], batch[-1] + s["offset"]
         link = on_site[batch[0]][0]
@@ -1061,7 +1078,7 @@ def anime(state):
             s, m = shows[i], info.get(i, {})
             if gojo_only(i):
                 continue  # wait for animegojo (handled above): no card at the scheduled time, no video link exists
-            total = m.get("episodes")
+            total = episode_total(m, state)
             line = episode_line(ep + s["offset"], total and total + s["offset"], t, thai[i][0] if i in thai else None)
             label = f" ({season_label(m)})" if season_label(m) else ""  # e.g. "Fall 2026, TV"
             # if an official channel already has this episode up with Thai subs, the card opens that video; otherwise no link
@@ -1283,6 +1300,9 @@ if __name__ == "__main__":
         x = ('<ProgItem><TID>8</TID><Count>15</Count><StTime>2026-10-02 00:26:00</StTime><Deleted>0</Deleted></ProgItem>'
              '<ProgItem><TID>8</TID><Count>15</Count><StTime>2026-10-02 02:00:00</StTime><Deleted>0</Deleted></ProgItem>'
              '<ProgItem><TID>8</TID><Count>16</Count><StTime>2026-10-08 23:56:00</StTime><Deleted>0</Deleted></ProgItem>')
+        assert episode_total({"episodes": None, "idMal": 1}, {"mal_totals": {"1": [12, time.time()]}}) == 12  # AniList has none: MAL's
+        assert episode_total({"episodes": 13, "idMal": 1}, {"mal_totals": {"1": [12, time.time()]}}) == 13  # AniList's wins
+        assert episode_total({"episodes": None, "idMal": 1}, {"mal_totals": {"1": [None, time.time()]}}) is None  # neither: blank
         assert tv_aired(x, {8: [15]}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: [15]}, 1790868600)  # earliest channel, season numbering, nothing future
         x2 = ('<ProgItem><TID>9</TID><Count>1</Count><StTime>2026-10-04 16:30:00</StTime></ProgItem>'
               '<ProgItem><TID>9</TID><Count>26</Count><StTime>2026-10-06 20:00:00</StTime></ProgItem>')
