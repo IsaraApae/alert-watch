@@ -33,7 +33,12 @@ def webtoon(url):
     rss = get(url.replace("://m.webtoons.com", "://www.webtoons.com").replace("/list?", "/rss?"))
     return {f"EP.{n}": link.replace("&amp;", "&") for link, n in re.findall(r"<link>([^<]*episode_no=(\d+))</link>", rss)}
 
-
+try:
+    import cloudscraper
+    _scraper = cloudscraper.create_scraper()
+except ImportError:
+    _scraper = None
+       
 SLOW = set()  # sites that timed out this run: skipped for the rest of it, so one dead site can't hold the run up for 15 minutes
 
 
@@ -672,7 +677,10 @@ FEEDS = {"anime-waku": "https://anime-waku.com/feed/?post_type=episodes", "anime
 
 def read_feed(url):
     """A site's RSS feed; an error when the site answers with anything else."""
-    page = get(url)
+    if _scraper:
+        page = _scraper.get(quote(url, safe=":/%?&="), timeout=20).text
+    else:
+        page = get(url)
     if "<rss" not in page[:1000]:
         raise RuntimeError("answered with something that is not its feed")
     return page
