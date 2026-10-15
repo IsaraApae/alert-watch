@@ -104,7 +104,7 @@ body::after { top: 0; left: 0; right: 0; height: 120px; background: linear-gradi
   max-width: 640px;
   margin: 0 auto;
   padding-inline: 16px;
-  padding-block: calc(env(safe-area-inset-top, 0px) + 20px) calc(env(safe-area-inset-bottom, 0px) + 96px);  /* the end of the page scrolls clear of the bottom blur */
+  padding-block: calc(env(safe-area-inset-top, 0px) + 20px) calc(env(safe-area-inset-bottom, 0px) + 40px);
   display: grid;
   gap: 14px;
 }
@@ -178,16 +178,6 @@ section { display: grid; gap: 14px; scroll-margin-top: 90px; }
 }
 .label b.today { color: var(--accent); }
 
-/* progressive blur at the bottom, under the browser's toolbar: stacked layers, stronger towards the edge (no mask, no colour fade).
-   For a top blur, copy it with top: 0 instead of bottom: 0 on the container and the layers. */
-.fade-blur { position: fixed; left: 0; right: 0; bottom: 0; height: calc(env(safe-area-inset-bottom, 0px) + 96px); z-index: 1; pointer-events: none; transform: translateZ(0); }
-.fade-blur i { position: absolute; left: 0; right: 0; bottom: 0; }
-.fade-blur i:nth-child(1) { height: 100%; -webkit-backdrop-filter: blur(0.5px); backdrop-filter: blur(0.5px); }
-.fade-blur i:nth-child(2) { height: 80%; -webkit-backdrop-filter: blur(1px); backdrop-filter: blur(1px); }
-.fade-blur i:nth-child(3) { height: 62%; -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
-.fade-blur i:nth-child(4) { height: 45%; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
-.fade-blur i:nth-child(5) { height: 30%; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
-.fade-blur i:nth-child(6) { height: 16%; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
 
 .primary {
   border: 0; border-radius: 999px; min-height: 44px; padding: 0 20px; cursor: pointer;
@@ -233,7 +223,6 @@ section { display: grid; gap: 14px; scroll-margin-top: 90px; }
     </div>
   </section>
 </main>
-<div class="fade-blur" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
 
 <script>
 // Data comes from schedule.json, which the Alert Watch cloud job rewrites whenever the schedule changes.
