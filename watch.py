@@ -33,12 +33,7 @@ def webtoon(url):
     rss = get(url.replace("://m.webtoons.com", "://www.webtoons.com").replace("/list?", "/rss?"))
     return {f"EP.{n}": link.replace("&amp;", "&") for link, n in re.findall(r"<link>([^<]*episode_no=(\d+))</link>", rss)}
 
-try:
-    import cloudscraper
-    _scraper = cloudscraper.create_scraper()
-except ImportError:
-    _scraper = None
-       
+
 SLOW = set()  # sites that timed out this run: skipped for the rest of it, so one dead site can't hold the run up for 15 minutes
 
 
@@ -683,9 +678,6 @@ def read_feed(url):
     if FEED_PROXY:
         site = next(n for n, u in FEEDS.items() if u == url)
         page, status = get(f"{FEED_PROXY}&site={site}"), "proxy"
-    elif _scraper:
-        r = _scraper.get(quote(url, safe=":/%?&="), timeout=20)
-        page, status = r.text, r.status_code
     else:
         page, status = get(url), "urllib"
     if "<rss" not in page[:1000]:
