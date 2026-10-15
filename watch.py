@@ -928,6 +928,9 @@ def anime(state):
     pending = state.setdefault("watch_later", {})  # episodes alerted before their Thai-sub video showed up: {key: release}
     videos = youtube_videos() if not seed else []  # every check, for animegojo and the specials below
     log = state.setdefault("first_source", {})  # per episode: where it was first seen with Thai subs, link, times, alerted
+    # YouTube's list of a channel's newest uploads doesn't always include the newest video (it depends on which server answers),
+    # so a video found once, by an earlier check or the schedule, counts: {key: YouTube link or None}
+    found_before = lambda key: ("https://www.youtube.com/watch?v=" + l[len(BRAVE):]) if (l := state.get("watch_links", {}).get(key, "")).startswith(BRAVE) else None
     try:
         found = gojo_latest(get(GOJO + "/"), shows) if not seed else []
     except Exception as e:
@@ -1060,7 +1063,7 @@ def anime(state):
             line = episode_line(ep + s["offset"], total and total + s["offset"], t, thai[i][0] if i in thai else None)
             label = f" ({season_label(m)})" if season_label(m) else ""  # e.g. "Fall 2026, TV"
             # if an official channel already has this episode up with Thai subs, the card opens that video; otherwise no link
-            yt = s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
+            yt = s["yt"] and (youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t) or found_before(f"{i}:{ep}"))
             if not yt and i in thai and thai[i][0] in YT_CHANNELS.values() and now - t < 60 * 60:
                 continue  # its channel may post a little late: wait up to an hour so the alert is one card with the link
             if not yt and s["yt"]:  # the video may still come later: send a "Watch now" card then
@@ -1076,7 +1079,7 @@ def anime(state):
     for key, t in list(pending.items()):
         i, ep = map(int, key.split(":"))
         s = shows.get(i)
-        yt = s and videos and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
+        yt = s and (videos and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t) or found_before(key))
         if yt:
             where = next((ch for title, link, p, ch in videos if link == yt), "YouTube")
             line = f"Episode {ep + s['offset']:02d} with Thai subs is up on {where}"
