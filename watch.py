@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Notify (macOS) when a watched manga page lists a chapter it didn't list last run."""
-import html, json, os, re, shutil, subprocess, sys, time, unicodedata, urllib.error, urllib.request
+import email.utils, html, json, os, re, shutil, subprocess, sys, time, unicodedata, urllib.error, urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote, unquote, urlparse
@@ -618,7 +618,7 @@ def specials(videos, shows, since):
     return out
 
 
-GOJO = "https://animegojos.com"  # of anime-waku, animeruka and animegojo, the only one GitHub's servers can read (the others answer with Cloudflare's bot check)
+GOJO = "https://animegojos.com"  # anime-waku and animeruka are read from their feeds (FEEDS) when they let this machine in
 
 
 def gojo_latest(page, shows):
@@ -666,6 +666,40 @@ def site_episodes(url):
 
 
 site_name = lambda url: "suba-anime" if "suba-anime.com" in url else "animegojo"
+
+# anime-waku and animeruka: each site's RSS feed of new episodes, which (unlike animegojo) gives every upload's time.
+# Read with ordinary requests only: when Cloudflare answers with its bot check (as it has for GitHub's servers), the
+# run reports it and carries on with the other sites; it is never worked around.
+FEEDS = {"anime-waku": "https://anime-waku.com/feed/?post_type=episodes", "animeruka": "https://animeruka.com/feed/?post_type=episodes"}
+
+
+def read_feed(url):
+    """A site's RSS feed; an error when the site answers with anything else (a bot check, a block page)."""
+    try:
+        page = get(url)
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"HTTP {e.code}{' (Cloudflare bot check)' if e.code in (403, 503) else ''}") from None
+    if "<rss" not in page[:1000]:
+        raise RuntimeError("answered with a bot check, not its feed" if "Just a moment" in page else "answered with something that is not its feed")
+    return page
+
+
+def feed_episodes(xml, shows):
+    """[(AniList id, episode, link, upload time)] for tracked shows in a site's episode feed, ซับไทย posts only.
+    Titles look like "Tensei shitara Ken deshita II ... (ภาค2) ตอนที่ 3 ซับไทย"; a post of several is "ตอนที่ 1-12"."""
+    out = []
+    for item in re.findall(r"<item>(.*?)</item>", xml, re.S):
+        tag = lambda name: (re.search(rf"<{name}>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</{name}>", item, re.S) or [None, ""])[1].strip()
+        title, link, pub = html.unescape(tag("title")).lower(), html.unescape(tag("link")), tag("pubDate")
+        num = re.search(r"ตอนที่\s*(\d+)(?:\s*-\s*(\d+))?", title)
+        if not (num and link and pub) or "ซับไทย" not in title or "พากย์ไทย" in title:
+            continue
+        name = title[:num.start()]
+        aid = next((i for i, s in shows.items() if s["yt"] and re.search(s["yt"], name)), None)
+        if aid:
+            ts = int(email.utils.parsedate_to_datetime(pub).timestamp())
+            out += [(aid, n, link, ts) for n in range(int(num[1]), int(num[2] or num[1]) + 1)]
+    return out
 
 
 def anime_list():
@@ -746,7 +780,7 @@ def schedule(state=None):
             if now - 8 * 86400 <= t <= now + 60 * 86400:
                 yt = t <= now and s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
                 rec = state.get("first_source", {}).get(f"{i}:{ep}", {})  # the animegojo episode page, if that's where it was found first
-                watch = (in_brave(yt) if yt else None) or links.get(f"{i}:{ep}") or (rec["url"] if rec.get("first") in ("animegojo", "suba-anime") else None)
+                watch = (in_brave(yt) if yt else None) or links.get(f"{i}:{ep}") or (rec["url"] if rec.get("first") in ("animegojo", "suba-anime", *FEEDS) else None)
                 if not watch and t <= now and (str(i) in pages or i in OTHER_PAGES) and not (i in thai and thai[i][0] in YT_CHANNELS.values()):
                     shift, have = on_gojo(i)  # aired, no button yet: the episode on its animegojo (or suba-anime) page, if it's up there
                     watch = have.get(ep + s["offset"] + shift)
@@ -949,6 +983,35 @@ def anime(state):
             continue
         # its numbers carry on through the season (Cour 2's episode 1 is its 13): only the shifted number is this cour's
         found += [(i, n, have[n]) for e in waiting for n in [e + shows[i]["offset"] + GOJO_SHIFT.get(i, 0)] if n in have]
+    # anime-waku and animeruka: the fastest site wins. Their feeds give upload times, so each episode's one card goes to
+    # whichever posted it first; animegojo and suba-anime (no upload times) alert only what neither feed had by then.
+    posts = []
+    for site, url in (FEEDS.items() if not seed else []):
+        try:
+            posts += [(ts, site, i, n, link) for i, n, link, ts in feed_episodes(read_feed(url), shows)]
+        except Exception as e:
+            print(f"FAIL {site}: {e}", file=sys.stderr)
+    feed_ep = lambda i, n: next((e for e in (n - shows[i]["offset"], n - shows[i]["offset"] - GOJO_SHIFT.get(i, 0)) if (i, e) in due), None)
+    for ts, site, i, n, link in sorted(posts):  # earliest upload first, across both sites
+        ep = feed_ep(i, n)
+        if ep is None or f"{i}:{ep}" in seen or not gojo_only(i) or not due[(i, ep)] - 8 * 86400 <= ts <= now:  # an older season's post: not this one
+            continue
+        s, m = shows[i], info.get(i, {})
+        # this site's posts of the show, and every not-yet-alerted episode due with this one: a season released at once gets one card
+        on_site = {feed_ep(j, k): (l, t) for t, w, j, k, l in sorted(posts, reverse=True) if w == site and j == i}
+        batch = [e for (j, e), t in sorted(due.items()) if j == i and t == due[(i, ep)] and f"{i}:{e}" not in seen and e in on_site]
+        total = m.get("episodes")
+        tot = f"{total + s['offset']:02d}" if total else "?"
+        a, b = batch[0] + s["offset"], batch[-1] + s["offset"]
+        posted = datetime.fromtimestamp(on_site[batch[0]][1], THAI).strftime("%d %b %Y %H:%M")
+        line = f"Episode {a:02d}{f'-{b:02d}' if b != a else ''}/{tot} · {site}\n{f'{thai[i][0]} · ' if i in thai else ''}Posted {posted}"
+        label = f" ({season_label(m)})" if season_label(m) else ""
+        notify(f"New episode: {s['name']}{label}", line, f"{line}\n{on_site[batch[0]][0]}", (m.get("coverImage") or {}).get("large"), on_site[batch[0]][0])
+        for e in batch:
+            seen.append(f"{i}:{e}")
+            pending.pop(f"{i}:{e}", None)
+            log[f"{i}:{e}"] = {"title": s["name"], "episode": e + s["offset"], "version": "ซับไทย", "first": site, "url": on_site[e][0],
+                               "detected": now, "published": on_site[e][1], "notified": True}
     for i, n, link in found:
         s = shows[i]
         if not gojo_only(i):
@@ -1192,6 +1255,15 @@ if __name__ == "__main__":
         series = '<title>Tensei Kizoku 3rd Season (ซับไทย) ตอนที่ 1-2</title><a href="#ep-1">1</a><a href="#ep-2">2</a>'
         assert gojo_sub_episodes(series) == {1, 2}
         assert gojo_sub_episodes(series.replace("ซับไทย", "พากย์ไทย")) == set()  # dubbed page
+        feed = ('<rss version="2.0"><channel><item><title>Tensei shitara Ken deshita II Season 2 ซวยเหลือหลายเกิดใหม่กลายเป็นดาบ (ภาค2) ตอนที่ 3 ซับไทย</title>'
+                '<link>https://anime-waku.com/ep/113639/</link><pubDate>Wed, 14 Oct 2026 15:51:01 +0000</pubDate></item>'
+                '<item><title>Tensei shitara Ken deshita II ตอนที่ 3 พากย์ไทย</title><link>https://anime-waku.com/ep/1/</link><pubDate>Wed, 14 Oct 2026 16:00:00 +0000</pubDate></item>'
+                '<item><title>Edgerunners 2 ตอนที่ 1-3 ซับไทย</title><link>https://animeruka.com/ep/e/</link><pubDate>Thu, 15 Oct 2026 04:30:27 +0000</pubDate></item>'
+                '<item><title>Black Clover ตอนที่ 2 ซับไทย</title><link>https://anime-waku.com/ep/2/</link><pubDate>Thu, 15 Oct 2026 04:00:00 +0000</pubDate></item></channel></rss>')
+        fs = {7: {"yt": "กลายเป็นดาบ|tensei shitara ken"}, 8: {"yt": "edgerunners"}}
+        wed = int(datetime(2026, 10, 14, 15, 51, 1, tzinfo=timezone.utc).timestamp())
+        thu = int(datetime(2026, 10, 15, 4, 30, 27, tzinfo=timezone.utc).timestamp())
+        assert feed_episodes(feed, fs) == [(7, 3, "https://anime-waku.com/ep/113639/", wed)] + [(8, n, "https://animeruka.com/ep/e/", thu) for n in (1, 2, 3)]
         assert specials(vids, sp, 50) == [(1, "13.5", "a", 100, "Ani-One Thailand"), (1, "0", "b", 100, "Ani-One Thailand")]
         assert in_brave("https://www.youtube.com/watch?v=j7zFyWX6t8M") == BRAVE + "j7zFyWX6t8M"
         T = datetime(2026, 10, 4, 21, 30, tzinfo=THAI).timestamp()
