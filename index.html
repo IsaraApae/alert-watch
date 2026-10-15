@@ -91,10 +91,10 @@ a { color: var(--accent); }
 
 /* in-app browsers (LINE, Facebook, Instagram) colour the status bar strip from theme-color or the page background, so the page's top edge is one solid colour: --strip */
 #strip { position: absolute; inset: 0; z-index: -2; background: var(--strip); }
-/* the fixed background, bottom to top: the base colour, the wash, then a fade from --strip at the very top */
+/* the fixed background, bottom to top: the base colour, the wash, then fades to one solid colour at each edge, so the browser's bars (which take one colour) meet it without a seam: --strip at the top, --edge at the bottom */
 body::before, body::after { content: ""; position: fixed; z-index: -1; pointer-events: none; }
 body::before { inset: 0; background: var(--bg); }
-body::after { top: 0; left: 0; right: 0; height: 120px; background: linear-gradient(var(--strip), transparent 120px); }
+body::after { inset: 0; background: linear-gradient(var(--strip), transparent 120px), linear-gradient(to top, var(--edge), transparent 120px); }
 /* fixed colour wash for the glass to blur */
 .wash { position: fixed; inset: -20vmax; z-index: -1; pointer-events: none; filter: blur(70px); opacity: var(--wash); }
 .wash i { position: absolute; width: 60vmax; height: 60vmax; border-radius: 50%; }
