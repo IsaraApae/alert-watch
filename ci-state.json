@@ -3031,7 +3031,8 @@
   "206401:3",
   "213805:3",
   "212503:2",
-  "210482:4"
+  "210482:4",
+  "195516:3"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3546,6 +3547,17 @@
    "published": null,
    "notified": true,
    "order": "estimated"
+  },
+  "195516:3": {
+   "title": "The Apothecary Diaries Season 3",
+   "episode": 3,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/3120/#ep-3",
+   "detected": 1792164618,
+   "published": null,
+   "notified": true,
+   "order": "estimated"
   }
  },
  "watch_links": {
@@ -3586,7 +3598,8 @@
   "206401:3": "https://isaraapae.github.io/alert-watch/b.html?v=Q_mbTgUGAxI",
   "213805:3": "https://animegojos.com/list/3165/#ep-3",
   "212503:2": "https://isaraapae.github.io/alert-watch/b.html?v=zjnWI-S177s",
-  "210482:4": "https://animegojos.com/list/2831/#ep-5"
+  "210482:4": "https://animegojos.com/list/2831/#ep-5",
+  "195516:3": "https://animegojos.com/list/3120/#ep-3"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -3707,7 +3720,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792164011,
+ "anime_checked": 1792164618,
  "suba_dropped": {},
  "mal_totals": {
   "60601": [
