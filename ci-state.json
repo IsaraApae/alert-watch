@@ -3030,7 +3030,8 @@
   "213657:1",
   "206401:3",
   "213805:3",
-  "212503:2"
+  "212503:2",
+  "210482:4"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3533,6 +3534,17 @@
    "published": 1792083608,
    "scheduled": 1792083600,
    "notified": true
+  },
+  "210482:4": {
+   "title": "JoJo Part 7: Steel Ball Run 2nd-3rd Stage",
+   "episode": 5,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/2831/#ep-5",
+   "detected": 1792159812,
+   "published": null,
+   "notified": true,
+   "order": "estimated"
   }
  },
  "watch_links": {
@@ -3572,7 +3584,8 @@
   "213657:1": "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/ep-13",
   "206401:3": "https://isaraapae.github.io/alert-watch/b.html?v=Q_mbTgUGAxI",
   "213805:3": "https://animegojos.com/list/3165/#ep-3",
-  "212503:2": "https://isaraapae.github.io/alert-watch/b.html?v=zjnWI-S177s"
+  "212503:2": "https://isaraapae.github.io/alert-watch/b.html?v=zjnWI-S177s",
+  "210482:4": "https://animegojos.com/list/2831/#ep-5"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -3693,7 +3706,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792159224,
+ "anime_checked": 1792159812,
  "suba_dropped": {},
  "mal_totals": {
   "60601": [
