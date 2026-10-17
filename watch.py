@@ -516,9 +516,13 @@ WEBTOON_SERIES_PAGE = {"6227", "9274"}
 # WEBTOON frees one more, a card gives the app's newest episode ("Ep.218": 216 free + 2).
 # ponytail: fixed numbers; if WEBTOON changes how many it locks, update them from the app.
 WEBTOON_LOCKED = {"6842": 2, "4395": 2, "7294": 3, "5823": 1, "5899": 1, "6718": 1, "7562": 2, "8314": 3, "6392": 3, "7637": 2,
-                  "2433": 3, "2342": 255, "4861": 198,  # Bad Guy: 55 free, 310 in the app; Reborn Rich: 10 free, 208
-                  "9274": 3, "6227": 2}  # Zodiac Girls, Enrolling in the Transcendent Academy (WEBTOON only): their cards and
-                  # the LINE list give the app's newest episode ("Ep.50": 47 free + 3), so you know which episode to read
+                  "2433": 3, "2342": 255,  # Bad Guy: 55 free, 310 in the app
+                  "6227": 2}  # Enrolling in the Transcendent Academy (WEBTOON only): its cards and the LINE list give the app's
+                  # newest episode ("Ep.140": 138 free + 2), so you know which episode to read
+# series whose app count can't be worked out from the free ones (WEBTOON's website shows Reborn Rich only up to Ep.10): the app
+# gets one more every week at a set time, counted from a known episode: {WEBTOON series number: (episode, when it came out)}.
+# Reborn Rich: Ep.208 in the app on Wed 14 Oct 2026; one more every Wednesday at 22:00 Thai time, each with a card.
+WEBTOON_WEEKLY = {"4861": (208, datetime(2026, 10, 14, 22, 0, tzinfo=timezone(timedelta(hours=7))).timestamp())}
 WEBTOON_TWINS = {"https://manga-lc.net/manga/the-regressed-son-of-a-duke-is-an-assassin-ลูกชายคนเล็กของดย/": "https://www.webtoons.com/th/fantasy/the-reborn-young-lord-is-an-assassin/list?title_no=6392",
                  "https://manga-lc.net/manga/life-changer-voice-phishing-คอลเซ็นเตอร์เปลี่ยน/": "https://www.webtoons.com/th/drama/life-changing-voice-phishing/list?title_no=7265",
                  "https://manga-lc.net/manga/reborn-rich/": "https://www.webtoons.com/th/drama/reborn-rich/list?title_no=4861",
@@ -1331,6 +1335,7 @@ def main():
     except Exception as e:  # the countdown page must never stop the alerts
         print(f"FAIL schedule: {e}", file=sys.stderr)
     state.pop("webtoon_switched", None)  # left from the automatic switch, which is gone
+    state.pop("webtoon_free", None)  # replaced by webtoon_app
     newest = state.setdefault("webtoon_newest", {})  # {WEBTOON series: its newest free chapter}, for the series in WEBTOON_TWINS
     for url in (HERE / "urls.txt").read_text().split():
         name = series_slug(url)
@@ -1350,18 +1355,24 @@ def main():
                 reach[url] = f"Ep.{top + WEBTOON_LOCKED[no]:g}"
             except Exception as e:  # keep the last one
                 print(f"FAIL webtoon {name}: {e}", file=sys.stderr)
+        else:
+            reach.pop(url, None)
         twin = WEBTOON_TWINS.get(url)
         if twin:  # how far WEBTOON is, to open whichever is ahead
             try:
                 tno = re.search(r"title_no=(\d+)", twin)[1]
-                free, locked = max(webtoon_chapters(twin, state).values(), default=0), WEBTOON_LOCKED.get(tno, 0)
-                seen_free = state.setdefault("webtoon_free", {})  # {WEBTOON series: its newest free chapter at the last check}
-                if locked and twin in seen_free and free > seen_free[twin]:  # one more free: the app has a new one too
+                if tno in WEBTOON_WEEKLY:  # one more every week
+                    ep, since = WEBTOON_WEEKLY[tno]
+                    app = ep + max(0, int((time.time() - since) // (7 * 86400)))
+                else:
+                    app = max(webtoon_chapters(twin, state).values(), default=0) + WEBTOON_LOCKED.get(tno, 0)
+                seen_app = state.setdefault("webtoon_app", {})  # {WEBTOON series: the app's newest at the last check}
+                if (tno in WEBTOON_LOCKED or tno in WEBTOON_WEEKLY) and twin in seen_app and app > seen_app[twin]:  # a new one in the app
                     title, image = cover(twin)
-                    line = f"Ep.{free + locked:g}"
+                    line = f"Ep.{app:g}"
                     notify(f"New chapter: {title or name}", line, f"{line}\nlinewebtoon://episodeList/webtoon?titleNo={tno}", image, WEBTOON_APP + tno)
-                seen_free[twin] = free
-                newest[twin] = free + locked
+                seen_app[twin] = app
+                newest[twin] = app
             except Exception as e:  # keep the last count
                 print(f"FAIL webtoon {name}: {e}", file=sys.stderr)
         new = sorted(set(found) - set(state[url])) if url in state else []  # first sight of a url = seed silently
