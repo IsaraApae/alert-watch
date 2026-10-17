@@ -669,8 +669,9 @@ def site_episodes(url):
 site_name = lambda url: "suba-anime" if "suba-anime.com" in url else "animegojo"
 
 # anime-waku and animeruka: each site's RSS feed of new episodes, which (unlike animegojo) gives every upload's time.
-# Read with ordinary requests only: when Cloudflare answers with its bot check (as it has for GitHub's servers), the
-# run reports it and carries on with the other sites; it is never worked around.
+# Read with ordinary requests first. anime-waku only: when Cloudflare answers with its bot check (as it has for GitHub's
+# servers), the feed is retried once through cloudscraper (CLOUDSCRAPER_SITES). If that fails too, the run reports it and
+# carries on with the other sites. animeruka and the rest are never retried this way.
 FEEDS = {"anime-waku": "https://anime-waku.com/feed/?post_type=episodes", "animeruka": "https://animeruka.com/feed/?post_type=episodes"}
 
 
@@ -678,6 +679,21 @@ FEED_PROXY = os.environ.get("FEED_PROXY", "")  # a Cloudflare Worker that fetche
 
 
 FEED_DIR = os.environ.get("FEED_DIR", "")  # feeds saved this run by vpn_feeds.py through a Thai VPN server
+
+
+CLOUDSCRAPER_SITES = {"anime-waku"}  # feeds retried through cloudscraper when the plain request meets Cloudflare's bot check
+
+
+def cloud_get(url):
+    """The page through cloudscraper, which solves Cloudflare's JavaScript check. RuntimeError if it can't (not installed, still blocked)."""
+    try:
+        import cloudscraper
+        scraper = cloudscraper.create_scraper(browser={"browser": "chrome", "platform": "windows", "mobile": False})
+        r = scraper.get(url, timeout=20)
+        r.raise_for_status()
+        return r.text
+    except Exception as e:  # ImportError, timeouts, 403s: all reported the same way, so the other sites carry on
+        raise RuntimeError(f"cloudscraper failed: {type(e).__name__}: {str(e)[:150]}") from None
 
 
 def read_feed(url):
@@ -690,7 +706,14 @@ def read_feed(url):
         elif FEED_PROXY:
             page, status = get(f"{FEED_PROXY}&site={site}"), "proxy"
         else:
-            page, status = get(url), "urllib"
+            try:
+                page, status = get(url), "urllib"
+                if site in CLOUDSCRAPER_SITES and "<rss" not in page[:1000]:  # a 200 that is the bot-check page
+                    page, status = cloud_get(url), "cloudscraper"
+            except urllib.error.HTTPError as e:
+                if site not in CLOUDSCRAPER_SITES or e.code not in (403, 503):
+                    raise
+                page, status = cloud_get(url), "cloudscraper"
     except urllib.error.HTTPError as e:
         raise RuntimeError(f"HTTP {e.code}{' (Cloudflare bot check)' if e.code in (403, 503) else ''}") from None
     if "<rss" not in page[:1000]:
