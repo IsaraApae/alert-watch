@@ -1316,7 +1316,7 @@ def library(state):
         wt = twin if twin and (not ids or max(map(chapter_number, ids)) <= state.get("webtoon_newest", {}).get(twin, 0)) else url
         tap = WEBTOON_APP + re.search(r"title_no=(\d+)", wt)[1] if "webtoons.com" in wt else quote(url, safe=":/%")
         out.append({"url": url, "name": title or series_slug(url), "title": title, "cover": image,
-                    "latest": state.get("webtoon_reach", {}).get(url) or re.sub(r"^ซี่?ซั่น-1/", "", latest), "open": tap})
+                    "latest": state.get("chapter_labels", {}).get(url) or (f"Chapter {chapter_number(latest):g}" if latest else ""), "open": tap})
     if old != {m["url"]: m for m in out} or len(old) != len(out):
         path.write_text(json.dumps({"manga": out}, ensure_ascii=False, indent=1))
 
@@ -1338,6 +1338,8 @@ def main():
         print(f"FAIL schedule: {e}", file=sys.stderr)
     state.pop("webtoon_switched", None)  # left from the automatic switch, which is gone
     state.pop("webtoon_free", None)  # replaced by webtoon_app
+    state.pop("webtoon_reach", None)  # replaced by chapter_labels
+    labels = state.setdefault("chapter_labels", {})  # {WEBTOON series: "Chapter 140", its newest (in the app), for the LINE list}
     newest = state.setdefault("webtoon_newest", {})  # {WEBTOON series: its newest free chapter}, for the series in WEBTOON_TWINS
     for url in (HERE / "urls.txt").read_text().split():
         name = series_slug(url)
@@ -1349,16 +1351,14 @@ def main():
         if not found:  # blocked / layout changed: keep old state, don't treat as "no chapters"
             print(f"EMPTY {name}", file=sys.stderr)
             continue
-        reach = state.setdefault("webtoon_reach", {})  # {WEBTOON series: the app's newest, "Ep.50"}, for those in WEBTOON_LOCKED
         no = "webtoons.com" in url and re.search(r"title_no=(\d+)", url)[1]
-        if no in WEBTOON_LOCKED:
+        real = {}  # a WEBTOON series' episodes as chapters, from their titles: {"EP.48": 47.0} (its own numbers count notices too)
+        if no:
             try:
-                top = max(webtoon_chapters(url, state).values(), default=0)
-                reach[url] = f"Ep.{top + WEBTOON_LOCKED[no]:g}"
+                real = webtoon_chapters(url, state)
+                labels[url] = f"Chapter {max(real.values()) + WEBTOON_LOCKED.get(no, 0):g}"  # the app's newest, for the LINE list
             except Exception as e:  # keep the last one
                 print(f"FAIL webtoon {name}: {e}", file=sys.stderr)
-        else:
-            reach.pop(url, None)
         twin = WEBTOON_TWINS.get(url)
         if twin:  # how far WEBTOON is, to open whichever is ahead
             try:
@@ -1369,9 +1369,11 @@ def main():
                 else:
                     app = max(webtoon_chapters(twin, state).values(), default=0) + WEBTOON_LOCKED.get(tno, 0)
                 seen_app = state.setdefault("webtoon_app", {})  # {WEBTOON series: the app's newest at the last check}
-                if (tno in WEBTOON_LOCKED or tno in WEBTOON_WEEKLY) and twin in seen_app and app > seen_app[twin]:  # a new one in the app
+                # a new one in the app, ahead of the manga site (one the site has came with the site's card)
+                if (tno in WEBTOON_LOCKED or tno in WEBTOON_WEEKLY) and twin in seen_app and app > seen_app[twin] \
+                        and app > max(map(chapter_number, found)):
                     title, image = cover(twin)
-                    line = f"Ep.{app:g}"
+                    line = f"Chapter {app:g}"
                     notify(f"New chapter: {title or name}", line, f"{line}\nlinewebtoon://episodeList/webtoon?titleNo={tno}", image, WEBTOON_APP + tno)
                 seen_app[twin] = app
                 newest[twin] = app
@@ -1379,29 +1381,29 @@ def main():
                 print(f"FAIL webtoon {name}: {e}", file=sys.stderr)
         new = sorted(set(found) - set(state[url])) if url in state else []  # first sight of a url = seed silently
         if new:
-            shown = ", ".join(re.sub(r"^ซี่?ซั่น-1/", "", c) for c in new)[:200]  # every series is on season 1; a later season would still show
+            number = lambda c: real.get(c) or chapter_number(c)  # "ซีซั่น-1/ตอนที่-216" -> 216, WEBTOON's "EP.48" -> 47 (its title's)
+            new = sorted(new, key=number)
+            shown = ", ".join(f"Chapter {number(c):g}" for c in new)[:200]
             if "webtoons.com" in url:  # a cover card that opens the series straight in the WEBTOON app
-                no = re.search(r"title_no=(\d+)", url)[1]
-                eps = sorted(int(c[3:]) for c in new)  # "EP.216" -> 216; the card opens the first new one, so you read in order
+                eps = sorted(int(c[3:]) for c in new)  # WEBTOON's own numbers: the card opens the first new one, so you read in order
                 if no in WEBTOON_SERIES_PAGE:
                     text, tap = f"{shown}\nlinewebtoon://episodeList/webtoon?titleNo={no}", WEBTOON_APP + no
                 else:
-                    text = "\n".join(f"EP.{e}\nlinewebtoon://viewer/webtoon?titleNo={no}&episodeNo={e}" for e in eps)
+                    text = "\n".join(f"Chapter {number(f'EP.{e}'):g}\nlinewebtoon://viewer/webtoon?titleNo={no}&episodeNo={e}" for e in eps)
                     tap = f"{WEBTOON_APP}{no}&e={eps[0]}"
                 title, image = cover(url)  # LINE cards only open web addresses, so the card goes via a page that hands off to the app
-                notify(f"New chapter: {title or name}", reach.get(url, shown), text, image, tap)
+                notify(f"New chapter: {title or name}", labels[url] if no in WEBTOON_LOCKED and url in labels else shown, text, image, tap)
             elif twin and max(map(chapter_number, new)) <= newest.get(twin, 0):  # WEBTOON has it too: the card opens it there
-                no = re.search(r"title_no=(\d+)", WEBTOON_TWINS[url])[1]
-                title, image = cover(WEBTOON_TWINS[url])
+                no = re.search(r"title_no=(\d+)", twin)[1]
+                title, image = cover(twin)
                 notify(f"New chapter: {title or name}", f"{shown} · on WEBTOON", f"{shown}\nlinewebtoon://episodeList/webtoon?titleNo={no}",
                        image, WEBTOON_APP + no)
             else:  # cover card that opens the first new chapter; the text version lists each new chapter's link
                 links = {c: quote(found[c], safe=":/%?=&#") for c in new}
-                order = sorted(new, key=lambda c: [int(x) for x in re.findall(r"\d+", c)] or [0])
-                text = "\n".join(f"{re.sub(r'^ซี่?ซั่น-1/', '', c)}\n{links[c]}" for c in order)
+                text = "\n".join(f"Chapter {number(c):g}\n{links[c]}" for c in new)
                 image = cover(url)[1]
                 title = twin and cover(twin)[0]  # a series also on WEBTOON: its WEBTOON title, as in the LINE list
-                notify(f"New chapter: {title or name}", shown, text, image and quote(image, safe=":/%?=&"), links[order[0]])
+                notify(f"New chapter: {title or name}", shown, text, image and quote(image, safe=":/%?=&"), links[new[0]])
         print(f"{name}: {len(found)} chapters, {len(new)} new")
         state[url] = sorted(set(found) | set(state.get(url, [])))
     STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1))
