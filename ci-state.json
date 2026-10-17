@@ -3733,8 +3733,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792219836,
- "suba_dropped": {},
+ "anime_checked": 1792220480,
  "mal_totals": {
   "60601": [
    null,
@@ -3764,5 +3763,55 @@
    null,
    1792219847
   ]
+ },
+ "suba_pages": {
+  "213657": [
+   "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/",
+   12
+  ]
+ },
+ "suba_titles": {
+  "https://suba-anime.com/keroro-gunsou/": "keroro gunsou☆ เคโรโระ ขบวนการอ๊บอ๊บป่วนโลก☆ ตอนที่ 1-4 ซับไทย anime-suba",
+  "https://suba-anime.com/zeri-feisheng/": "zeri feisheng (a good day to ascend) ลำนำวิถีเซียน ตอนที่ 1-17 ซับไทย anime-suba",
+  "https://suba-anime.com/wu-shen-zhu-zai/": "wu shen zhu zai ปรมาจารย์การต่อสู้ ตอนที่ 1-690 ซับไทย anime-suba",
+  "https://suba-anime.com/douluo-dalu-2-jueshi-tangmen/": "douluo dalu ii: jueshi tangmen ตำนานจอมยุทธ์ภูตถังซาน 2: สำนักถังเลิศภพจบแดน ตอนที่ 77-176 ซับไทย anime-suba",
+  "https://suba-anime.com/uchi-no-otoutodomo-ga-sumimasen/": "uchi no otoutodomo ga sumimasen ขอโทษทีที่มีน้องชายจอมป่วน ตอนที่ 1-16 ซับไทย anime-suba",
+  "https://suba-anime.com/wu-shang-shen-di-ss2/": "supreme god emperor 2nd season จักรพรรดิเทพสูงสุด (ภาค2) ตอนที่ 1-585 ซับไทย anime-suba",
+  "https://suba-anime.com/qiyun-dantian-kaiju-qiandao-zhizun-dantian/": "qiyun dantian: kaiju qiandao zhizun dantian ระบบเช็คอินหมื่นพิภพของมหาจักรพรรดิ ตอนที่ 1-35 ซับไทย anime-suba",
+  "https://suba-anime.com/tougen-anki-ss2-part-1/": "tougen anki: nikko・kegon no taki-hen สงครามเลือดอสูร (ภาค2) (พาร์ต1) ตอนที่ 0-4 ซับไทย anime-suba",
+  "https://suba-anime.com/hotaru-no-yomeiri/": "hotaru no yomeiri วิวาห์แห่งหิ่งห้อย ตอนที่ 1-3 ซับไทย anime-suba",
+  "https://suba-anime.com/kusuriya-no-hitorigoto-ss3/": "kusuriya no hitorigoto 3 สืบคดีปริศนา หมอยาตำรับโคมแดง (ภาค3) ตอนที่ 1-4 ซับไทย anime-suba",
+  "https://suba-anime.com/tokyo-revengers-ss4/": "tokyo revengers: santen sensou-hen โตเกียว รีเวนเจอร์ส (ภาค4) ตอนที่ 1-4 ซับไทย anime-suba",
+  "https://suba-anime.com/jojo-no-kimyou-na-bouken-steel-ball-run/": "jojo no kimyou na bouken: part 7 steel ball run โจโจ้ล่าข้ามศตวรรษ:สตีลบอลรัน (พาร์ต7) ตอนที่ 1-6 ซับไทย anime-suba"
+ },
+ "suba_search": {
+  "213805": {},
+  "195516": {
+   "https://suba-anime.com/kusuriya-no-hitorigoto-ss3/": [
+    1,
+    2,
+    3
+   ]
+  },
+  "178083": {
+   "https://suba-anime.com/tokyo-revengers-ss4/": [
+    1,
+    2,
+    3
+   ]
+  },
+  "191656": {},
+  "209872": {},
+  "189123": {},
+  "195539": {},
+  "210482": {
+   "https://suba-anime.com/jojo-no-kimyou-na-bouken-steel-ball-run/": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ]
+  }
  }
 }
