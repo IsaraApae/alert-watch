@@ -29,9 +29,17 @@ jobs:
     timeout-minutes: 9  # a stuck run must end before the next one starts
     steps:
       - uses: actions/checkout@v4
+      - name: Read anime feeds through a Thai VPN
+        if: ${{ !inputs.ping && !inputs.richmenu && !inputs.f1check }}
+        continue-on-error: true
+        timeout-minutes: 4
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq openvpn > /dev/null
+          python3 vpn_feeds.py
       - run: python3 watch.py ${{ inputs.ping && 'ping' || '' }}${{ inputs.richmenu && 'richmenu' || '' }}${{ inputs.f1check && 'f1check' || '' }}${{ inputs.sites && 'sites' || '' }}
         env:
           MANGA_STATE: ci-state.json
+          FEED_DIR: feeds
           LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
           YOUTUBE_KEY: ${{ secrets.YOUTUBE_KEY }}
       - run: |
