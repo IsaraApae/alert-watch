@@ -3733,7 +3733,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792225234,
+ "anime_checked": 1792225839,
  "mal_totals": {
   "60601": [
    null,
@@ -3860,9 +3860,32 @@
   },
   "2342": {},
   "4271": {},
-  "7265": {}
+  "7265": {},
+  "6227": {},
+  "9274": {}
  },
  "webtoon_newest": {
+  "https://www.webtoons.com/th/drama/reborn-rich/list?title_no=4861": 208.0,
+  "https://www.webtoons.com/th/fantasy/the-reborn-young-lord-is-an-assassin/list?title_no=6392": 132.0,
+  "https://www.webtoons.com/th/fantasy/ultimate-shut-in/list?title_no=7562": 90.0,
+  "https://www.webtoons.com/th/action/99-reinforced-wooden-stick/list?title_no=4395": 217.0,
+  "https://www.webtoons.com/th/fantasy/the-misunderstood-hunter/list?title_no=7294": 98.0,
+  "https://www.webtoons.com/th/fantasy/overpowered-than-the-hero/list?title_no=5823": 125.0,
+  "https://www.webtoons.com/th/action/juvenile-detention-center/list?title_no=6842": 114.0,
+  "https://www.webtoons.com/th/action/the-toy/list?title_no=6718": 77.0,
+  "https://www.webtoons.com/th/action/loan-sharks-genius-grandson/list?title_no=7637": 96.0,
+  "https://www.webtoons.com/th/fantasy/what-a-bountiful-harvest-demon-lord/list?title_no=8314": 72.0,
+  "https://www.webtoons.com/th/action/killer-peter/list?title_no=5899": 144.0,
+  "https://www.webtoons.com/th/fantasy/ticket-hero/list?title_no=2433": 311.0,
+  "https://www.webtoons.com/th/comedy/badguy/list?title_no=2342": 310.0,
+  "https://www.webtoons.com/th/fantasy/reality-quest/list?title_no=4271": 215.0,
+  "https://www.webtoons.com/th/drama/life-changing-voice-phishing/list?title_no=7265": 90.0
+ },
+ "webtoon_reach": {
+  "https://m.webtoons.com/th/fantasy/enrolling-in-the-transcendent-academy/list?title_no=6227": "Ep.138 free · Ep.140 in the app",
+  "https://m.webtoons.com/th/fantasy/zodiac-girls/list?title_no=9274": "Ep.47 free · Ep.50 in the app"
+ },
+ "webtoon_free": {
   "https://www.webtoons.com/th/drama/reborn-rich/list?title_no=4861": 10.0,
   "https://www.webtoons.com/th/fantasy/the-reborn-young-lord-is-an-assassin/list?title_no=6392": 129.0,
   "https://www.webtoons.com/th/fantasy/ultimate-shut-in/list?title_no=7562": 88.0,
