@@ -3733,7 +3733,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792222234,
+ "anime_checked": 1792222897,
  "mal_totals": {
   "60601": [
    null,
@@ -3836,5 +3836,6 @@
     5
    ]
   }
- }
+ },
+ "webtoon_switched": {}
 }
