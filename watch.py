@@ -644,8 +644,8 @@ def gojo_sub_episodes(page):
 # animegojo may carry a new cour on an older page: Yozakura Season 2 Cour 1 was its 1-12, so its 13 would be Cour 2's 1
 GOJO_SHIFT = {213657: 12}
 
-# shows also followed on another site: {AniList id: its series page}, only until anime-waku, animeruka or animegojo
-# carries the show (suba_dropped in the state); from then on those three compete for it. suba-anime was the only place to
+# shows also followed on another site: {AniList id: its series page}, racing anime-waku, animeruka and animegojo for every
+# episode (whichever posts it first sends the card). suba-anime was the only place to
 # watch Yozakura Season 2 in Thailand; its page numbers the season 1-24, so Cour 2's episode 1 is its 13 (GOJO_SHIFT).
 # Read with ordinary requests only: if the site ever answers with a bot check, it's reported as a failure, not worked around.
 OTHER_PAGES = {213657: "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/"}
@@ -1019,14 +1019,9 @@ def anime(state):
         except Exception as e:
             print(f"FAIL {site}: {e}", file=sys.stderr)
     to_ep = lambda i, n: next((e for e in (n - shows[i]["offset"], n - shows[i]["offset"] - GOJO_SHIFT.get(i, 0)) if (i, e) in due), None)
-    # suba-anime is for Yozakura only, and only until one of the three sites carries it: from then on those three compete
-    dropped = state.setdefault("suba_dropped", {})  # {AniList id: the site that had it}
-    for t, site, i, n, link in hits:
-        if i in OTHER_PAGES and str(i) not in dropped and to_ep(i, n) is not None:
-            dropped[str(i)] = site
-            print(f"{shows[i]['name']}: found on {site}, so suba-anime is no longer checked")
-    for i, url in (OTHER_PAGES.items() if not seed else []):
-        if i not in shows or not gojo_only(i) or str(i) in dropped:
+    state.pop("suba_dropped", None)  # suba-anime used to be dropped once another site had the show; now it always races
+    for i, url in (OTHER_PAGES.items() if not seed else []):  # suba-anime (Yozakura only) races the other three sites
+        if i not in shows or not gojo_only(i):
             continue
         waiting = [e for (j, e), t in due.items() if j == i and f"{i}:{e}" not in seen and now >= t - 86400]
         if not waiting:
