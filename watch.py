@@ -515,7 +515,9 @@ WEBTOON_SERIES_PAGE = {"6227", "9274"}
 # in the app in Oct 2026, by WEBTOON series number: added to the free count before comparing with the manga site.
 # ponytail: fixed numbers; if WEBTOON changes how many it locks, update them from the app.
 WEBTOON_LOCKED = {"6842": 2, "4395": 2, "7294": 3, "5823": 1, "5899": 1, "6718": 1, "7562": 2, "8314": 3, "6392": 3, "7637": 2,
-                  "2433": 3, "2342": 255, "4861": 198}  # Bad Guy: 55 free, 310 in the app; Reborn Rich: 10 free, 208
+                  "2433": 3, "2342": 255, "4861": 198,  # Bad Guy: 55 free, 310 in the app; Reborn Rich: 10 free, 208
+                  "9274": 3, "6227": 2}  # Zodiac Girls, Enrolling in the Transcendent Academy (WEBTOON only): their cards and
+                  # the LINE list say how far the app is ("Ep.47 free · Ep.50 in the app"), so you know which episode to read
 WEBTOON_TWINS = {"https://manga-lc.net/manga/the-regressed-son-of-a-duke-is-an-assassin-ลูกชายคนเล็กของดย/": "https://www.webtoons.com/th/fantasy/the-reborn-young-lord-is-an-assassin/list?title_no=6392",
                  "https://manga-lc.net/manga/life-changer-voice-phishing-คอลเซ็นเตอร์เปลี่ยน/": "https://www.webtoons.com/th/drama/life-changing-voice-phishing/list?title_no=7265",
                  "https://manga-lc.net/manga/reborn-rich/": "https://www.webtoons.com/th/drama/reborn-rich/list?title_no=4861",
@@ -1307,7 +1309,7 @@ def library(state):
         wt = twin if twin and (not ids or max(map(chapter_number, ids)) <= state.get("webtoon_newest", {}).get(twin, 0)) else url
         tap = WEBTOON_APP + re.search(r"title_no=(\d+)", wt)[1] if "webtoons.com" in wt else quote(url, safe=":/%")
         out.append({"url": url, "name": title or series_slug(url), "title": title, "cover": image,
-                    "latest": re.sub(r"^ซี่?ซั่น-1/", "", latest), "open": tap})
+                    "latest": state.get("webtoon_reach", {}).get(url) or re.sub(r"^ซี่?ซั่น-1/", "", latest), "open": tap})
     if old != {m["url"]: m for m in out} or len(old) != len(out):
         path.write_text(json.dumps({"manga": out}, ensure_ascii=False, indent=1))
 
@@ -1339,6 +1341,14 @@ def main():
         if not found:  # blocked / layout changed: keep old state, don't treat as "no chapters"
             print(f"EMPTY {name}", file=sys.stderr)
             continue
+        reach = state.setdefault("webtoon_reach", {})  # {WEBTOON series: "Ep.47 free · Ep.50 in the app"}, for those in WEBTOON_LOCKED
+        no = "webtoons.com" in url and re.search(r"title_no=(\d+)", url)[1]
+        if no in WEBTOON_LOCKED:
+            try:
+                top = max(webtoon_chapters(url, state).values(), default=0)
+                reach[url] = f"Ep.{top:g} free · Ep.{top + WEBTOON_LOCKED[no]:g} in the app"
+            except Exception as e:  # keep the last one
+                print(f"FAIL webtoon {name}: {e}", file=sys.stderr)
         twin = WEBTOON_TWINS.get(url)
         if twin:  # how far WEBTOON is, to open whichever is ahead
             try:
@@ -1357,7 +1367,7 @@ def main():
                     text = "\n".join(f"EP.{e}\nlinewebtoon://viewer/webtoon?titleNo={no}&episodeNo={e}" for e in eps)
                     tap = f"{WEBTOON_APP}{no}&e={eps[0]}"
                 title, image = cover(url)  # LINE cards only open web addresses, so the card goes via a page that hands off to the app
-                notify(f"New chapter: {title or name}", shown, text, image, tap)
+                notify(f"New chapter: {title or name}", reach.get(url, shown), text, image, tap)
             elif twin and max(map(chapter_number, new)) <= newest.get(twin, 0):  # WEBTOON has it too: the card opens it there
                 no = re.search(r"title_no=(\d+)", WEBTOON_TWINS[url])[1]
                 title, image = cover(WEBTOON_TWINS[url])
