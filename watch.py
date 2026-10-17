@@ -516,13 +516,15 @@ WEBTOON_SERIES_PAGE = {"6227", "9274"}
 # WEBTOON frees one more, a card gives the app's newest episode ("Ep.218": 216 free + 2).
 # ponytail: fixed numbers; if WEBTOON changes how many it locks, update them from the app.
 WEBTOON_LOCKED = {"6842": 2, "4395": 2, "7294": 3, "5823": 1, "5899": 1, "6718": 1, "7562": 2, "8314": 3, "6392": 3, "7637": 2,
-                  "2433": 3, "2342": 255,  # Bad Guy: 55 free, 310 in the app
+                  "2433": 3,
                   "6227": 2}  # Enrolling in the Transcendent Academy (WEBTOON only): its cards and the LINE list give the app's
                   # newest episode ("Ep.140": 138 free + 2), so you know which episode to read
-# series whose app count can't be worked out from the free ones (WEBTOON's website shows Reborn Rich only up to Ep.10): the app
+# series whose app count can't be worked out from the free ones (WEBTOON's website shows Reborn Rich only up to Ep.10, Bad Guy
+# up to Ep.55): the app
 # gets one more every week at a set time, counted from a known episode: {WEBTOON series number: (episode, when it came out)}.
-# Reborn Rich: Ep.208 in the app on Wed 14 Oct 2026; one more every Wednesday at 22:00 Thai time, each with a card.
-WEBTOON_WEEKLY = {"4861": (208, datetime(2026, 10, 14, 22, 0, tzinfo=timezone(timedelta(hours=7))).timestamp())}
+# Reborn Rich Ep.208 and Bad Guy Ep.310 in the app on Wed 14 Oct 2026; one more every Wednesday at 22:00 Thai time, each with a card.
+WED_14_OCT = datetime(2026, 10, 14, 22, 0, tzinfo=timezone(timedelta(hours=7))).timestamp()
+WEBTOON_WEEKLY = {"4861": (208, WED_14_OCT), "2342": (310, WED_14_OCT)}
 WEBTOON_TWINS = {"https://manga-lc.net/manga/the-regressed-son-of-a-duke-is-an-assassin-ลูกชายคนเล็กของดย/": "https://www.webtoons.com/th/fantasy/the-reborn-young-lord-is-an-assassin/list?title_no=6392",
                  "https://manga-lc.net/manga/life-changer-voice-phishing-คอลเซ็นเตอร์เปลี่ยน/": "https://www.webtoons.com/th/drama/life-changing-voice-phishing/list?title_no=7265",
                  "https://manga-lc.net/manga/reborn-rich/": "https://www.webtoons.com/th/drama/reborn-rich/list?title_no=4861",
