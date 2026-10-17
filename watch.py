@@ -1396,7 +1396,7 @@ def main():
             elif twin and max(map(chapter_number, new)) <= newest.get(twin, 0):  # WEBTOON has it too: the card opens it there
                 no = re.search(r"title_no=(\d+)", twin)[1]
                 title, image = cover(twin)
-                notify(f"New chapter: {title or name}", f"{shown} · on WEBTOON", f"{shown}\nlinewebtoon://episodeList/webtoon?titleNo={no}",
+                notify(f"New chapter: {title or name}", shown, f"{shown}\nlinewebtoon://episodeList/webtoon?titleNo={no}",
                        image, WEBTOON_APP + no)
             else:  # cover card that opens the first new chapter; the text version lists each new chapter's link
                 links = {c: quote(found[c], safe=":/%?=&#") for c in new}
