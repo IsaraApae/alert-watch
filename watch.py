@@ -28,61 +28,6 @@ def chapters(url, html):
     return out
 
 
-WEBTOON_EP = re.compile(r"(?:(?:\bS{1,2}|Season\s*)(\d+)\]?\s*)?Ep\.?\s*(\d+(?:\.\d+)?)", re.I)
-
-
-def webtoon_ep(title):
-    """'S2 Ep.12' -> (2, 12.0), 'SS2 Ep.10' -> (2, 10.0), '[Season 2] Ep.163' -> (2, 163.0), 'Ep.215' -> (1, 215.0); None for a
-    notice or a review."""
-    found = WEBTOON_EP.search(title)
-    return (int(found[1] or 1), float(found[2])) if found else None
-
-
-def webtoon_rows(list_url, page):
-    """[(WEBTOON episode number, title)] on one page of a series' episode list (newest first, 10 a page)."""
-    return [(int(n), html.unescape(t).strip()) for n, t in re.findall(r'data-episode-no="(\d+)".*?class="subj"><span>([^<]*)', get(f"{list_url}&page={page}"), re.S)]
-
-
-def season_start(list_url, season, newest_no, ep, seasons):
-    """How many chapters came before this season (Juvenile Prison's S2 Ep.1 is chapter 101: 100), from the list: the
-    chapter just before the season's first episode. Kept per series in seasons ({season: chapters before})."""
-    if season <= 1:
-        return 0
-    if str(season) not in seasons:
-        page, rows = max(1, int(ep) // 10), []
-        for page in range(page, page + 6):  # the season's first episode is about ep episodes back, 10 a page
-            rows += webtoon_rows(list_url, page)
-            older = [(n, webtoon_ep(t)) for n, t in rows if webtoon_ep(t) and webtoon_ep(t)[0] < season]
-            if older:
-                n, (s_prev, last) = max(older)
-                seasons[str(season)] = season_start(list_url, s_prev, n, last, seasons) + last
-                break
-        else:
-            raise RuntimeError(f"season {season}'s start not found")
-    return seasons[str(season)]
-
-
-def webtoon_chapters(url, state):
-    """LINE Webtoon: {"EP.112": 112.0}, each free episode's chapter number counted on through the seasons as the manga sites
-    count it (Juvenile Prison's "S2 Ep.12" is chapter 112); WEBTOON's own episode number counts notices and extras too.
-    Episodes locked behind coins or ads exist only in the WEBTOON app, so they aren't counted."""
-    list_url = url.replace("://m.webtoons.com", "://www.webtoons.com").replace("/rss?", "/list?")
-    rss = get(list_url.replace("/list?", "/rss?"))
-    seasons = state.setdefault("webtoon_seasons", {}).setdefault(re.search(r"title_no=(\d+)", url)[1], {})
-    out = {}
-    for title, n in re.findall(r"<item>\s*<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</title>.*?episode_no=(\d+)", rss, re.S):
-        found = webtoon_ep(html.unescape(title))
-        if found:
-            out[f"EP.{n}"] = season_start(list_url, found[0], int(n), found[1], seasons) + found[1]
-    return out
-
-
-def chapter_number(c):
-    """'ซีซั่น-1/ตอนที่-226' -> 226.0, '9_1' -> 9.1: a manga site's chapter id as a number."""
-    found = re.search(r"\d+(?:_\d+)?", re.sub(r"^ซี่?ซั่น-\d+/", "", c))
-    return float(found[0].replace("_", ".")) if found else 0.0
-
-
 def webtoon(url):
     """LINE Webtoon: {"EP.216": link} from the series' RSS feed, which lists its latest free episodes."""
     rss = get(url.replace("://m.webtoons.com", "://www.webtoons.com").replace("/list?", "/rss?"))
@@ -507,12 +452,9 @@ def cover(url):
 
 WEBTOON_APP = "https://isaraapae.github.io/alert-watch/w.html?t="  # redirect page on the gh-pages branch; opens linewebtoon://
 WEBTOON_SERIES_PAGE = {"6227", "9274"}
-# manga-site series that are also on WEBTOON Thai (same work: found by their Thai titles there). Once WEBTOON's newest free
-# chapter passes the site's, the series is followed on WEBTOON instead (webtoon_switched in the state): a card says so and
-# brings the new chapters, then the WEBTOON episodes are alerted and the LINE list shows WEBTOON. WEBTOON's website shows
-# only part of what its app has (Reborn Rich: Ep.1-10 on the site, 218 in the app; The Boy of Death, +99 Wooden Stick and
-# A Sense of Amusement: Ep.2), so for those the switch only comes once the website itself gets ahead; the app's own list
-# isn't read (it is only for the app).
+# manga-site series that are also on WEBTOON Thai (found by their Thai titles there). WEBTOON's app is always further along
+# (its newest episodes are locked behind coins or ads and exist only in the app), so these stay alerted from the manga site,
+# the fastest source the watcher can read, but the card and the LINE list open the series in the WEBTOON app.
 WEBTOON_TWINS = {"https://manga-lc.net/manga/the-regressed-son-of-a-duke-is-an-assassin-ลูกชายคนเล็กของดย/": "https://www.webtoons.com/th/fantasy/the-reborn-young-lord-is-an-assassin/list?title_no=6392",
                  "https://manga-lc.net/manga/life-changer-voice-phishing-คอลเซ็นเตอร์เปลี่ยน/": "https://www.webtoons.com/th/drama/life-changing-voice-phishing/list?title_no=7265",
                  "https://manga-lc.net/manga/reborn-rich/": "https://www.webtoons.com/th/drama/reborn-rich/list?title_no=4861",
@@ -1290,17 +1232,17 @@ def library(state):
     old = {m["url"]: m for m in (json.loads(path.read_text())["manga"] if path.exists() else [])}
     out = []
     for url in (HERE / "urls.txt").read_text().split():
-        url = state.get("webtoon_switched", {}).get(url, url)  # a series followed on WEBTOON since it got ahead there
         prev = old.get(url, {})
-        if "cover" in prev and url not in COVER_OVERRIDES:
+        if "cover" in prev and url not in COVER_OVERRIDES and (url not in WEBTOON_TWINS or prev.get("title")):  # a WEBTOON one: its title once
             title, image = prev.get("title"), prev["cover"]
         else:
-            title, image = cover(url)
-            title = title if "webtoons.com" in url else None  # other sites' page titles are full of extra words
+            title, image = cover(WEBTOON_TWINS.get(url, url))  # a manga-site series also on WEBTOON shows WEBTOON's title and cover
+            title = title if "webtoons.com" in WEBTOON_TWINS.get(url, url) else None  # other sites' page titles are full of extra words
             image = quote(image, safe=":/%?=&") if image and re.search(r"\.(jpe?g|png)$", urlparse(image).path, re.I) else None
         ids = state.get(url) or []
         latest = max(ids, key=lambda c: [int(x) for x in re.findall(r"\d+", c)] or [0]) if ids else ""
-        tap = WEBTOON_APP + re.search(r"title_no=(\d+)", url)[1] if "webtoons.com" in url else quote(url, safe=":/%")
+        wt = WEBTOON_TWINS.get(url, url)  # and opens there
+        tap = WEBTOON_APP + re.search(r"title_no=(\d+)", wt)[1] if "webtoons.com" in wt else quote(url, safe=":/%")
         out.append({"url": url, "name": title or series_slug(url), "title": title, "cover": image,
                     "latest": re.sub(r"^ซี่?ซั่น-1/", "", latest), "open": tap})
     if old != {m["url"]: m for m in out} or len(old) != len(out):
@@ -1322,27 +1264,9 @@ def main():
         schedule(state)
     except Exception as e:  # the countdown page must never stop the alerts
         print(f"FAIL schedule: {e}", file=sys.stderr)
-    switched = state.setdefault("webtoon_switched", {})  # {manga-site series: its WEBTOON series}, once WEBTOON got ahead
+    for key in ("webtoon_switched", "webtoon_seasons"):  # left from the automatic switch, which is gone
+        state.pop(key, None)
     for url in (HERE / "urls.txt").read_text().split():
-        twin = WEBTOON_TWINS.get(url)
-        if twin and url not in switched and state.get(url):
-            try:
-                on_webtoon = webtoon_chapters(twin, state)
-                site_top = max(map(chapter_number, state[url]))
-                ahead = sorted(n for n in on_webtoon.values() if n > site_top)
-                if ahead:
-                    switched[url] = twin
-                    state[twin] = sorted(k for k, n in on_webtoon.items() if n <= site_top)  # read on the site already
-                    title, image = cover(twin)
-                    fmt = lambda n: f"{n:g}"
-                    line = f"WEBTOON is ahead now: Ep.{fmt(ahead[-1])} (the site had {fmt(site_top)}). Followed on WEBTOON from now on."
-                    notify(f"New chapter: {title or series_slug(url)}", line, f"{line}\n{WEBTOON_APP}{re.search(r'title_no=(\d+)', twin)[1]}",
-                           image, WEBTOON_APP + re.search(r"title_no=(\d+)", twin)[1])
-                    state[twin] = sorted(on_webtoon)  # the card above brought these; later ones get the usual WEBTOON cards
-                    print(f"{series_slug(url)}: WEBTOON passed the site ({fmt(ahead[-1])} > {fmt(site_top)}), now followed there")
-            except Exception as e:
-                print(f"FAIL webtoon twin {series_slug(url)}: {e}", file=sys.stderr)
-        url = switched.get(url, url)
         name = series_slug(url)
         try:
             found = webtoon(url) if "webtoons.com" in url else chapters(url, get(url))
@@ -1365,6 +1289,11 @@ def main():
                     tap = f"{WEBTOON_APP}{no}&e={eps[0]}"
                 title, image = cover(url)  # LINE cards only open web addresses, so the card goes via a page that hands off to the app
                 notify(f"New chapter: {title or name}", shown, text, image, tap)
+            elif url in WEBTOON_TWINS:  # also on WEBTOON, which is always further along in the app: the card opens it there
+                no = re.search(r"title_no=(\d+)", WEBTOON_TWINS[url])[1]
+                title, image = cover(WEBTOON_TWINS[url])
+                notify(f"New chapter: {title or name}", f"{shown} · on WEBTOON", f"{shown}\nlinewebtoon://episodeList/webtoon?titleNo={no}",
+                       image, WEBTOON_APP + no)
             else:  # cover card that opens the first new chapter; the text version lists each new chapter's link
                 links = {c: quote(found[c], safe=":/%?=&#") for c in new}
                 order = sorted(new, key=lambda c: [int(x) for x in re.findall(r"\d+", c)] or [0])
@@ -1459,8 +1388,6 @@ if __name__ == "__main__":
         assert episode_total({"episodes": None, "idMal": 1}, {"mal_totals": {"1": [12, time.time()]}}) == 12  # AniList has none: MAL's
         assert episode_total({"episodes": 13, "idMal": 1}, {"mal_totals": {"1": [12, time.time()]}}) == 13  # AniList's wins
         assert episode_total({"episodes": None, "idMal": 1}, {"mal_totals": {"1": [None, time.time()]}}) is None  # neither: blank
-        assert [webtoon_ep(t) for t in ("S2 Ep.12", "[Season 2] Ep.163", "Season 2 Ep.130 สไลด์เดอร์ (3)", "SS2 Ep.10 มังกร", "Ep.215", "Ep.90 ตัวตน (จบซีซัน 1)", "ประกาศ")] == [(2, 12), (2, 163), (2, 130), (2, 10), (1, 215), (1, 90), None]
-        assert [chapter_number(c) for c in ("ซีซั่น-1/ตอนที่-226", "ซีซั่น-1/ตอนที่-9_1", "112 (จบซีซั่น 1)", "EP.45")] == [226, 9.1, 112, 45]
         assert tv_aired(x, {8: [15]}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: [15]}, 1790868600)  # earliest channel, season numbering, nothing future
         x2 = ('<ProgItem><TID>9</TID><Count>1</Count><StTime>2026-10-04 16:30:00</StTime></ProgItem>'
               '<ProgItem><TID>9</TID><Count>26</Count><StTime>2026-10-06 20:00:00</StTime></ProgItem>')
