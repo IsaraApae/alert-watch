@@ -512,7 +512,8 @@ WEBTOON_SERIES_PAGE = {"6227", "9274"}
 # WEBTOON's app has that chapter (webtoon_newest in the state), and the manga site when the site is ahead. WEBTOON's newest
 # episodes, locked behind coins or ads, exist only in the app, so the app's count is the free ones plus WEBTOON_LOCKED.
 # how many more episodes the WEBTOON app has than WEBTOON's website shows free (the ones locked behind coins or ads), counted
-# in the app in Oct 2026, by WEBTOON series number: added to the free count before comparing with the manga site.
+# in the app in Oct 2026, by WEBTOON series number: added to the free count before comparing with the manga site, and when
+# WEBTOON frees one more, a card says how far the app is now ("Ep.216 free · Ep.218 in the app").
 # ponytail: fixed numbers; if WEBTOON changes how many it locks, update them from the app.
 WEBTOON_LOCKED = {"6842": 2, "4395": 2, "7294": 3, "5823": 1, "5899": 1, "6718": 1, "7562": 2, "8314": 3, "6392": 3, "7637": 2,
                   "2433": 3, "2342": 255, "4861": 198,  # Bad Guy: 55 free, 310 in the app; Reborn Rich: 10 free, 208
@@ -1352,7 +1353,15 @@ def main():
         twin = WEBTOON_TWINS.get(url)
         if twin:  # how far WEBTOON is, to open whichever is ahead
             try:
-                newest[twin] = max(webtoon_chapters(twin, state).values(), default=0) + WEBTOON_LOCKED.get(re.search(r"title_no=(\d+)", twin)[1], 0)
+                tno = re.search(r"title_no=(\d+)", twin)[1]
+                free, locked = max(webtoon_chapters(twin, state).values(), default=0), WEBTOON_LOCKED.get(tno, 0)
+                seen_free = state.setdefault("webtoon_free", {})  # {WEBTOON series: its newest free chapter at the last check}
+                if locked and twin in seen_free and free > seen_free[twin]:  # one more free: the app has a new one too
+                    title, image = cover(twin)
+                    line = f"Ep.{free:g} free · Ep.{free + locked:g} in the app"
+                    notify(f"New chapter: {title or name}", line, f"{line}\nlinewebtoon://episodeList/webtoon?titleNo={tno}", image, WEBTOON_APP + tno)
+                seen_free[twin] = free
+                newest[twin] = free + locked
             except Exception as e:  # keep the last count
                 print(f"FAIL webtoon {name}: {e}", file=sys.stderr)
         new = sorted(set(found) - set(state[url])) if url in state else []  # first sight of a url = seed silently
