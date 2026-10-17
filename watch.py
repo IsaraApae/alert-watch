@@ -677,11 +677,17 @@ FEEDS = {"anime-waku": "https://anime-waku.com/feed/?post_type=episodes", "anime
 FEED_PROXY = os.environ.get("FEED_PROXY", "")  # a Cloudflare Worker that fetches the feeds: the sites refuse GitHub's own addresses
 
 
+FEED_DIR = os.environ.get("FEED_DIR", "")  # feeds saved this run by vpn_feeds.py through a Thai VPN server
+
+
 def read_feed(url):
     """A site's RSS feed; an error when the site answers with anything else (a bot check, a block page)."""
+    site = next((n for n, u in FEEDS.items() if u == url), "")
+    saved = HERE / FEED_DIR / f"{site}.xml" if FEED_DIR and site else None
     try:
-        if FEED_PROXY:
-            site = next(n for n, u in FEEDS.items() if u == url)
+        if saved and saved.exists():
+            page, status = saved.read_text(encoding="utf-8"), "vpn"
+        elif FEED_PROXY:
             page, status = get(f"{FEED_PROXY}&site={site}"), "proxy"
         else:
             page, status = get(url), "urllib"
