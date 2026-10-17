@@ -28,6 +28,24 @@ def chapters(url, html):
     return out
 
 
+def webtoon_chapters(url):
+    """LINE Webtoon: {"EP.225": 215.0}, each free episode's chapter number from its title ("Ep.215"); WEBTOON's own episode
+    number counts notices and extras too, so it runs ahead of the chapter number."""
+    rss = get(url.replace("://m.webtoons.com", "://www.webtoons.com").replace("/list?", "/rss?"))
+    out = {}
+    for title, n in re.findall(r"<item>\s*<title>(?:<!\[CDATA\[)?([^<\]]*).*?episode_no=(\d+)", rss, re.S):
+        found = re.search(r"\d+(?:\.\d+)?", title)
+        if found:
+            out[f"EP.{n}"] = float(found[0])
+    return out
+
+
+def chapter_number(c):
+    """'ซีซั่น-1/ตอนที่-226' -> 226.0, '9_1' -> 9.1: a manga site's chapter id as a number."""
+    found = re.search(r"\d+(?:_\d+)?", re.sub(r"^ซี่?ซั่น-\d+/", "", c))
+    return float(found[0].replace("_", ".")) if found else 0.0
+
+
 def webtoon(url):
     """LINE Webtoon: {"EP.216": link} from the series' RSS feed, which lists its latest free episodes."""
     rss = get(url.replace("://m.webtoons.com", "://www.webtoons.com").replace("/list?", "/rss?"))
@@ -451,7 +469,13 @@ def cover(url):
 
 
 WEBTOON_APP = "https://isaraapae.github.io/alert-watch/w.html?t="  # redirect page on the gh-pages branch; opens linewebtoon://
-WEBTOON_SERIES_PAGE = {"6227", "9274"}  # Enrolling in the Transcendent Academy, Zodiac Girls: cards open the series page, not the episode
+WEBTOON_SERIES_PAGE = {"6227", "9274"}
+# manga-site series that are also on WEBTOON Thai (same work: title and authors checked). Once WEBTOON's newest free
+# chapter passes the site's, the series is followed on WEBTOON instead (webtoon_switched in the state): a card says so and
+# brings the new chapters, then the WEBTOON episodes are alerted and the LINE list shows WEBTOON. Bad Guy is not here:
+# WEBTOON Thai's "BAD GUY" is a different series. Reborn Rich: WEBTOON Thai only started it (Ep.10 vs 193, Oct 2026).
+WEBTOON_TWINS = {"https://manga-lc.net/manga/reality-quest/": "https://www.webtoons.com/th/fantasy/reality-quest/list?title_no=4271",
+                 "https://manga-lc.net/manga/reborn-rich/": "https://www.webtoons.com/th/drama/reborn-rich/list?title_no=4861"}  # Enrolling in the Transcendent Academy, Zodiac Girls: cards open the series page, not the episode
 BRAVE = "https://isaraapae.github.io/alert-watch/b.html?v="  # redirect page on the gh-pages branch; opens a YouTube video in Brave
 
 
@@ -1214,6 +1238,7 @@ def library(state):
     old = {m["url"]: m for m in (json.loads(path.read_text())["manga"] if path.exists() else [])}
     out = []
     for url in (HERE / "urls.txt").read_text().split():
+        url = state.get("webtoon_switched", {}).get(url, url)  # a series followed on WEBTOON since it got ahead there
         prev = old.get(url, {})
         if "cover" in prev and url not in COVER_OVERRIDES:
             title, image = prev.get("title"), prev["cover"]
@@ -1245,7 +1270,27 @@ def main():
         schedule(state)
     except Exception as e:  # the countdown page must never stop the alerts
         print(f"FAIL schedule: {e}", file=sys.stderr)
+    switched = state.setdefault("webtoon_switched", {})  # {manga-site series: its WEBTOON series}, once WEBTOON got ahead
     for url in (HERE / "urls.txt").read_text().split():
+        twin = WEBTOON_TWINS.get(url)
+        if twin and url not in switched and state.get(url):
+            try:
+                on_webtoon = webtoon_chapters(twin)
+                site_top = max(map(chapter_number, state[url]))
+                ahead = sorted(n for n in on_webtoon.values() if n > site_top)
+                if ahead:
+                    switched[url] = twin
+                    state[twin] = sorted(k for k, n in on_webtoon.items() if n <= site_top)  # read on the site already
+                    title, image = cover(twin)
+                    fmt = lambda n: f"{n:g}"
+                    line = f"WEBTOON is ahead now: Ep.{fmt(ahead[-1])} (the site had {fmt(site_top)}). Followed on WEBTOON from now on."
+                    notify(f"New chapter: {title or series_slug(url)}", line, f"{line}\n{WEBTOON_APP}{re.search(r'title_no=(\d+)', twin)[1]}",
+                           image, WEBTOON_APP + re.search(r"title_no=(\d+)", twin)[1])
+                    state[twin] = sorted(on_webtoon)  # the card above brought these; later ones get the usual WEBTOON cards
+                    print(f"{series_slug(url)}: WEBTOON passed the site ({fmt(ahead[-1])} > {fmt(site_top)}), now followed there")
+            except Exception as e:
+                print(f"FAIL webtoon twin {series_slug(url)}: {e}", file=sys.stderr)
+        url = switched.get(url, url)
         name = series_slug(url)
         try:
             found = webtoon(url) if "webtoons.com" in url else chapters(url, get(url))
@@ -1362,6 +1407,7 @@ if __name__ == "__main__":
         assert episode_total({"episodes": None, "idMal": 1}, {"mal_totals": {"1": [12, time.time()]}}) == 12  # AniList has none: MAL's
         assert episode_total({"episodes": 13, "idMal": 1}, {"mal_totals": {"1": [12, time.time()]}}) == 13  # AniList's wins
         assert episode_total({"episodes": None, "idMal": 1}, {"mal_totals": {"1": [None, time.time()]}}) is None  # neither: blank
+        assert [chapter_number(c) for c in ("ซีซั่น-1/ตอนที่-226", "ซีซั่น-1/ตอนที่-9_1", "112 (จบซีซั่น 1)", "EP.45")] == [226, 9.1, 112, 45]
         assert tv_aired(x, {8: [15]}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: [15]}, 1790868600)  # earliest channel, season numbering, nothing future
         x2 = ('<ProgItem><TID>9</TID><Count>1</Count><StTime>2026-10-04 16:30:00</StTime></ProgItem>'
               '<ProgItem><TID>9</TID><Count>26</Count><StTime>2026-10-06 20:00:00</StTime></ProgItem>')
