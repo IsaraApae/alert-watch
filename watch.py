@@ -668,6 +668,23 @@ def site_episodes(url):
 
 site_name = lambda url: "suba-anime" if "suba-anime.com" in url else "animegojo"
 
+SUBA = "https://suba-anime.com"
+
+
+def suba_series(home):
+    """Series pages linked from suba-anime's home page, which lists the series it updated last (its search answers with a bot
+    check, so it isn't used)."""
+    return list(dict.fromkeys(re.findall(r'href="(https://suba-anime\.com/[^"/#?.]+/)"', home)))
+
+
+def suba_pages(state):
+    """{AniList id: [suba-anime series page, number shift]}: learned pages, plus OTHER_PAGES (Yozakura, numbered on through
+    the season: GOJO_SHIFT)."""
+    pages = state.setdefault("suba_pages", {})
+    for i, url in OTHER_PAGES.items():
+        pages.setdefault(str(i), [url, GOJO_SHIFT.get(i, 0)])
+    return pages
+
 # anime-waku and animeruka: each site's RSS feed of new episodes, which (unlike animegojo) gives every upload's time.
 # Read with ordinary requests only: when Cloudflare answers with its bot check (as it has for GitHub's servers), the
 # run reports it and carries on with the other sites; it is never worked around.
@@ -785,11 +802,12 @@ def schedule(state=None):
     for a, n, link, p, ch in specials(videos, shows, now - 8 * 86400):
         kept[link] = [a, n, int(p)]
     pages = state.setdefault("gojo_pages", {})  # {AniList id: [animegojo ซับไทย series page, number shift]}, learned from alerts
+    subas = suba_pages(state)  # the same for suba-anime
     gojo = {}
 
     def on_gojo(i):  # (shift, {episode number: link} on its page): each page fetched at most once per run
         if i not in gojo:
-            url, shift = (GOJO + pages[str(i)][0], pages[str(i)][1]) if str(i) in pages else (OTHER_PAGES[i], GOJO_SHIFT.get(i, 0))
+            url, shift = (GOJO + pages[str(i)][0], pages[str(i)][1]) if str(i) in pages else subas[str(i)]
             try:
                 gojo[i] = (shift, site_episodes(url))
             except Exception as e:
@@ -813,14 +831,14 @@ def schedule(state=None):
                 yt = t <= now and s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
                 rec = state.get("first_source", {}).get(f"{i}:{ep}", {})  # the animegojo episode page, if that's where it was found first
                 watch = (in_brave(yt) if yt else None) or links.get(f"{i}:{ep}") or (rec["url"] if rec.get("first") in ("animegojo", "suba-anime", *FEEDS) else None)
-                if not watch and t <= now and (str(i) in pages or i in OTHER_PAGES) and not (i in thai and thai[i][0] in YT_CHANNELS.values()):
+                if not watch and t <= now and (str(i) in pages or str(i) in subas) and not (i in thai and thai[i][0] in YT_CHANNELS.values()):
                     shift, have = on_gojo(i)  # aired, no button yet: the episode on its animegojo (or suba-anime) page, if it's up there
                     watch = have.get(ep + s["offset"] + shift)
                 if watch:
                     links[f"{i}:{ep}"] = watch
                 # the platform is the show's own; an episode found on suba-anime names it on that episode only
                 rows.append({"ep": ep + s["offset"], "at": t, **({"watch": watch} if watch else {}),
-                             **({"where": site_name(watch)} if watch and i in OTHER_PAGES and urlparse(watch).netloc == urlparse(OTHER_PAGES[i]).netloc else {})})
+                             **({"where": site_name(watch)} if watch and urlparse(watch).netloc == urlparse(SUBA).netloc else {})})
         rows += [{"ep": n, "at": p, "watch": in_brave(link)} for link, (a, n, p) in kept.items() if a == i]
         rows.sort(key=lambda r: r["at"])
         total = episode_total(m, state)
@@ -1020,7 +1038,11 @@ def anime(state):
             print(f"FAIL {site}: {e}", file=sys.stderr)
     to_ep = lambda i, n: next((e for e in (n - shows[i]["offset"], n - shows[i]["offset"] - GOJO_SHIFT.get(i, 0)) if (i, e) in due), None)
     state.pop("suba_dropped", None)  # suba-anime used to be dropped once another site had the show; now it always races
-    for i, url in (OTHER_PAGES.items() if not seed else []):  # suba-anime (Yozakura only) races the other three sites
+    # suba-anime races the other three for every show not on Muse or Ani-One: each show's series page, from a day before an
+    # episode is due (Yozakura's numbers carry on through the season: Cour 2's episode 1 is its 13, the page's shift)
+    subas = suba_pages(state)
+    for k, (url, shift) in (list(subas.items()) if not seed else []):
+        i = int(k)
         if i not in shows or not gojo_only(i):
             continue
         waiting = [e for (j, e), t in due.items() if j == i and f"{i}:{e}" not in seen and now >= t - 86400]
@@ -1029,10 +1051,46 @@ def anime(state):
         try:
             have = site_episodes(url)
         except Exception as e:
-            print(f"FAIL {site_name(url)} {url}: {e}", file=sys.stderr)
+            print(f"FAIL suba-anime {url}: {e}", file=sys.stderr)
             continue
-        # its numbers carry on through the season (Cour 2's episode 1 is its 13): only the shifted number is this cour's
-        hits += [(mid, "suba-anime", i, n, have[n]) for e in waiting for n in [e + shows[i]["offset"] + GOJO_SHIFT.get(i, 0)] if n in have]
+        hits += [(mid, "suba-anime", i, n, have[n]) for e in waiting for n in [e + shows[i]["offset"] + shift] if n in have]
+    # a show with no suba-anime page yet: look for it among the series on suba-anime's home page, reading each page's title
+    # once (suba_titles). As on animegojo, a page may be an older season, so what a page has when first seen is its baseline,
+    # and it counts once it gains an episode that is due
+    titles = state.setdefault("suba_titles", {})  # {series page: its title}
+    look = state.setdefault("suba_search", {})  # {AniList id: {page: its episodes at the first look}}
+    home = None
+    for i, s in shows.items():
+        if seed or not gojo_only(i) or not s["yt"] or str(i) in subas:
+            look.pop(str(i), None)
+            continue
+        due_eps = [(e, t) for (j, e), t in due.items() if j == i and f"{i}:{e}" not in seen]
+        if not due_eps or (str(i) in look and not any(now >= t - 86400 for e, t in due_eps)):
+            continue
+        try:
+            if home is None:
+                home = suba_series(get(SUBA + "/"))
+                for url in [u for u in home if u not in titles][:12]:  # a few new titles a run: the rest come in later runs
+                    found_title = re.search(r"<title>([^<]*)", get(url))
+                    titles[url] = html.unescape(found_title[1]).lower() if found_title else ""
+                for url in list(titles)[:-300]:
+                    del titles[url]
+            current = {url: sorted(site_episodes(url)) for url in home if re.search(s["yt"], titles.get(url, ""))}
+        except Exception as e:
+            print(f"FAIL suba-anime search {s['name']}: {e}", file=sys.stderr)
+            home = []
+            continue
+        first_look = look.setdefault(str(i), {})
+        for url, eps in current.items():
+            if url not in first_look:  # seen for the first time (now, or only now on the home page): what it has is old
+                first_look[url] = eps
+                continue
+            added = set(eps) - set(first_look[url])
+            new = [e + s["offset"] for e, t in due_eps if e + s["offset"] in added]
+            if new:
+                subas[str(i)] = [url, 0]
+                hits += [(mid, "suba-anime", i, n, f"{url}ep-{n}") for n in new]
+                break
     pages_read = {}
     for t, site, i, n, link in sorted(hits, key=lambda h: h[0]):  # fastest first
         s, m = shows[i], info.get(i, {})
@@ -1043,7 +1101,7 @@ def anime(state):
         if site in FEEDS:
             on_site = {to_ep(j, k): (l, ts) for ts, w, j, k, l in sorted(hits, key=lambda h: h[0], reverse=True) if w == site and j == i}
         else:  # animegojo or suba-anime: read the series page (checks animegojo's is ซับไทย)
-            page_url = OTHER_PAGES[i] if site == "suba-anime" else link.split("#")[0]
+            page_url = suba_pages(state)[str(i)][0] if site == "suba-anime" else link.split("#")[0]
             try:
                 if page_url not in pages_read:
                     pages_read[page_url] = site_episodes(page_url)
