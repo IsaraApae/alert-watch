@@ -509,8 +509,13 @@ WEBTOON_APP = "https://isaraapae.github.io/alert-watch/w.html?t="  # redirect pa
 WEBTOON_SERIES_PAGE = {"6227", "9274"}
 # manga-site series that are also on WEBTOON Thai (found by their Thai titles there). They're alerted when the manga site
 # posts a chapter, the fastest source the watcher can read. The card and the LINE list open the series in the WEBTOON app when
-# WEBTOON has that chapter free (webtoon_newest in the state), and the manga site when the site is ahead. WEBTOON's newest
-# episodes, locked behind coins or ads, exist only in the app, so only its free ones count.
+# WEBTOON's app has that chapter (webtoon_newest in the state), and the manga site when the site is ahead. WEBTOON's newest
+# episodes, locked behind coins or ads, exist only in the app, so the app's count is the free ones plus WEBTOON_LOCKED.
+# how many more episodes the WEBTOON app has than WEBTOON's website shows free (the ones locked behind coins or ads), counted
+# in the app in Oct 2026, by WEBTOON series number: added to the free count before comparing with the manga site.
+# ponytail: fixed numbers; if WEBTOON changes how many it locks, update them from the app.
+WEBTOON_LOCKED = {"6842": 2, "4395": 2, "7294": 3, "5823": 1, "5899": 1, "6718": 1, "7562": 2, "8314": 3, "6392": 3, "7637": 2,
+                  "2433": 3, "2342": 255, "4861": 198}  # Bad Guy: 55 free, 310 in the app; Reborn Rich: 10 free, 208
 WEBTOON_TWINS = {"https://manga-lc.net/manga/the-regressed-son-of-a-duke-is-an-assassin-ลูกชายคนเล็กของดย/": "https://www.webtoons.com/th/fantasy/the-reborn-young-lord-is-an-assassin/list?title_no=6392",
                  "https://manga-lc.net/manga/life-changer-voice-phishing-คอลเซ็นเตอร์เปลี่ยน/": "https://www.webtoons.com/th/drama/life-changing-voice-phishing/list?title_no=7265",
                  "https://manga-lc.net/manga/reborn-rich/": "https://www.webtoons.com/th/drama/reborn-rich/list?title_no=4861",
@@ -1337,7 +1342,7 @@ def main():
         twin = WEBTOON_TWINS.get(url)
         if twin:  # how far WEBTOON is, to open whichever is ahead
             try:
-                newest[twin] = max(webtoon_chapters(twin, state).values(), default=0)
+                newest[twin] = max(webtoon_chapters(twin, state).values(), default=0) + WEBTOON_LOCKED.get(re.search(r"title_no=(\d+)", twin)[1], 0)
             except Exception as e:  # keep the last count
                 print(f"FAIL webtoon {name}: {e}", file=sys.stderr)
         new = sorted(set(found) - set(state[url])) if url in state else []  # first sight of a url = seed silently
