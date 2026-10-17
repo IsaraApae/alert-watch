@@ -3034,7 +3034,8 @@
   "210482:4",
   "195516:3",
   "178083:3",
-  "191656:3"
+  "191656:3",
+  "209872:3"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3582,6 +3583,16 @@
    "published": null,
    "notified": true,
    "order": "estimated"
+  },
+  "209872:3": {
+   "title": "Ranma 1/2 Season 3",
+   "episode": 3,
+   "version": "ซับไทย",
+   "first": "animeruka",
+   "url": "https://animeruka.com/ep/ranma-%c2%bd-season-3-ep-3/",
+   "detected": 1792257630,
+   "published": 1792257587,
+   "notified": true
   }
  },
  "watch_links": {
@@ -3625,7 +3636,8 @@
   "210482:4": "https://animegojos.com/list/2831/#ep-5",
   "195516:3": "https://animegojos.com/list/3120/#ep-3",
   "178083:3": "https://animegojos.com/list/3171/#ep-3",
-  "191656:3": "https://animegojos.com/list/3211/#ep-3"
+  "191656:3": "https://animegojos.com/list/3211/#ep-3",
+  "209872:3": "https://animeruka.com/ep/ranma-%c2%bd-season-3-ep-3/"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -3746,7 +3758,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792257067,
+ "anime_checked": 1792257630,
  "mal_totals": {
   "60601": [
    null,
