@@ -3035,7 +3035,8 @@
   "195516:3",
   "178083:3",
   "191656:3",
-  "209872:3"
+  "209872:3",
+  "202250:3"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3593,6 +3594,17 @@
    "detected": 1792257630,
    "published": 1792257587,
    "notified": true
+  },
+  "202250:3": {
+   "title": "Magic Repo Man",
+   "episode": 3,
+   "version": "ซับไทย",
+   "first": "Muse Thailand",
+   "url": "https://www.youtube.com/watch?v=HChhn5U9nvM",
+   "detected": 1792260039,
+   "published": 1792260006,
+   "scheduled": 1792260000,
+   "notified": true
   }
  },
  "watch_links": {
@@ -3637,7 +3649,8 @@
   "195516:3": "https://animegojos.com/list/3120/#ep-3",
   "178083:3": "https://animegojos.com/list/3171/#ep-3",
   "191656:3": "https://animegojos.com/list/3211/#ep-3",
-  "209872:3": "https://animeruka.com/ep/ranma-%c2%bd-season-3-ep-3/"
+  "209872:3": "https://animeruka.com/ep/ranma-%c2%bd-season-3-ep-3/",
+  "202250:3": "https://isaraapae.github.io/alert-watch/b.html?v=HChhn5U9nvM"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -3758,7 +3771,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792259460,
+ "anime_checked": 1792260039,
  "mal_totals": {
   "60601": [
    null,
