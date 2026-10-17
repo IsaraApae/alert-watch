@@ -11,7 +11,7 @@ Sends a LINE message (official account **Alert Watch**) when a tracked manga cha
 | Kind | Card opens |
 |---|---|
 | Manga ([urls.txt](urls.txt)) | The new chapter; for the 15 series also on WEBTOON Thai, the series in the WEBTOON app when WEBTOON has that chapter free |
-| Webtoon ([urls.txt](urls.txt)) | The episode in the WEBTOON app; for Enrolling in the Transcendent Academy and Zodiac Girls, the series page |
+| Webtoon ([urls.txt](urls.txt)) | The episode in the WEBTOON app; for Enrolling in the Transcendent Academy and Zodiac Girls, the series page, and the card and LINE list say how far the app is ("Ep.47 free · Ep.50 in the app": the free episodes plus the ones locked behind coins or ads, `WEBTOON_LOCKED` in `watch.py`) |
 | Anime ([anime.txt](anime.txt)) | Muse/Ani-One shows: the Thai-sub video in Brave. Other shows (Netflix, Disney+, Bilibili, online): the [animegojo](https://animegojos.com) episode page, once it's up with Thai subs |
 | Anime specials | The Thai-sub video in Brave. Specials are episode 0 or ".5" episodes posted by Muse Thailand or Ani-One Thailand, sent once a YouTube premiere starts. |
 
