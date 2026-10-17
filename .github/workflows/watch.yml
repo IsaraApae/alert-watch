@@ -36,6 +36,9 @@ jobs:
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq openvpn > /dev/null
           python3 vpn_feeds.py
+      - name: Install cloudscraper (anime-waku bot check)
+        continue-on-error: true  # watch.py reports it and carries on if this fails
+        run: pip install -q cloudscraper
       - run: python3 watch.py ${{ inputs.ping && 'ping' || '' }}${{ inputs.richmenu && 'richmenu' || '' }}${{ inputs.f1check && 'f1check' || '' }}${{ inputs.sites && 'sites' || '' }}
         env:
           MANGA_STATE: ci-state.json
