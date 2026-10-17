@@ -111,8 +111,8 @@ def main():
             saved = try_server(ip, config, pins, Path(d))
             if saved:
                 print(f"VPN: Thai server {ip} ok, saved {', '.join(saved)}")
-                    return
-    print("VPN: no Thai server gave every feed; watch.py reads the rest directly")
+                return
+    print("VPN: no Thai server worked; watch.py reads the feeds directly")
 
 
 if __name__ == "__main__":
