@@ -513,12 +513,12 @@ WEBTOON_SERIES_PAGE = {"6227", "9274"}
 # episodes, locked behind coins or ads, exist only in the app, so the app's count is the free ones plus WEBTOON_LOCKED.
 # how many more episodes the WEBTOON app has than WEBTOON's website shows free (the ones locked behind coins or ads), counted
 # in the app in Oct 2026, by WEBTOON series number: added to the free count before comparing with the manga site, and when
-# WEBTOON frees one more, a card says how far the app is now ("Ep.216 free · Ep.218 in the app").
+# WEBTOON frees one more, a card gives the app's newest episode ("Ep.218": 216 free + 2).
 # ponytail: fixed numbers; if WEBTOON changes how many it locks, update them from the app.
 WEBTOON_LOCKED = {"6842": 2, "4395": 2, "7294": 3, "5823": 1, "5899": 1, "6718": 1, "7562": 2, "8314": 3, "6392": 3, "7637": 2,
                   "2433": 3, "2342": 255, "4861": 198,  # Bad Guy: 55 free, 310 in the app; Reborn Rich: 10 free, 208
                   "9274": 3, "6227": 2}  # Zodiac Girls, Enrolling in the Transcendent Academy (WEBTOON only): their cards and
-                  # the LINE list say how far the app is ("Ep.47 free · Ep.50 in the app"), so you know which episode to read
+                  # the LINE list give the app's newest episode ("Ep.50": 47 free + 3), so you know which episode to read
 WEBTOON_TWINS = {"https://manga-lc.net/manga/the-regressed-son-of-a-duke-is-an-assassin-ลูกชายคนเล็กของดย/": "https://www.webtoons.com/th/fantasy/the-reborn-young-lord-is-an-assassin/list?title_no=6392",
                  "https://manga-lc.net/manga/life-changer-voice-phishing-คอลเซ็นเตอร์เปลี่ยน/": "https://www.webtoons.com/th/drama/life-changing-voice-phishing/list?title_no=7265",
                  "https://manga-lc.net/manga/reborn-rich/": "https://www.webtoons.com/th/drama/reborn-rich/list?title_no=4861",
@@ -1342,12 +1342,12 @@ def main():
         if not found:  # blocked / layout changed: keep old state, don't treat as "no chapters"
             print(f"EMPTY {name}", file=sys.stderr)
             continue
-        reach = state.setdefault("webtoon_reach", {})  # {WEBTOON series: "Ep.47 free · Ep.50 in the app"}, for those in WEBTOON_LOCKED
+        reach = state.setdefault("webtoon_reach", {})  # {WEBTOON series: the app's newest, "Ep.50"}, for those in WEBTOON_LOCKED
         no = "webtoons.com" in url and re.search(r"title_no=(\d+)", url)[1]
         if no in WEBTOON_LOCKED:
             try:
                 top = max(webtoon_chapters(url, state).values(), default=0)
-                reach[url] = f"Ep.{top:g} free · Ep.{top + WEBTOON_LOCKED[no]:g} in the app"
+                reach[url] = f"Ep.{top + WEBTOON_LOCKED[no]:g}"
             except Exception as e:  # keep the last one
                 print(f"FAIL webtoon {name}: {e}", file=sys.stderr)
         twin = WEBTOON_TWINS.get(url)
@@ -1358,7 +1358,7 @@ def main():
                 seen_free = state.setdefault("webtoon_free", {})  # {WEBTOON series: its newest free chapter at the last check}
                 if locked and twin in seen_free and free > seen_free[twin]:  # one more free: the app has a new one too
                     title, image = cover(twin)
-                    line = f"Ep.{free:g} free · Ep.{free + locked:g} in the app"
+                    line = f"Ep.{free + locked:g}"
                     notify(f"New chapter: {title or name}", line, f"{line}\nlinewebtoon://episodeList/webtoon?titleNo={tno}", image, WEBTOON_APP + tno)
                 seen_free[twin] = free
                 newest[twin] = free + locked
