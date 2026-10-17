@@ -3733,7 +3733,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792226440,
+ "anime_checked": 1792227035,
  "mal_totals": {
   "60601": [
    null,
@@ -3862,7 +3862,13 @@
   "4271": {},
   "7265": {},
   "6227": {},
-  "9274": {}
+  "9274": {},
+  "4436": {},
+  "7989": {},
+  "6843": {},
+  "6553": {},
+  "6865": {},
+  "6957": {}
  },
  "webtoon_newest": {
   "https://www.webtoons.com/th/drama/reborn-rich/list?title_no=4861": 208,
@@ -3877,12 +3883,9 @@
   "https://www.webtoons.com/th/fantasy/what-a-bountiful-harvest-demon-lord/list?title_no=8314": 72.0,
   "https://www.webtoons.com/th/action/killer-peter/list?title_no=5899": 144.0,
   "https://www.webtoons.com/th/fantasy/ticket-hero/list?title_no=2433": 311.0,
-  "https://www.webtoons.com/th/comedy/badguy/list?title_no=2342": 310.0,
+  "https://www.webtoons.com/th/comedy/badguy/list?title_no=2342": 310,
   "https://www.webtoons.com/th/fantasy/reality-quest/list?title_no=4271": 215.0,
   "https://www.webtoons.com/th/drama/life-changing-voice-phishing/list?title_no=7265": 90.0
- },
- "webtoon_reach": {
-  "https://m.webtoons.com/th/fantasy/enrolling-in-the-transcendent-academy/list?title_no=6227": "Ep.140"
  },
  "webtoon_app": {
   "https://www.webtoons.com/th/drama/reborn-rich/list?title_no=4861": 208,
@@ -3897,8 +3900,18 @@
   "https://www.webtoons.com/th/fantasy/what-a-bountiful-harvest-demon-lord/list?title_no=8314": 72.0,
   "https://www.webtoons.com/th/action/killer-peter/list?title_no=5899": 144.0,
   "https://www.webtoons.com/th/fantasy/ticket-hero/list?title_no=2433": 311.0,
-  "https://www.webtoons.com/th/comedy/badguy/list?title_no=2342": 310.0,
+  "https://www.webtoons.com/th/comedy/badguy/list?title_no=2342": 310,
   "https://www.webtoons.com/th/fantasy/reality-quest/list?title_no=4271": 215.0,
   "https://www.webtoons.com/th/drama/life-changing-voice-phishing/list?title_no=7265": 90.0
+ },
+ "chapter_labels": {
+  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": "Chapter 219",
+  "https://m.webtoons.com/th/fantasy/enrolling-in-the-transcendent-academy/list?title_no=6227": "Chapter 140",
+  "https://m.webtoons.com/th/fantasy/zodiac-girls/list?title_no=9274": "Chapter 47",
+  "https://www.webtoons.com/th/action/high-school-conquest/list?title_no=7989": "Chapter 45",
+  "https://www.webtoons.com/th/action/kenka-revenge/list?title_no=6843": "Chapter 73",
+  "https://www.webtoons.com/th/romance/the-mafia-nanny/list?title_no=6553": "Chapter 63",
+  "https://www.webtoons.com/th/action/dead-mansion/list?title_no=6865": "Chapter 51",
+  "https://www.webtoons.com/th/fantasy/my-virtual-god-is-a-teenage-girl/list?title_no=6957": "Chapter 48"
  }
 }
