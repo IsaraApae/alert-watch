@@ -3033,7 +3033,8 @@
   "212503:2",
   "210482:4",
   "195516:3",
-  "178083:3"
+  "178083:3",
+  "191656:3"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3570,6 +3571,17 @@
    "published": null,
    "notified": true,
    "order": "estimated"
+  },
+  "191656:3": {
+   "title": "Even the Student Council Has Its Holes!",
+   "episode": 3,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/3211/#ep-3",
+   "detected": 1792257067,
+   "published": null,
+   "notified": true,
+   "order": "estimated"
   }
  },
  "watch_links": {
@@ -3612,7 +3624,8 @@
   "212503:2": "https://isaraapae.github.io/alert-watch/b.html?v=zjnWI-S177s",
   "210482:4": "https://animegojos.com/list/2831/#ep-5",
   "195516:3": "https://animegojos.com/list/3120/#ep-3",
-  "178083:3": "https://animegojos.com/list/3171/#ep-3"
+  "178083:3": "https://animegojos.com/list/3171/#ep-3",
+  "191656:3": "https://animegojos.com/list/3211/#ep-3"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -3733,7 +3746,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792256457,
+ "anime_checked": 1792257067,
  "mal_totals": {
   "60601": [
    null,
@@ -3814,7 +3827,8 @@
   "https://suba-anime.com/black-clover-ss2/": "black clover 2 แบล็คโคลเวอร์ (ภาค2) ตอนที่ 1-4 ซับไทย anime-suba",
   "https://suba-anime.com/marronnier-oukoku-no-shichinin-no-kishi/": "marronnier oukoku no shichinin no kishi เจ็ดอัศวินแห่งอาณาจักรมาร์รอนเนียร์ ตอนที่ 1-4 ซับไทย anime-suba",
   "https://suba-anime.com/genso-suikoden/": "gensou suikoden ซุยโคเด็น ตอนที่ 1-3 ซับไทย anime-suba",
-  "https://suba-anime.com/vertex-force/": "vertex force เวอร์เท็กซ์ ฟอร์ซ ตอนที่ 1-4 ซับไทย anime-suba"
+  "https://suba-anime.com/vertex-force/": "vertex force เวอร์เท็กซ์ ฟอร์ซ ตอนที่ 1-4 ซับไทย anime-suba",
+  "https://suba-anime.com/seitokai-ni-mo-ana-wa-aru/": "seitokai ni mo ana wa aru! สภานักเรียนฉบับรั่ว! ตอนที่ 1-4 ซับไทย anime-suba"
  },
  "suba_search": {
   "213805": {},
@@ -3832,7 +3846,13 @@
     3
    ]
   },
-  "191656": {},
+  "191656": {
+   "https://suba-anime.com/seitokai-ni-mo-ana-wa-aru/": [
+    1,
+    2,
+    3
+   ]
+  },
   "209872": {},
   "189123": {},
   "195539": {},
