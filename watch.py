@@ -28,15 +28,52 @@ def chapters(url, html):
     return out
 
 
-def webtoon_chapters(url):
-    """LINE Webtoon: {"EP.225": 215.0}, each free episode's chapter number from its title ("Ep.215"); WEBTOON's own episode
-    number counts notices and extras too, so it runs ahead of the chapter number."""
-    rss = get(url.replace("://m.webtoons.com", "://www.webtoons.com").replace("/list?", "/rss?"))
+WEBTOON_EP = re.compile(r"(?:(?:\bS{1,2}|Season\s*)(\d+)\]?\s*)?Ep\.?\s*(\d+(?:\.\d+)?)", re.I)
+
+
+def webtoon_ep(title):
+    """'S2 Ep.12' -> (2, 12.0), 'SS2 Ep.10' -> (2, 10.0), '[Season 2] Ep.163' -> (2, 163.0), 'Ep.215' -> (1, 215.0); None for a
+    notice or a review."""
+    found = WEBTOON_EP.search(title)
+    return (int(found[1] or 1), float(found[2])) if found else None
+
+
+def webtoon_rows(list_url, page):
+    """[(WEBTOON episode number, title)] on one page of a series' episode list (newest first, 10 a page)."""
+    return [(int(n), html.unescape(t).strip()) for n, t in re.findall(r'data-episode-no="(\d+)".*?class="subj"><span>([^<]*)', get(f"{list_url}&page={page}"), re.S)]
+
+
+def season_start(list_url, season, newest_no, ep, seasons):
+    """How many chapters came before this season (Juvenile Prison's S2 Ep.1 is chapter 101: 100), from the list: the
+    chapter just before the season's first episode. Kept per series in seasons ({season: chapters before})."""
+    if season <= 1:
+        return 0
+    if str(season) not in seasons:
+        page, rows = max(1, int(ep) // 10), []
+        for page in range(page, page + 6):  # the season's first episode is about ep episodes back, 10 a page
+            rows += webtoon_rows(list_url, page)
+            older = [(n, webtoon_ep(t)) for n, t in rows if webtoon_ep(t) and webtoon_ep(t)[0] < season]
+            if older:
+                n, (s_prev, last) = max(older)
+                seasons[str(season)] = season_start(list_url, s_prev, n, last, seasons) + last
+                break
+        else:
+            raise RuntimeError(f"season {season}'s start not found")
+    return seasons[str(season)]
+
+
+def webtoon_chapters(url, state):
+    """LINE Webtoon: {"EP.112": 112.0}, each free episode's chapter number counted on through the seasons as the manga sites
+    count it (Juvenile Prison's "S2 Ep.12" is chapter 112); WEBTOON's own episode number counts notices and extras too.
+    Episodes locked behind coins or ads exist only in the WEBTOON app, so they aren't counted."""
+    list_url = url.replace("://m.webtoons.com", "://www.webtoons.com").replace("/rss?", "/list?")
+    rss = get(list_url.replace("/list?", "/rss?"))
+    seasons = state.setdefault("webtoon_seasons", {}).setdefault(re.search(r"title_no=(\d+)", url)[1], {})
     out = {}
-    for title, n in re.findall(r"<item>\s*<title>(?:<!\[CDATA\[)?([^<\]]*).*?episode_no=(\d+)", rss, re.S):
-        found = re.search(r"\d+(?:\.\d+)?", title)
+    for title, n in re.findall(r"<item>\s*<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</title>.*?episode_no=(\d+)", rss, re.S):
+        found = webtoon_ep(html.unescape(title))
         if found:
-            out[f"EP.{n}"] = float(found[0])
+            out[f"EP.{n}"] = season_start(list_url, found[0], int(n), found[1], seasons) + found[1]
     return out
 
 
@@ -476,7 +513,9 @@ WEBTOON_SERIES_PAGE = {"6227", "9274"}
 # only part of what its app has (Reborn Rich: Ep.1-10 on the site, 218 in the app; The Boy of Death, +99 Wooden Stick and
 # A Sense of Amusement: Ep.2), so for those the switch only comes once the website itself gets ahead; the app's own list
 # isn't read (it is only for the app).
-WEBTOON_TWINS = {"https://manga-lc.net/manga/reborn-rich/": "https://www.webtoons.com/th/drama/reborn-rich/list?title_no=4861",
+WEBTOON_TWINS = {"https://manga-lc.net/manga/the-regressed-son-of-a-duke-is-an-assassin-ลูกชายคนเล็กของดย/": "https://www.webtoons.com/th/fantasy/the-reborn-young-lord-is-an-assassin/list?title_no=6392",
+                 "https://manga-lc.net/manga/life-changer-voice-phishing-คอลเซ็นเตอร์เปลี่ยน/": "https://www.webtoons.com/th/drama/life-changing-voice-phishing/list?title_no=7265",
+                 "https://manga-lc.net/manga/reborn-rich/": "https://www.webtoons.com/th/drama/reborn-rich/list?title_no=4861",
                  "https://manga-lc.net/manga/the-ultimate-shut-in-โทษที-พื้นที่นี้ห้าม/": "https://www.webtoons.com/th/fantasy/ultimate-shut-in/list?title_no=7562",
                  "https://manga-lc.net/manga/99-wooden-stick-99-ท่อนไม้พร้อมบวก/": "https://www.webtoons.com/th/action/99-reinforced-wooden-stick/list?title_no=4395",
                  "https://manga-lc.net/manga/the-delusional-hunter-in-a-another-world/": "https://www.webtoons.com/th/fantasy/the-misunderstood-hunter/list?title_no=7294",
@@ -1288,7 +1327,7 @@ def main():
         twin = WEBTOON_TWINS.get(url)
         if twin and url not in switched and state.get(url):
             try:
-                on_webtoon = webtoon_chapters(twin)
+                on_webtoon = webtoon_chapters(twin, state)
                 site_top = max(map(chapter_number, state[url]))
                 ahead = sorted(n for n in on_webtoon.values() if n > site_top)
                 if ahead:
@@ -1420,6 +1459,7 @@ if __name__ == "__main__":
         assert episode_total({"episodes": None, "idMal": 1}, {"mal_totals": {"1": [12, time.time()]}}) == 12  # AniList has none: MAL's
         assert episode_total({"episodes": 13, "idMal": 1}, {"mal_totals": {"1": [12, time.time()]}}) == 13  # AniList's wins
         assert episode_total({"episodes": None, "idMal": 1}, {"mal_totals": {"1": [None, time.time()]}}) is None  # neither: blank
+        assert [webtoon_ep(t) for t in ("S2 Ep.12", "[Season 2] Ep.163", "Season 2 Ep.130 สไลด์เดอร์ (3)", "SS2 Ep.10 มังกร", "Ep.215", "Ep.90 ตัวตน (จบซีซัน 1)", "ประกาศ")] == [(2, 12), (2, 163), (2, 130), (2, 10), (1, 215), (1, 90), None]
         assert [chapter_number(c) for c in ("ซีซั่น-1/ตอนที่-226", "ซีซั่น-1/ตอนที่-9_1", "112 (จบซีซั่น 1)", "EP.45")] == [226, 9.1, 112, 45]
         assert tv_aired(x, {8: [15]}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: [15]}, 1790868600)  # earliest channel, season numbering, nothing future
         x2 = ('<ProgItem><TID>9</TID><Count>1</Count><StTime>2026-10-04 16:30:00</StTime></ProgItem>'
