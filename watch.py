@@ -470,12 +470,25 @@ def cover(url):
 
 WEBTOON_APP = "https://isaraapae.github.io/alert-watch/w.html?t="  # redirect page on the gh-pages branch; opens linewebtoon://
 WEBTOON_SERIES_PAGE = {"6227", "9274"}
-# manga-site series that are also on WEBTOON Thai (same work: title and authors checked). Once WEBTOON's newest free
+# manga-site series that are also on WEBTOON Thai (same work: found by their Thai titles there). Once WEBTOON's newest free
 # chapter passes the site's, the series is followed on WEBTOON instead (webtoon_switched in the state): a card says so and
-# brings the new chapters, then the WEBTOON episodes are alerted and the LINE list shows WEBTOON. Bad Guy is not here:
-# WEBTOON Thai's "BAD GUY" is a different series. Reborn Rich: WEBTOON Thai only started it (Ep.10 vs 193, Oct 2026).
-WEBTOON_TWINS = {"https://manga-lc.net/manga/reality-quest/": "https://www.webtoons.com/th/fantasy/reality-quest/list?title_no=4271",
-                 "https://manga-lc.net/manga/reborn-rich/": "https://www.webtoons.com/th/drama/reborn-rich/list?title_no=4861"}  # Enrolling in the Transcendent Academy, Zodiac Girls: cards open the series page, not the episode
+# brings the new chapters, then the WEBTOON episodes are alerted and the LINE list shows WEBTOON. WEBTOON's website shows
+# only part of what its app has (Reborn Rich: Ep.1-10 on the site, 218 in the app; The Boy of Death, +99 Wooden Stick and
+# A Sense of Amusement: Ep.2), so for those the switch only comes once the website itself gets ahead; the app's own list
+# isn't read (it is only for the app).
+WEBTOON_TWINS = {"https://manga-lc.net/manga/reborn-rich/": "https://www.webtoons.com/th/drama/reborn-rich/list?title_no=4861",
+                 "https://manga-lc.net/manga/the-ultimate-shut-in-โทษที-พื้นที่นี้ห้าม/": "https://www.webtoons.com/th/fantasy/ultimate-shut-in/list?title_no=7562",
+                 "https://manga-lc.net/manga/99-wooden-stick-99-ท่อนไม้พร้อมบวก/": "https://www.webtoons.com/th/action/99-reinforced-wooden-stick/list?title_no=4395",
+                 "https://manga-lc.net/manga/the-delusional-hunter-in-a-another-world/": "https://www.webtoons.com/th/fantasy/the-misunderstood-hunter/list?title_no=7294",
+                 "https://manga-lc.net/manga/secretly-more-powerful-than-the-hero/": "https://www.webtoons.com/th/fantasy/overpowered-than-the-hero/list?title_no=5823",
+                 "https://manga-lc.net/manga/juvenile-prison/": "https://www.webtoons.com/th/action/juvenile-detention-center/list?title_no=6842",
+                 "https://manga-lc.net/manga/a-sense-of-amusement-สนามเด็กล่า/": "https://www.webtoons.com/th/action/the-toy/list?title_no=6718",
+                 "https://manga-lc.net/manga/genius-grandson-of-the-loan-shark-king-หลานอัจฉริยะของรา/": "https://www.webtoons.com/th/action/loan-sharks-genius-grandson/list?title_no=7637",
+                 "https://manga-lc.net/manga/what-a-bountiful-harvest-demon-lord-วิถีชาวนาของราชาปี/": "https://www.webtoons.com/th/fantasy/what-a-bountiful-harvest-demon-lord/list?title_no=8314",
+                 "https://manga-lc.net/manga/killer-peter-นักฆ่าย้อนวัย/": "https://www.webtoons.com/th/action/killer-peter/list?title_no=5899",
+                 "https://manga-lc.net/manga/the-boy-of-death/": "https://www.webtoons.com/th/fantasy/ticket-hero/list?title_no=2433",
+                 "https://manga-lc.net/manga/bad-guy/": "https://www.webtoons.com/th/comedy/badguy/list?title_no=2342",
+                 "https://manga-lc.net/manga/reality-quest/": "https://www.webtoons.com/th/fantasy/reality-quest/list?title_no=4271"}  # Enrolling in the Transcendent Academy, Zodiac Girls: cards open the series page, not the episode
 BRAVE = "https://isaraapae.github.io/alert-watch/b.html?v="  # redirect page on the gh-pages branch; opens a YouTube video in Brave
 
 
