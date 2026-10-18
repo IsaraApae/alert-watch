@@ -3036,7 +3036,8 @@
   "178083:3",
   "191656:3",
   "209872:3",
-  "202250:3"
+  "202250:3",
+  "189123:3"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3605,6 +3606,16 @@
    "published": 1792260006,
    "scheduled": 1792260000,
    "notified": true
+  },
+  "189123:3": {
+   "title": "Blue Box Season 2",
+   "episode": 3,
+   "version": "ซับไทย",
+   "first": "animeruka",
+   "url": "https://animeruka.com/ep/ao-no-hako-blue-box-season-2-ep-3/",
+   "detected": 1792312236,
+   "published": 1792312036,
+   "notified": true
   }
  },
  "watch_links": {
@@ -3650,7 +3661,8 @@
   "178083:3": "https://animegojos.com/list/3171/#ep-3",
   "191656:3": "https://animegojos.com/list/3211/#ep-3",
   "209872:3": "https://animeruka.com/ep/ranma-%c2%bd-season-3-ep-3/",
-  "202250:3": "https://isaraapae.github.io/alert-watch/b.html?v=HChhn5U9nvM"
+  "202250:3": "https://isaraapae.github.io/alert-watch/b.html?v=HChhn5U9nvM",
+  "189123:3": "https://animeruka.com/ep/ao-no-hako-blue-box-season-2-ep-3/"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -3771,7 +3783,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792311695,
+ "anime_checked": 1792312236,
  "mal_totals": {
   "60601": [
    null,
