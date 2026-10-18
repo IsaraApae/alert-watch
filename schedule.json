@@ -1,5 +1,5 @@
 {
- "updated": 1792338698,
+ "updated": 1792342846,
  "shows": [
   {
    "name": "As a Reincarnated Aristocrat Season 3",
@@ -252,11 +252,6 @@
    "where": "Bilibili",
    "episodes": [
     {
-     "ep": 2,
-     "at": 1791651600.0,
-     "watch": "https://animegojos.com/list/3211/#ep-2"
-    },
-    {
      "ep": 3,
      "at": 1792256400.0,
      "watch": "https://animegojos.com/list/3211/#ep-3"
@@ -302,11 +297,6 @@
    "total": null,
    "where": "Netflix",
    "episodes": [
-    {
-     "ep": 2,
-     "at": 1791651600.0,
-     "watch": "https://animegojos.com/list/3197/#ep-2"
-    },
     {
      "ep": 3,
      "at": 1792256400.0,
@@ -591,6 +581,10 @@
     {
      "ep": 10,
      "at": 1796922000.0
+    },
+    {
+     "ep": 11,
+     "at": 1797526800.0
     }
    ]
   },
