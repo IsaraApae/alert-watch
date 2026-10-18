@@ -754,8 +754,6 @@ def site_episodes(url):
     return {n: f"{url.split('#')[0]}#ep-{n}" for n in gojo_sub_episodes(page)}
 
 
-# the sites an episode's Watch button can open, by address: the website names the site on that episode ("EP 03 · animeruka")
-SITE_NAMES = {"animegojos.com": "animegojo", "animeruka.com": "animeruka", "anime-waku.com": "anime-waku", "suba-anime.com": "suba-anime"}
 site_name = lambda url: "suba-anime" if "suba-anime.com" in url else "animegojo"
 
 # anime-waku and animeruka: each site's RSS feed of new episodes, which (unlike animegojo) gives every upload's time.
@@ -908,9 +906,7 @@ def schedule(state=None):
                     watch = have.get(ep + s["offset"] + shift)
                 if watch:
                     links[f"{i}:{ep}"] = watch
-                # the platform is the show's own; an episode whose Watch button opens one of the sites names that site
-                rows.append({"ep": ep + s["offset"], "at": t, **({"watch": watch} if watch else {}),
-                             **({"where": SITE_NAMES[urlparse(watch).netloc]} if watch and urlparse(watch).netloc in SITE_NAMES else {})})
+                rows.append({"ep": ep + s["offset"], "at": t, **({"watch": watch} if watch else {})})  # the platform is the show's own
         rows += [{"ep": n, "at": p, "watch": in_brave(link)} for link, (a, n, p) in kept.items() if a == i]
         rows.sort(key=lambda r: r["at"])
         total = episode_total(m, state)
