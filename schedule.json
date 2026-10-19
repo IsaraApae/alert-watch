@@ -1,5 +1,5 @@
 {
- "updated": 1792396843,
+ "updated": 1792422064,
  "shows": [
   {
    "name": "As a Reincarnated Aristocrat Season 3",
@@ -8,11 +8,6 @@
    "total": null,
    "where": "Ani-One Thailand",
    "episodes": [
-    {
-     "ep": 3,
-     "at": 1791730800.0,
-     "watch": "https://isaraapae.github.io/alert-watch/b.html?v=ocZG0w7HgLU"
-    },
     {
      "ep": 4,
      "at": 1792335600.0,
@@ -195,6 +190,10 @@
     {
      "ep": 11,
      "at": 1797001200.0
+    },
+    {
+     "ep": 12,
+     "at": 1797606000.0
     }
    ]
   },
