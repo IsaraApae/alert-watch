@@ -311,7 +311,7 @@ def f1_card(meeting, session, when, rows, replay_key=None):
             {"type": "box", "layout": "vertical", "margin": "md", "contents": table}]
     return {"type": "bubble", "size": "mega", "header": f1_head(meeting, session, when),
             "body": {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "contents": body},
-            **({"footer": f1_button("Watch replay", f"{F1_PAGE}?replay={replay_key}")} if replay_key else {})}
+            **({"footer": f1_button("Watch replay", f"{F1_SITE}?replay={replay_key}")} if replay_key else {})}
 
 
 def f1_standings_card(title, sub_title, rows, colour_of):
@@ -389,7 +389,9 @@ def f1_standings(state, token, s, meeting):
     del sent[:-50]
 
 
-F1_PAGE = "https://isaraapae.github.io/alert-watch/f1.html"
+# the F1 Live site (its own repo, IsaraApae/f1-live): "?live" opens its Live tab, "?replay=KEY" a session's replay
+F1_SITE = "https://isaraapae.github.io/f1-live/"
+F1_PAGE = F1_SITE + "?live"
 
 
 def f1_live_card(meeting, session, when, live):
@@ -1243,7 +1245,7 @@ def setup_richmenu():
     menu = {"size": {"width": 2500, "height": 843}, "selected": True, "name": "Alert Watch", "chatBarText": "Menu",
             "areas": [{"bounds": {"x": 0, "y": 0, "width": 833, "height": 843}, "action": {"type": "uri", "label": "Next episode", "uri": site}},
                       {"bounds": {"x": 833, "y": 0, "width": 834, "height": 843}, "action": {"type": "uri", "label": "Timetable", "uri": site + "?v=week"}},
-                      {"bounds": {"x": 1667, "y": 0, "width": 833, "height": 843}, "action": {"type": "uri", "label": "F1 Live", "uri": site + "f1.html"}}]}
+                      {"bounds": {"x": 1667, "y": 0, "width": 833, "height": 843}, "action": {"type": "uri", "label": "F1 Live", "uri": F1_PAGE}}]}
     old = [m["richMenuId"] for m in call("GET", "https://api.line.me/v2/bot/richmenu/list")["richmenus"] if m["name"] == "Alert Watch"]
     rid = call("POST", "https://api.line.me/v2/bot/richmenu", json.dumps(menu).encode())["richMenuId"]
     call("POST", f"https://api-data.line.me/v2/bot/richmenu/{rid}/content", (HERE / "richmenu.png").read_bytes(), "image/png")
