@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 9  # a stuck run must end before the next one starts
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Read anime feeds through a Thai VPN
         if: ${{ !inputs.ping && !inputs.richmenu && !inputs.f1check }}
         continue-on-error: true
