@@ -756,6 +756,18 @@ def site_episodes(url):
 
 site_name = lambda url: "suba-anime" if "suba-anime.com" in url else "animegojo"
 
+
+def series_page(link):
+    """The series page an episode's link belongs to, for a whole season released at once: animegojo's /list/3165/#ep-3
+    and suba-anime's .../ep-13 are on it already, animeruka's /ep/<show>-ep-3/ is /anime/<show>/. Anything else
+    (anime-waku's numbered pages, a YouTube video) stays the episode's own link."""
+    if link.startswith(GOJO):
+        return link.split("#")[0]
+    if "suba-anime.com" in link:
+        return re.sub(r"/ep-\d+/?$", "/", link)
+    return re.sub(r"^(https://animeruka\.com)/ep/(.+)-ep-\d+/?$", r"\1/anime/\2/", link)
+
+
 # anime-waku and animeruka: each site's RSS feed of new episodes, which (unlike animegojo) gives every upload's time.
 # Read with ordinary requests only: when Cloudflare answers with its bot check (as it has for GitHub's servers), the
 # run reports it and carries on with the other sites; it is never worked around.
@@ -907,6 +919,9 @@ def schedule(state=None):
                 if watch:
                     links[f"{i}:{ep}"] = watch
                 rows.append({"ep": ep + s["offset"], "at": t, **({"watch": watch} if watch else {})})  # the platform is the show's own
+        for r in rows:  # a whole season out at once (Netflix) is one "EP 01-10" row on the site: its Watch opens the series
+            if r.get("watch") and sum(x["at"] == r["at"] for x in rows) > 1:
+                r["watch"] = series_page(r["watch"])
         rows += [{"ep": n, "at": p, "watch": in_brave(link)} for link, (a, n, p) in kept.items() if a == i]
         rows.sort(key=lambda r: r["at"])
         total = episode_total(m, state)
@@ -1154,7 +1169,7 @@ def anime(state):
         total = episode_total(m, state)
         tot = f"{total + s['offset']:02d}" if total else "?"
         a, b = batch[0] + s["offset"], batch[-1] + s["offset"]
-        link = on_site[batch[0]][0]
+        link = on_site[batch[0]][0] if len(batch) == 1 else series_page(on_site[batch[0]][0])  # several at once: the series
         # when it aired on its platform (Japanese TV if none is set), not when the site posted it
         when = f"{'' if i in thai else 'Aired '}{datetime.fromtimestamp(due[(i, batch[0])], THAI):%d %b %Y %H:%M}"
         line = f"Episode {a:02d}{f'-{b:02d}' if b != a else ''}/{tot} · {site}\n{f'{thai[i][0]} · ' if i in thai else ''}{when}"
@@ -1425,6 +1440,10 @@ if __name__ == "__main__":
         thu = int(datetime(2026, 10, 15, 4, 30, 27, tzinfo=timezone.utc).timestamp())
         assert feed_episodes(feed, fs) == [(7, 3, "https://anime-waku.com/ep/113639/", wed)] + [(8, n, "https://animeruka.com/ep/e/", thu) for n in (1, 2, 3)]
         assert specials(vids, sp, 50) == [(1, "13.5", "a", 100, "Ani-One Thailand"), (1, "0", "b", 100, "Ani-One Thailand")]
+        assert [series_page(u) for u in ("https://animeruka.com/ep/cyberpunk-edgerunners-season-2-ep-10/", GOJO + "/list/3165/#ep-3",
+                                         "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/ep-13", "https://anime-waku.com/ep/113639/")] == [
+            "https://animeruka.com/anime/cyberpunk-edgerunners-season-2/", GOJO + "/list/3165/",
+            "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/", "https://anime-waku.com/ep/113639/"]  # anime-waku: no series link
         assert in_brave("https://www.youtube.com/watch?v=j7zFyWX6t8M") == BRAVE + "j7zFyWX6t8M"
         T = datetime(2026, 10, 4, 21, 30, tzinfo=THAI).timestamp()
         sh = {1: {"yt": "abc", "first": [1]}, 2: {"yt": "xyz", "first": [14]}}
