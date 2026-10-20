@@ -3051,7 +3051,9 @@
   "195539:7",
   "195539:8",
   "195539:9",
-  "195539:10"
+  "195539:10",
+  "207329:3",
+  "198727:2"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3763,6 +3765,28 @@
    "detected": 1792497044,
    "published": 1792496738,
    "notified": true
+  },
+  "207329:3": {
+   "title": "The Laid-Off Cheat-Granting Mage Enjoys a Second Lease on Life",
+   "episode": 3,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=PCRNUokasJQ",
+   "detected": 1792513954,
+   "published": 1792510209,
+   "scheduled": 1792510200,
+   "notified": true
+  },
+  "198727:2": {
+   "title": "Chitose Is in the Ramune Bottle 2nd Cour",
+   "episode": 2,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=HX7tTC4GhsY",
+   "detected": 1792513954,
+   "published": 1792513811,
+   "scheduled": 1792513800,
+   "notified": true
   }
  },
  "watch_links": {
@@ -3822,7 +3846,9 @@
   "195539:7": "https://animeruka.com/ep/cyberpunk-edgerunners-season-2-ep-7/",
   "195539:8": "https://animeruka.com/ep/cyberpunk-edgerunners-season-2-ep-8/",
   "195539:9": "https://animeruka.com/ep/cyberpunk-edgerunners-season-2-ep-9/",
-  "195539:10": "https://animeruka.com/ep/cyberpunk-edgerunners-season-2-ep-10/"
+  "195539:10": "https://animeruka.com/ep/cyberpunk-edgerunners-season-2-ep-10/",
+  "198727:2": "https://isaraapae.github.io/alert-watch/b.html?v=HX7tTC4GhsY",
+  "207329:3": "https://isaraapae.github.io/alert-watch/b.html?v=PCRNUokasJQ"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -3887,7 +3913,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792513232,
+ "anime_checked": 1792513954,
  "mal_totals": {
   "60601": [
    null,
