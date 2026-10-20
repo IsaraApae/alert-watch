@@ -3041,7 +3041,8 @@
   "189123:3",
   "185756:4",
   "199426:3",
-  "213657:2"
+  "213657:2",
+  "195539:1"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3653,6 +3654,16 @@
    "published": null,
    "notified": true,
    "order": "estimated"
+  },
+  "195539:1": {
+   "title": "Cyberpunk: Edgerunners 2",
+   "episode": 1,
+   "version": "ซับไทย",
+   "first": "animeruka",
+   "url": "https://animeruka.com/ep/cyberpunk-edgerunners-season-2-ep-1/",
+   "detected": 1792488038,
+   "published": 1792487533,
+   "notified": true
   }
  },
  "watch_links": {
@@ -3702,7 +3713,8 @@
   "189123:3": "https://animeruka.com/ep/ao-no-hako-blue-box-season-2-ep-3/",
   "185756:4": "https://isaraapae.github.io/alert-watch/b.html?v=nCYhRXyGYKE",
   "199426:3": "https://isaraapae.github.io/alert-watch/b.html?v=sF8mOzYPWO0",
-  "213657:2": "https://animegojos.com/list/2927/#ep-14"
+  "213657:2": "https://animegojos.com/list/2927/#ep-14",
+  "195539:1": "https://animeruka.com/ep/cyberpunk-edgerunners-season-2-ep-1/"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -3767,7 +3779,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792487442,
+ "anime_checked": 1792488038,
  "mal_totals": {
   "60601": [
    null,
