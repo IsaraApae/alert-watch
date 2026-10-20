@@ -3050,7 +3050,8 @@
   "195539:6",
   "195539:7",
   "195539:8",
-  "195539:9"
+  "195539:9",
+  "195539:10"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3752,6 +3753,16 @@
    "detected": 1792495232,
    "published": 1792494646,
    "notified": true
+  },
+  "195539:10": {
+   "title": "Cyberpunk: Edgerunners 2",
+   "episode": 10,
+   "version": "ซับไทย",
+   "first": "animeruka",
+   "url": "https://animeruka.com/ep/cyberpunk-edgerunners-season-2-ep-10/",
+   "detected": 1792497044,
+   "published": 1792496738,
+   "notified": true
   }
  },
  "watch_links": {
@@ -3810,7 +3821,8 @@
   "195539:6": "https://animeruka.com/ep/cyberpunk-edgerunners-season-2-ep-6/",
   "195539:7": "https://animeruka.com/ep/cyberpunk-edgerunners-season-2-ep-7/",
   "195539:8": "https://animeruka.com/ep/cyberpunk-edgerunners-season-2-ep-8/",
-  "195539:9": "https://animeruka.com/ep/cyberpunk-edgerunners-season-2-ep-9/"
+  "195539:9": "https://animeruka.com/ep/cyberpunk-edgerunners-season-2-ep-9/",
+  "195539:10": "https://animeruka.com/ep/cyberpunk-edgerunners-season-2-ep-10/"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -3875,7 +3887,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792496451,
+ "anime_checked": 1792497044,
  "mal_totals": {
   "60601": [
    null,
