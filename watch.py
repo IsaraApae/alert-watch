@@ -1342,6 +1342,13 @@ def main():
             except Exception as e:  # keep the last count
                 print(f"FAIL webtoon {name}: {e}", file=sys.stderr)
         new = sorted(set(found) - set(state[url])) if url in state else []  # first sight of a url = seed silently
+        if new and twin and re.search(r"title_no=(\d+)", twin)[1] in {*WEBTOON_LOCKED, *WEBTOON_WEEKLY}:
+            # the app's own card already gave every chapter up to its count (Chapter 99 at Tuesday 22:00): the manga site
+            # catching up to one of them (Chapter 96 at 00:10) is no news
+            old = [c for c in new if chapter_number(c) <= newest.get(twin, 0)]
+            if old:
+                print(f"{name}: {', '.join(f'Chapter {chapter_number(c):g}' for c in old)} already in WEBTOON's card, not sent again")
+            new = [c for c in new if c not in old]
         if new:
             number = lambda c: real.get(c) or chapter_number(c)  # "ซีซั่น-1/ตอนที่-216" -> 216, WEBTOON's "EP.48" -> 47 (its title's)
             new = sorted(new, key=number)
