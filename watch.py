@@ -865,23 +865,80 @@ def anilist(query, variables):
     return json.loads(urllib.request.urlopen(req, timeout=30).read())["data"]
 
 
+def saved_media(state, shows):
+    """{AniList id: AniList's last answer for the show}, for when AniList is down (on 21 Oct 2026 its API was switched off
+    for everyone, "temporarily disabled due to severe stability issues", and every anime alert stopped): what schedule()
+    saved in anilist_media, or else the cover, season, count and online airing times schedule.json last had. Japanese TV
+    times come from Syoboi, so only online-only shows need AniList's airing times."""
+    saved = state.get("anilist_media", {})
+    path = HERE / "schedule.json"
+    site = {w["name"]: w for w in (json.loads(path.read_text())["shows"] if path.exists() else [])}
+    thai = thai_times()
+    out = {}
+    for i, s in shows.items():
+        if str(i) in saved:
+            out[i] = saved[str(i)]
+        elif s["name"] in site:
+            w = site[s["name"]]
+            parts = (w.get("label") or "").split(", ")  # season_label's "Fall 2026, TV", back into AniList's fields
+            season = re.fullmatch(r"(\w+) (\d{4})", parts[0])
+            fmt = parts[-1] if len(parts) == 2 or not season else ""
+            # the site's times are AniList's own only for an online show with no Thai slot of its own; specials (0, .5) left out
+            nodes = [{"episode": r["ep"] - s["offset"], "airingAt": int(r["at"])} for r in w["episodes"]
+                     if not s["tid"] and not (i in thai and thai[i][1]) and r["ep"] == int(r["ep"]) and r["ep"] > s["offset"]]
+            out[i] = {"id": i, "idMal": None, "episodes": w["total"] and w["total"] - s["offset"],
+                      "season": season and season[1].upper(), "seasonYear": season and int(season[2]),
+                      "format": fmt.replace(" ", "_") or None, "coverImage": {"large": w.get("cover")}, "airingSchedule": {"nodes": nodes}}
+    return out
+
+
+def saved_tv(state, shows):
+    """{(AniList id, episode): Japanese broadcast} as the last good Syoboi check saved them (tv_times), for when Syoboi is
+    down (on 21 Oct 2026 it was, together with AniList); else worked back from schedule.json's Thai release times."""
+    if state.get("tv_times"):
+        return {(int(k.split(":")[0]), int(k.split(":")[1])): t for k, t in state["tv_times"].items()}
+    path = HERE / "schedule.json"
+    thai = thai_times()
+    by_name = {s["name"]: i for i, s in shows.items() if s["tid"]}
+    out = {}
+    for w in (json.loads(path.read_text())["shows"] if path.exists() else []):
+        i = by_name.get(w["name"])
+        for r in w["episodes"] if i else []:
+            if r["ep"] == int(r["ep"]) and r["ep"] > shows[i]["offset"]:  # specials (0, .5) left out
+                early = thai[i][3] if i in thai and thai[i][1] else 0  # release_time() of this gives the same Thai time back
+                out[(i, int(r["ep"]) - shows[i]["offset"])] = r["at"] + early * 86400
+    return out
+
+
 def schedule(state=None):
     """Write schedule.json for the countdown page: every show's episodes from a week ago to two months ahead,
     with the same times and numbering as the alerts. Rewritten only when something changed, so it isn't committed every run."""
     shows, now = anime_list(), int(time.time())
     q = "query($ids:[Int]){Page(perPage:50){media(id_in:$ids){id idMal episodes season seasonYear format coverImage{large} airingSchedule(perPage:50){nodes{episode airingAt}}}}}"
+    state = {} if state is None else state
     try:
         info = {m["id"]: m for m in anilist(q, {"ids": list(shows)})["Page"]["media"]}
+        # saved for when AniList is down; TV shows' airing times come from Syoboi, so theirs aren't kept
+        state["anilist_media"] = {str(i): {k: v for k, v in m.items() if k != "airingSchedule" or not shows.get(i, {}).get("tid")}
+                                  for i, m in info.items()}
+    except Exception as e:
+        print(f"FAIL anilist: {e} (using its last saved answer)", file=sys.stderr)
+        info = saved_media(state, shows)
+    try:
         by_tid = {s["tid"]: i for i, s in shows.items() if s["tid"]}
         span = f"{datetime.fromtimestamp(now - 30 * 86400, JST):%Y%m%d_%H%M%S}-{datetime.fromtimestamp(now + 60 * 86400, JST):%Y%m%d_%H%M%S}"  # from a month back: a rerun must not pass for an episode's first broadcast
         xml = get(f"https://cal.syoboi.jp/db.php?Command=ProgLookup&TID={','.join(map(str, by_tid))}&Range={span}")
-        tv = tv_aired(xml, {tid: shows[i]["first"] for tid, i in by_tid.items()}, now + 60 * 86400)
-    except Exception as e:  # keep the previous file rather than publish a half-empty one
-        print(f"FAIL schedule: {e}", file=sys.stderr)
+        tv = {(by_tid[tid], ep): t for (tid, ep), t in tv_aired(xml, {tid: shows[i]["first"] for tid, i in by_tid.items()}, now + 60 * 86400).items()}
+        state["tv_times"] = {f"{i}:{ep}": t for (i, ep), t in tv.items()}  # saved for when Syoboi is down
+        tv_ok = True
+    except Exception as e:
+        print(f"FAIL tv schedule: {e} (using the last saved times)", file=sys.stderr)
+        tv, tv_ok = saved_tv(state, shows), False
+    if not tv:  # keep the previous file rather than publish a half-empty one
+        print("FAIL schedule: no TV times", file=sys.stderr)
         return
     videos = youtube_videos()
     thai = thai_times()
-    state = {} if state is None else state
     links = state.setdefault("watch_links", {})  # Watch links found earlier: a channel's video drops out of its newest 50 within days
     kept = state.setdefault("special_rows", {})  # specials seen this week: {link: [AniList id, episode, published]}
     for a, n, link, p, ch in specials(videos, shows, now - 8 * 86400):
@@ -904,7 +961,7 @@ def schedule(state=None):
     for i, s in shows.items():
         m = info.get(i, {})
         if s["tid"]:
-            eps = {ep: t for (tid, ep), t in tv.items() if tid == s["tid"] and ep >= 1}
+            eps = {ep: t for (j, ep), t in tv.items() if j == i and ep >= 1}
         else:
             eps = {n["episode"]: n["airingAt"] for n in (m.get("airingSchedule") or {}).get("nodes", [])}
         jp[i] = dict(eps)
@@ -940,7 +997,8 @@ def schedule(state=None):
         cards = []
     auto = HERE / "thai_times_auto.json"
     known = json.loads(auto.read_text()) if auto.exists() else {}
-    learned = {str(k): v for k, v in learn_release_times(shows, jp, videos, cards).items()}
+    # only from real Syoboi times: ones worked back from schedule.json would "learn" the slots already in it
+    learned = {str(k): v for k, v in learn_release_times(shows, jp, videos, cards).items()} if tv_ok else {}
     merged = {k: v for k, v in {**known, **learned}.items() if int(k) in shows}  # a slot stays known after its week scrolls off
     if merged != known:
         auto.write_text(json.dumps(merged, ensure_ascii=False, indent=1))
@@ -1026,13 +1084,14 @@ def anime(state):
     query = ("query($ids:[Int],$web:[Int],$a:Int,$b:Int){info:Page(perPage:50){media(id_in:$ids){id idMal episodes season seasonYear format coverImage{large}}}"
              " web:Page(perPage:50){airingSchedules(mediaId_in:$web,airingAt_greater:$a,airingAt_lesser:$b){episode airingAt media{id}}}}")
     web_only = [i for i, s in shows.items() if not s["tid"]]
-    body = json.dumps({"query": query, "variables": {"ids": list(shows), "web": web_only or [0], "a": now - 8 * 86400, "b": now + 8 * 86400}}).encode()
-    req = urllib.request.Request("https://graphql.anilist.co", data=body, headers={"Content-Type": "application/json", "User-Agent": UA})
     try:
-        data = json.loads(urllib.request.urlopen(req, timeout=30).read())["data"]
-    except Exception as e:
-        print(f"FAIL anilist: {e}", file=sys.stderr)
-        return
+        data = anilist(query, {"ids": list(shows), "web": web_only or [0], "a": now - 8 * 86400, "b": now + 8 * 86400})
+    except Exception as e:  # AniList down: its last answer, so the TV shows (Syoboi) and YouTube links still alert
+        print(f"FAIL anilist: {e} (using its last saved answer)", file=sys.stderr)
+        saved = saved_media(state, shows)
+        data = {"info": {"media": list(saved.values())}, "web": {"airingSchedules": [
+            {"episode": n["episode"], "airingAt": n["airingAt"], "media": {"id": i}} for i in web_only if i in saved
+            for n in (saved[i].get("airingSchedule") or {}).get("nodes", []) if n["airingAt"] > now - 8 * 86400]}}
     info = {m["id"]: m for m in data["info"]["media"]}
     ahead = now + 8 * 86400  # a Thai release can come before Japanese TV (Chitose: a week), so look past now
     aired = {(a["media"]["id"], a["episode"]): a["airingAt"] for a in data["web"]["airingSchedules"] if a["airingAt"] <= ahead}
@@ -1043,8 +1102,9 @@ def anime(state):
             xml = get(f"https://cal.syoboi.jp/db.php?Command=ProgLookup&TID={','.join(map(str, by_tid))}&Range={span}")
             first = {tid: shows[i]["first"] for tid, i in by_tid.items()}
             aired.update({(by_tid[tid], ep): t for (tid, ep), t in tv_aired(xml, first, ahead).items()})
-        except Exception as e:
-            print(f"FAIL tv schedule: {e}", file=sys.stderr)
+        except Exception as e:  # Syoboi down: the times the last good check saved
+            print(f"FAIL tv schedule: {e} (using the last saved times)", file=sys.stderr)
+            aired.update({k: t for k, t in saved_tv(state, shows).items() if t <= ahead})
     seed = "anime" not in state  # first run: record the past week's episodes silently
     seen = state.setdefault("anime", [])
     thai = thai_times()  # shows released later with Thai subs: alert at that time instead of the Japanese broadcast
