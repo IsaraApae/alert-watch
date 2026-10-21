@@ -3058,7 +3058,9 @@
   "195539:9",
   "195539:10",
   "207329:3",
-  "198727:2"
+  "198727:2",
+  "176314:3",
+  "152677:3"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3792,6 +3794,28 @@
    "published": 1792513811,
    "scheduled": 1792513800,
    "notified": true
+  },
+  "176314:3": {
+   "title": "Sasaki and Peeps Season 2",
+   "episode": 3,
+   "version": "ซับไทย",
+   "first": "Muse Thailand",
+   "url": "https://www.youtube.com/watch?v=HS7nRZFlsus",
+   "detected": 1792593050,
+   "published": 1792587607,
+   "scheduled": 1792587600,
+   "notified": true
+  },
+  "152677:3": {
+   "title": "The Detective Is Already Dead Season 2",
+   "episode": 3,
+   "version": "ซับไทย",
+   "first": "Muse Thailand",
+   "url": "https://www.youtube.com/watch?v=6NPWX9lhDOs",
+   "detected": 1792593050,
+   "published": 1792589407,
+   "scheduled": 1792589400,
+   "notified": true
   }
  },
  "watch_links": {
@@ -3853,7 +3877,9 @@
   "195539:9": "https://animeruka.com/ep/cyberpunk-edgerunners-season-2-ep-9/",
   "195539:10": "https://animeruka.com/ep/cyberpunk-edgerunners-season-2-ep-10/",
   "198727:2": "https://isaraapae.github.io/alert-watch/b.html?v=HX7tTC4GhsY",
-  "207329:3": "https://isaraapae.github.io/alert-watch/b.html?v=PCRNUokasJQ"
+  "207329:3": "https://isaraapae.github.io/alert-watch/b.html?v=PCRNUokasJQ",
+  "152677:3": "https://isaraapae.github.io/alert-watch/b.html?v=6NPWX9lhDOs",
+  "176314:3": "https://isaraapae.github.io/alert-watch/b.html?v=HS7nRZFlsus"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -3918,7 +3944,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792585237,
+ "anime_checked": 1792593050,
  "mal_totals": {
   "60601": [
    null,
