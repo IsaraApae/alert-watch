@@ -202,6 +202,11 @@ def f1_rows(results, drivers):
     return rows
 
 
+# drivers formula1.com has no photo of in a season (checked for 2024-2026): the year and team of the photo to use instead,
+# as on the F1 Live site (2024: Doohan, Alpine's stand-in for the last race only; his 2025 Alpine photo)
+F1_PHOTO_FROM = {(2024, "jacdoo01"): (2025, "alpine")}
+
+
 def f1_photo(d, px):
     """A driver's face as PNG, from formula1.com's portraits for the current season in their current team's suit
     (OpenF1's own photo links are last season's, in old team suits, and rookies have none)."""
@@ -215,6 +220,7 @@ def f1_photo(d, px):
     if not code or not team:
         return None
     year = d.get("year") or datetime.now(THAI).year
+    year, team = F1_PHOTO_FROM.get((year, code), (year, team))
     # c_thumb,g_face: cropped to the face; d_: formula1.com's blank driver if the portrait is missing, never a broken image
     return (f"https://media.formula1.com/image/upload/c_thumb,g_face,z_0.6,w_{px},h_{px}/d_common:f1:{year}:fallback:driver:"
             f"{year}fallbackdriverright.webp/common/f1/{year}/{team}/{code}/{year}{team}{code}right.png")
@@ -1529,6 +1535,7 @@ if __name__ == "__main__":
         assert episode_total({"episodes": None, "idMal": 1}, {"mal_totals": {"1": [None, time.time()]}}) is None  # neither: blank
         assert [webtoon_ep(t) for t in ("S2 Ep.12", "[Season 2] Ep.163", "Season 2 Ep.130 สไลด์เดอร์ (3)", "SS2 Ep.10 มังกร", "Ep.215", "Ep.90 ตัวตน (จบซีซัน 1)", "ประกาศ")] == [(2, 12), (2, 163), (2, 130), (2, 10), (1, 215), (1, 90), None]
         assert [chapter_number(c) for c in ("ซีซั่น-1/ตอนที่-226", "ซีซั่น-1/ตอนที่-9_1", "112 (จบซีซั่น 1)", "EP.45")] == [226, 9.1, 112, 45]
+        assert "/2025/alpine/jacdoo01/" in f1_photo({"full_name": "Jack DOOHAN", "team_name": "Alpine", "year": 2024}, 96)  # no 2024 photo
         assert tv_aired(x, {8: [15]}, 1790868600) == {(8, 1): 1790868360}, tv_aired(x, {8: [15]}, 1790868600)  # earliest channel, season numbering, nothing future
         x2 = ('<ProgItem><TID>9</TID><Count>1</Count><StTime>2026-10-04 16:30:00</StTime></ProgItem>'
               '<ProgItem><TID>9</TID><Count>26</Count><StTime>2026-10-06 20:00:00</StTime></ProgItem>')
