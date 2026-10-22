@@ -3063,7 +3063,8 @@
   "152677:3",
   "159042:4",
   "206401:4",
-  "213805:4"
+  "213805:4",
+  "212503:3"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3854,6 +3855,17 @@
    "published": null,
    "notified": true,
    "order": "estimated"
+  },
+  "212503:3": {
+   "title": "The Iceblade Sorcerer Shall Rule the World Season 2",
+   "episode": 3,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=-rE0g4d-NOk",
+   "detected": 1792688446,
+   "published": 1792688700,
+   "scheduled": 1792688400,
+   "notified": true
   }
  },
  "watch_links": {
@@ -3920,7 +3932,8 @@
   "176314:3": "https://isaraapae.github.io/alert-watch/b.html?v=HS7nRZFlsus",
   "159042:4": "https://isaraapae.github.io/alert-watch/b.html?v=EZzAhqKWiMU",
   "206401:4": "https://isaraapae.github.io/alert-watch/b.html?v=MWZPtKMM08c",
-  "213805:4": "https://animegojos.com/list/3165/#ep-4"
+  "213805:4": "https://animegojos.com/list/3165/#ep-4",
+  "212503:3": "https://isaraapae.github.io/alert-watch/b.html?v=-rE0g4d-NOk"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -3985,7 +3998,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792687865,
+ "anime_checked": 1792688446,
  "mal_totals": {
   "60601": [
    null,
