@@ -3062,7 +3062,8 @@
   "176314:3",
   "152677:3",
   "159042:4",
-  "206401:4"
+  "206401:4",
+  "213805:4"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3842,6 +3843,17 @@
    "published": 1792672209,
    "scheduled": 1792672200,
    "notified": true
+  },
+  "213805:4": {
+   "title": "The Ramparts of Ice Season 2",
+   "episode": 4,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/3165/#ep-4",
+   "detected": 1792684283,
+   "published": null,
+   "notified": true,
+   "order": "estimated"
   }
  },
  "watch_links": {
@@ -3907,7 +3919,8 @@
   "152677:3": "https://isaraapae.github.io/alert-watch/b.html?v=6NPWX9lhDOs",
   "176314:3": "https://isaraapae.github.io/alert-watch/b.html?v=HS7nRZFlsus",
   "159042:4": "https://isaraapae.github.io/alert-watch/b.html?v=EZzAhqKWiMU",
-  "206401:4": "https://isaraapae.github.io/alert-watch/b.html?v=MWZPtKMM08c"
+  "206401:4": "https://isaraapae.github.io/alert-watch/b.html?v=MWZPtKMM08c",
+  "213805:4": "https://animegojos.com/list/3165/#ep-4"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -3972,19 +3985,19 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792683635,
+ "anime_checked": 1792684283,
  "mal_totals": {
   "60601": [
    null,
-   1792662662
+   1792684297
   ],
   "64534": [
    null,
-   1792662662
+   1792684290
   ],
   "63801": [
    null,
-   1792662662
+   1792684297
   ],
   "64254": [
    12,
@@ -3992,15 +4005,15 @@
   ],
   "64503": [
    null,
-   1792662663
+   1792684298
   ],
   "62922": [
    null,
-   1792662663
+   1792684298
   ],
   "63431": [
    null,
-   1792662664
+   1792684298
   ]
  },
  "webtoon_seasons": {
