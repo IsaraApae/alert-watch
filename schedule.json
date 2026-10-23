@@ -1,5 +1,5 @@
 {
- "updated": 1792758646,
+ "updated": 1792769484,
  "shows": [
   {
    "name": "As a Reincarnated Aristocrat Season 3",
@@ -101,11 +101,6 @@
    "where": "Netflix",
    "episodes": [
     {
-     "ep": 3,
-     "at": 1792078200.0,
-     "watch": "https://animegojos.com/list/3165/#ep-3"
-    },
-    {
      "ep": 4,
      "at": 1792683000.0,
      "watch": "https://animegojos.com/list/3165/#ep-4"
@@ -158,7 +153,8 @@
     },
     {
      "ep": 4,
-     "at": 1792767600.0
+     "at": 1792767600.0,
+     "watch": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-4/"
     },
     {
      "ep": 5,
@@ -924,6 +920,10 @@
     {
      "ep": 11,
      "at": 1797348600.0
+    },
+    {
+     "ep": 12,
+     "at": 1797953400.0
     }
    ]
   }
