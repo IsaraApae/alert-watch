@@ -3071,7 +3071,8 @@
   "212503:3",
   "210482:5",
   "195516:4",
-  "178083:4"
+  "178083:4",
+  "191656:4"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3905,6 +3906,17 @@
    "detected": 1792777832,
    "published": 1792777328,
    "notified": true
+  },
+  "191656:4": {
+   "title": "Even the Student Council Has Its Holes!",
+   "episode": 4,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/3211/#ep-4",
+   "detected": 1792861834,
+   "published": null,
+   "notified": true,
+   "order": "estimated"
   }
  },
  "watch_links": {
@@ -3975,7 +3987,8 @@
   "212503:3": "https://isaraapae.github.io/alert-watch/b.html?v=-rE0g4d-NOk",
   "210482:5": "https://animegojos.com/list/2831/#ep-6",
   "195516:4": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-4/",
-  "178083:4": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-4/"
+  "178083:4": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-4/",
+  "191656:4": "https://animegojos.com/list/3211/#ep-4"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4042,7 +4055,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792861275,
+ "anime_checked": 1792861834,
  "mal_totals": {
   "60601": [
    null,
