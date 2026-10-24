@@ -3073,7 +3073,8 @@
   "195516:4",
   "178083:4",
   "191656:4",
-  "209872:4"
+  "209872:4",
+  "202250:4"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3929,6 +3930,17 @@
    "published": null,
    "notified": true,
    "order": "estimated"
+  },
+  "202250:4": {
+   "title": "Magic Repo Man",
+   "episode": 4,
+   "version": "ซับไทย",
+   "first": "Muse Thailand",
+   "url": "https://www.youtube.com/watch?v=9WgIdBi9wmw",
+   "detected": 1792866042,
+   "published": 1792865909,
+   "scheduled": 1792864800,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4001,7 +4013,8 @@
   "195516:4": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-4/",
   "178083:4": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-4/",
   "191656:4": "https://animegojos.com/list/3211/#ep-4",
-  "209872:4": "https://animegojos.com/list/3197/#ep-4"
+  "209872:4": "https://animegojos.com/list/3197/#ep-4",
+  "202250:4": "https://isaraapae.github.io/alert-watch/b.html?v=9WgIdBi9wmw"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4068,7 +4081,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792865428,
+ "anime_checked": 1792866042,
  "mal_totals": {
   "60601": [
    null,
