@@ -34,7 +34,7 @@ A card with the official F1 logo after every session of each Grand Prix weekend:
 The cards use the F1 Live site's light look: white panels on light grey and the site's driver tags (the car number on the team colour, the three-letter name tinted with it).
 
 - Header: the F1 logo, the Grand Prix with its flag, the session, and the Thai start time.
-- The top 3 with their photos on their team colour, P1 in red, each with their driver tag and time.
+- The top 3 as a podium (P2, P1 in the middle, P3) with their photos on their team colour, P1 in red, each with their driver tag and time.
 - Everyone else as the page's timing table: position, driver tag, name and time, in striped rows.
 - A red **Watch replay** button that opens the session's replay on the F1 Live page.
 - The time column shows:
@@ -94,7 +94,7 @@ You can also edit the files directly:
   - **ping** sends a test card.
   - **richmenu** installs the LINE menu.
   - **f1check** has LINE check every kind of card (anime, manga, and the F1 results, standings and live cards, built from the latest race) without sending anything.
-  - **sites** checks which anime sources GitHub can read right now (animegojo, suba-anime and the two episode feeds).
+  - **sites** checks which anime sources GitHub can read right now (animegojo, suba-anime and the two episode feeds), and Formula 1's live timing feed.
 - `python3 watch.py test` runs the self-checks.
 - [line/Code.gs](line/Code.gs) is the LINE command webhook. It runs on Google Apps Script with these script properties: `LINE_TOKEN`, `GITHUB_TOKEN`, `OWNER_ID`. After you change it, redeploy it with **Manage deployments → New version**.
 - The `gh-pages` branch holds the website:
