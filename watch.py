@@ -227,10 +227,10 @@ def f1_photo(d, px):
 
 
 def f1_logo(team, year):
-    """A team's white logo for the season as PNG, for the cards' dark background (as the F1 Live page uses in dark mode),
-    from formula1.com (Red Bull Racing: .../2026/redbullracing/2026redbullracinglogowhite)."""
+    """A team's logo for the season as PNG, in its own colours for the cards' light background (as the F1 Live site uses in
+    light mode), from formula1.com (Red Bull Racing: .../2026/redbullracing/2026redbullracinglogo)."""
     slug = re.sub(r"[^a-z0-9]", "", (team or "").lower())
-    return f"https://media.formula1.com/image/upload/c_fit,w_96,h_96/common/f1/{year}/{slug}/{year}{slug}logowhite.png" if slug else None
+    return f"https://media.formula1.com/image/upload/c_fit,w_96,h_96/common/f1/{year}/{slug}/{year}{slug}logo.png" if slug else None
 
 
 def f1_name(d):
@@ -241,9 +241,10 @@ def f1_name(d):
     return f"{first[0][0]}. " * bool(first) + " ".join(last).title()
 
 
-# the F1 Live page's look: navy, team-colour driver tags (car number on the team colour, the name tinted with it)
-F1C = {"bg": "#0B0B10", "panel": "#15151E", "row": "#181821", "line": "#262633", "text": "#F2F2F6", "dim": "#8D8D9C",
-       "red": "#E10600", "green": "#22C55E", "purple": "#B14CF0"}
+# the F1 Live site's light look: white panels on light grey, team-colour driver tags (car number on the team colour, the
+# name tinted with it)
+F1C = {"bg": "#EEF0F4", "panel": "#FFFFFF", "row": "#F5F6F9", "line": "#E4E6EC", "text": "#111118", "dim": "#6B6F7C",
+       "red": "#E10600", "green": "#16A34A", "purple": "#9333EA"}
 
 
 def f1_mix(a, b, share):
@@ -265,12 +266,12 @@ def f1_tag(d, size="xs"):
     t = lambda text, **k: {"type": "text", "text": text or "?", "size": size, "weight": "bold", "align": "center", "gravity": "center", **k}
     return {"type": "box", "layout": "horizontal", "flex": 0, "cornerRadius": "4px", "height": "20px", "contents": [
         {"type": "box", "layout": "vertical", "backgroundColor": c, "width": "26px", "contents": [t(num, color=f1_ink(c))]},
-        {"type": "box", "layout": "vertical", "backgroundColor": f1_mix(c, F1C["panel"], .24), "width": "38px",
-         "contents": [t(d.get("name_acronym"), color=f1_mix(c, "#FFFFFF", .55))]}]}
+        {"type": "box", "layout": "vertical", "backgroundColor": f1_mix(c, F1C["panel"], .14), "width": "38px",
+         "contents": [t(d.get("name_acronym"), color=f1_mix(c, "#000000", .78))]}]}
 
 
 def f1_head(meeting, title, sub):
-    """The dark header: F1 logo, the Grand Prix and its flag, a big title, a dim line under it."""
+    """The header: F1 logo, the Grand Prix and its flag, a big title, a grey line under it."""
     t = lambda text, **k: {"type": "text", "text": text, **k}
     return {"type": "box", "layout": "vertical", "backgroundColor": F1C["bg"], "spacing": "xs", "paddingAll": "16px", "contents": [
         {"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "center", "contents": [
@@ -412,43 +413,240 @@ def f1_live_card(meeting, session, when, live):
             "footer": f1_button("Open F1 Live", F1_PAGE)}
 
 
-def f1_live(state, token, sessions, now):
-    """Tell LINE when a session goes live (from 15 minutes before its start to 30 minutes after), once."""
-    sent = state.setdefault("f1_live", [])
-    for s in sessions:
-        start, key = datetime.fromisoformat(s["date_start"]).timestamp(), str(s["session_key"])
-        if key in sent or not start - 15 * 60 <= now <= start + 30 * 60:
-            continue
+F1_FEED = "wss://livetiming.formula1.com/signalrcore"  # Formula 1's live timing: free, the F1 Live site's live data
+JOB_START = float(os.environ.get("JOB_START") or time.time())  # when this GitHub job began (watch.yml): it has 9 minutes in all
+F1_FINAL = ("Finalised", "Ends")  # the feed's session status once the order is final
+
+
+def f1_spare():
+    """Seconds this check can still wait for an F1 session to start or finish, leaving 2.5 minutes of the job's 9 for the rest
+    (the schedule, manga, saving). None on the Mac."""
+    return max(0, JOB_START + 8 * 60 - 150 - time.time()) if os.environ.get("LINE_TOKEN") else 0
+
+
+def f1_merge(old, new):
+    """Formula 1's feed sends changes: objects merge, lists change by index ({"3": {...}})."""
+    if not isinstance(new, dict):
+        return new
+    if isinstance(old, list):
+        old = list(old)
+        for k, v in new.items():
+            if k.isdigit():
+                old.extend([None] * (int(k) + 1 - len(old)))
+                old[int(k)] = f1_merge(old[int(k)], v)
+        return old
+    out = dict(old) if isinstance(old, dict) else {}
+    for k, v in new.items():
+        if k != "_kf":
+            out[k] = f1_merge(out.get(k), v)
+    return out
+
+
+def f1_feed(until=None, done=None):
+    """Formula 1's live timing feed: its state now ({topic: data}); with done, it keeps reading the feed's changes until
+    done(state) or the clock passes until. Unlike OpenF1, it answers during a session. None if it can't be reached."""
+    try:
+        from websockets.sync.client import connect
+    except ImportError:
+        print("FAIL f1 feed: the websockets package isn't installed", file=sys.stderr)
+        return None
+    topics = ["SessionInfo", "SessionStatus", "TimingData", "DriverList", "LapCount", "ExtrapolatedClock"]
+    try:
+        with connect(F1_FEED, open_timeout=15, additional_headers={"User-Agent": UA}) as ws:
+            ws.send(json.dumps({"protocol": "json", "version": 1}) + "\x1e")
+            ws.recv(timeout=15)
+            ws.send(json.dumps({"type": 1, "invocationId": "1", "target": "Subscribe", "arguments": [topics]}) + "\x1e")
+            feed, began = None, time.time()
+            while True:
+                if feed is not None and (not done or done(feed) or not until or time.time() >= until):
+                    return feed
+                if feed is None and time.time() - began > 20:
+                    raise TimeoutError("no answer to the subscription")
+                try:
+                    raw = ws.recv(timeout=max(1, min(30, (until or 0) - time.time())) if feed is not None else 15)
+                except TimeoutError:
+                    continue
+                for part in raw.split("\x1e"):
+                    if not part:
+                        continue
+                    m = json.loads(part)
+                    if m.get("type") == 3:
+                        feed = m.get("result") or {}
+                    elif m.get("type") == 1 and feed is not None and len(m.get("arguments") or []) >= 2:
+                        feed[m["arguments"][0]] = f1_merge(feed.get(m["arguments"][0]), m["arguments"][1])
+                    elif m.get("type") == 7:
+                        return feed
+    except Exception as e:
+        print(f"FAIL f1 feed: {e}", file=sys.stderr)
+        return None
+
+
+def f1_feed_start(feed):
+    """When the feed's session began, as a timestamp (its StartDate is local time, with the circuit's GMT offset)."""
+    info = (feed or {}).get("SessionInfo") or {}
+    try:
+        off = info.get("GmtOffset") or "00:00:00"
+        h, m, sec = (int(x) for x in off.lstrip("+-").split(":"))
+        return datetime.fromisoformat(info["StartDate"]).replace(tzinfo=timezone.utc).timestamp() - (-1 if off.startswith("-") else 1) * (h * 3600 + m * 60 + sec)
+    except Exception:
+        return None
+
+
+def f1_feed_left(feed, session):
+    """Roughly how many seconds until the feed's session finishes, or None: a race by laps to go at the leader's pace,
+    anything else by its clock (qualifying only in its last part: Q1 and Q2 ending isn't the end)."""
+    td, now = feed.get("TimingData") or {}, time.time()
+    if session in ("Race", "Sprint"):
+        laps, lines = feed.get("LapCount") or {}, td.get("Lines") or {}
+        lead = next((l for l in lines.values() if str(l.get("Position")) == "1"), {})
+        pace = f1_seconds(((lead.get("LastLapTime") or {}).get("Value")) or "") or 100
+        return (laps["TotalLaps"] - laps["CurrentLap"] + 1) * pace if laps.get("TotalLaps") and laps.get("CurrentLap") else None
+    if ("Qualifying" in session or "Shootout" in session) and (td.get("SessionPart") or 0) < 3:
+        return None
+    clock = feed.get("ExtrapolatedClock") or {}
+    try:
+        h, m, sec = (int(x) for x in clock["Remaining"].split(":"))
+        ran = now - datetime.fromisoformat(clock["Utc"].replace("Z", "+00:00")).timestamp() if clock.get("Extrapolating") else 0
+        return max(0, h * 3600 + m * 60 + sec - ran)
+    except Exception:
+        return None
+
+
+def f1_seconds(text):
+    """"1:34.035" -> 94.035, "+0.123" -> 0.123; None if it isn't a time."""
+    m = re.fullmatch(r"\+?(?:(\d+):)?(\d+(?:\.\d+)?)", (text or "").strip())
+    return int(m[1] or 0) * 60 + float(m[2]) if m else None
+
+
+def f1_feed_rows(feed, session, year):
+    """[(position, driver, time)] from the feed, as f1_rows makes them from OpenF1: a race's laps for the winner, then gaps,
+    laps down or DNF; a qualifying's lap in the last part the driver reached; a practice's best lap, then gaps."""
+    lines, names = (feed.get("TimingData") or {}).get("Lines") or {}, feed.get("DriverList") or {}
+    value = lambda x: (x or {}).get("Value") if isinstance(x, dict) else x
+    rows = []
+    for n, l in sorted(lines.items(), key=lambda kv: int(kv[1].get("Position") or 99)):
+        d = names.get(n) or {}
+        driver = {"driver_number": int(n), "name_acronym": d.get("Tla"), "team_colour": d.get("TeamColour"), "team_name": d.get("TeamName"),
+                  "full_name": d.get("FullName") or f"{d.get('FirstName', '')} {(d.get('LastName') or '').upper()}".strip(),
+                  "headshot_url": d.get("HeadshotUrl"), "year": year}
+        pos = str(l.get("Position") or "NC")
+        if session in ("Race", "Sprint"):
+            gap = str(value(l.get("GapToLeader")) or "")
+            laps = re.fullmatch(r"\+?(\d+)\s*L(?:APS?)?", gap, re.I)
+            val = ("DNF" if l.get("Retired") else f"{l.get('NumberOfLaps') or ''} Laps".strip() if pos == "1"
+                   else f"+{laps[1]} Lap{'' if laps[1] == '1' else 's'}" if laps else gap or "–")
+        elif "Qualifying" in session or "Shootout" in session:
+            parts = l.get("BestLapTimes") or []
+            parts = [parts[k] for k in sorted(parts, key=int)] if isinstance(parts, dict) else parts
+            val = next((value(x) for x in reversed(parts) if value(x)), None) or "No time"
+        else:
+            best = value(l.get("BestLapTime"))
+            val = (best if pos == "1" else value(l.get("TimeDiffToFastest")) or best) or "No time"
+        rows.append((pos, driver, val))
+    return rows
+
+
+def f1_schedule(state, now):
+    """The weekend's sessions and their meetings, from OpenF1; during a session OpenF1 refuses free requests (HTTP 401), so
+    the last list it gave is kept in the state and used then."""
+    since = datetime.fromtimestamp(now - 3 * 86400, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    keep = ("session_key", "session_name", "date_start", "date_end", "meeting_key", "year", "country_name")
+    ts = lambda x: datetime.fromisoformat(x).timestamp()
+    try:
+        sessions = [s for s in json.loads(get(f"{OPENF1}/sessions?date_end>={since}")) if ts(s["date_start"]) < now + 10 * 86400]
+        state["f1_schedule"] = [{k: s.get(k) for k in keep} for s in sessions]
+    except Exception as e:
+        sessions = [s for s in state.get("f1_schedule", []) if ts(s["date_end"]) >= now - 3 * 86400]
+        print(f"f1: OpenF1 didn't answer ({e}); using the saved schedule ({len(sessions)} sessions)")
+    meetings = state.setdefault("f1_meetings", {})
+    for mk in {str(s["meeting_key"]) for s in sessions} - set(meetings):
         try:
-            meeting = (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0]
+            meetings[mk] = (json.loads(get(f"{OPENF1}/meetings?meeting_key={mk}")) or [{}])[0]
         except Exception:
-            meeting = {}
-        live = now >= start
-        when = datetime.fromtimestamp(start, THAI).strftime("%a %d %b · %H:%M") + ("" if live else f" · in {max(1, round((start - now) / 60))} min")
+            pass
+    for mk in set(meetings) - {str(s["meeting_key"]) for s in sessions}:
+        del meetings[mk]
+    return sessions, meetings
+
+
+def f1_started(state, token, sessions, meetings):
+    """A LINE card when a session starts, once: at its start time if this check can wait for it (it waits up to f1_spare()),
+    else on the next check, up to 30 minutes in."""
+    sent = state.setdefault("f1_live", [])
+    for s in sorted(sessions, key=lambda s: s["date_start"]):
+        start, key = datetime.fromisoformat(s["date_start"]).timestamp(), str(s["session_key"])
+        if key in sent or time.time() > start + 30 * 60:
+            continue
+        if start > time.time():
+            if start - time.time() > f1_spare():
+                continue  # the next check sends it
+            time.sleep(start - time.time())
+        meeting = meetings.get(str(s["meeting_key"])) or {}
         name = meeting.get("meeting_name") or s.get("country_name") or "Formula 1"
-        if not token:   # on the Mac: show what would be sent
+        when = datetime.fromtimestamp(start, THAI).strftime("%a %d %b · %H:%M")
+        if not token:  # on the Mac: show what would be sent
             print(f"F1 live: {s['session_name']} · {name} · {when}")
         else:
-            card = {"type": "flex", "altText": f"F1 {s['session_name']} · {name} is {'live' if live else 'starting'}: open F1 Live",
-                    "contents": f1_live_card(meeting, s["session_name"], when, live)}
-            plain = {"type": "text", "text": f"F1 {s['session_name']} · {name} is {'live now' if live else 'starting soon'}\n{F1_PAGE}"}
+            card = {"type": "flex", "altText": f"F1 {s['session_name']} · {name} is live: open F1 Live", "contents": f1_live_card(meeting, s["session_name"], when, True)}
+            plain = {"type": "text", "text": f"F1 {s['session_name']} · {name} is live now\n{F1_PAGE}"}
             if not (line_send(token, card) or line_send(token, plain)):
                 continue
         sent.append(key)
     del sent[:-100]
 
 
+def f1_finished(state, token, sessions, meetings):
+    """The results card as soon as a session finishes, from Formula 1's own feed (OpenF1, which the other cards use, only
+    opens again a while after a session). The order counts as final when the feed says so, or 3 minutes after the chequered
+    flag; a check waits for that while it has time (f1_spare()), and the next check carries on."""
+    sent, seen = state.setdefault("f1_sessions", []), state.setdefault("f1_flag", {})  # seen: when the flag was first seen
+    ts = lambda x: datetime.fromisoformat(x).timestamp()
+    due = [s for s in sessions if str(s["session_key"]) not in sent and ts(s["date_start"]) <= time.time() <= ts(s["date_end"]) + 3 * 3600]
+    if not due:
+        return
+    feed = f1_feed()
+    start = f1_feed_start(feed)
+    s = next((s for s in due if start and abs(ts(s["date_start"]) - start) < 1800), None)
+    if not s:
+        return  # the feed is on another session
+    key, session = str(s["session_key"]), s["session_name"]
+    status = lambda f: (f.get("SessionStatus") or {}).get("Status")
+
+    def final(f):
+        if status(f) == "Finished":
+            seen.setdefault(key, time.time())
+        return status(f) in F1_FINAL or (key in seen and time.time() - seen[key] >= 180)
+    left, spare = f1_feed_left(feed, session), f1_spare()
+    if not final(feed) and spare > 30 and (status(feed) == "Finished" or (left is not None and left < spare - 30)):
+        feed = f1_feed(until=time.time() + spare, done=final) or feed  # about to finish: wait for it
+    if not final(feed):
+        return
+    meeting = meetings.get(str(s["meeting_key"])) or {}
+    rows = f1_feed_rows(feed, session, s.get("year"))
+    if not rows:
+        return
+    name = meeting.get("meeting_name") or s.get("country_name") or "Formula 1"
+    when = datetime.fromtimestamp(ts(s["date_start"]), THAI).strftime("%a %d %b %Y · %H:%M")
+    top = ", ".join(f"{p} {d.get('name_acronym', '?')}" for p, d, _ in rows[:3])
+    if not token:  # on the Mac: show what would be sent
+        print(f"F1 {session} · {name} · {when} | {top} (from F1's feed)")
+        return
+    plain = {"type": "text", "text": f"F1 {session} · {name}\n{when}\n" + "\n".join(f"{p} {f1_name(d)} ({d.get('team_name', '')}) {v}" for p, d, v in rows)}
+    card = {"type": "flex", "altText": f"F1 {session} · {name}: {top}"[:400], "contents": f1_card(meeting, session, when, rows, key)}
+    if line_send(token, card) or line_send(token, plain):
+        sent.append(key)
+        seen.pop(key, None)
+        print(f"f1: {session} results sent from F1's feed")
+
+
 def f1(state):
     """Send every Formula 1 session's order once it is published: Practice 1-3, Sprint Qualifying, Sprint, Qualifying, Race."""
     token, now = os.environ.get("LINE_TOKEN"), time.time()
     state.pop("f1", None)  # the earlier race-only records
-    since = datetime.fromtimestamp(now - 3 * 86400, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
-    try:
-        sessions = json.loads(get(f"{OPENF1}/sessions?date_end>={since}"))
-    except Exception as e:
-        print(f"FAIL f1 sessions: {e}", file=sys.stderr)
-        return
-    f1_live(state, token, sessions, now)
+    sessions, meetings = f1_schedule(state, now)
+    f1_started(state, token, sessions, meetings)
+    f1_finished(state, token, sessions, meetings)  # straight after a session, from F1's feed; below, from OpenF1 once it opens
+    now = time.time()
     end = lambda s: datetime.fromisoformat(s["date_end"]).timestamp()
     ended = sorted((s for s in sessions if end(s) <= now), key=end)
     if "f1_sessions" not in state:  # the first run sends only the newest session, as a sample, not the whole weekend
@@ -471,7 +669,7 @@ def f1(state):
             if not results:
                 continue  # not published yet: tried again on the next check
             drivers = {d["driver_number"]: {**d, "year": s.get("year")} for d in json.loads(get(f"{OPENF1}/drivers?session_key={key}"))}
-            meeting = (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0]
+            meeting = meetings.get(str(s["meeting_key"])) or (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0]
         except Exception as e:
             print(f"FAIL f1 {s['session_name']}: {e}", file=sys.stderr)
             continue
@@ -514,7 +712,7 @@ def cover(url):
 
 
 WEBTOON_APP = "https://isaraapae.github.io/alert-watch/w.html?t="  # redirect page on the gh-pages branch; opens linewebtoon://
-WEBTOON_SERIES_PAGE = {"6227", "9274"}
+WEBTOON_SERIES_PAGE = {"6227", "9274"}  # Enrolling in the Transcendent Academy, Zodiac Girls: cards open the series page, not the episode
 # manga-site series that are also on WEBTOON Thai (found by their Thai titles there). They're alerted when the manga site
 # posts a chapter, the fastest source the watcher can read. The card and the LINE list open the series in the WEBTOON app when
 # WEBTOON's app has that chapter (webtoon_newest in the state), and the manga site when the site is ahead. WEBTOON's newest
@@ -547,7 +745,7 @@ WEBTOON_TWINS = {"https://manga-lc.net/manga/the-regressed-son-of-a-duke-is-an-a
                  "https://manga-lc.net/manga/killer-peter-นักฆ่าย้อนวัย/": "https://www.webtoons.com/th/action/killer-peter/list?title_no=5899",
                  "https://manga-lc.net/manga/the-boy-of-death/": "https://www.webtoons.com/th/fantasy/ticket-hero/list?title_no=2433",
                  "https://manga-lc.net/manga/bad-guy/": "https://www.webtoons.com/th/comedy/badguy/list?title_no=2342",
-                 "https://manga-lc.net/manga/reality-quest/": "https://www.webtoons.com/th/fantasy/reality-quest/list?title_no=4271"}  # Enrolling in the Transcendent Academy, Zodiac Girls: cards open the series page, not the episode
+                 "https://manga-lc.net/manga/reality-quest/": "https://www.webtoons.com/th/fantasy/reality-quest/list?title_no=4271"}
 BRAVE = "https://isaraapae.github.io/alert-watch/b.html?v="  # redirect page on the gh-pages branch; opens a YouTube video in Brave
 
 
