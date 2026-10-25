@@ -29,7 +29,7 @@ When an F1 session starts, LINE gets one card, "LIVE NOW", with a button that op
 
 ## Formula 1 results
 
-A card with the official F1 logo after every session of each Grand Prix weekend: **Practice 1, 2 and 3, Sprint Qualifying, Sprint, Qualifying and Race**, sent once each as soon as the session finishes (`f1_sessions` in `ci-state.json`). The order comes from Formula 1's own live timing feed (free, the one the F1 Live site uses): it counts as final when the feed says so, or 3 minutes after the chequered flag, and a check that finds a session about to finish waits for it. OpenF1 refuses free requests during a session (HTTP 401), so the weekend's schedule and Grand Prix details are saved whenever it answers (`f1_schedule`, `f1_meetings`), and if the feed can't be read, the card comes from OpenF1 once it opens again.
+A card with the official F1 logo after every session of each Grand Prix weekend: **Practice 1, 2 and 3, Sprint Qualifying, Sprint, Qualifying and Race**, sent once each as soon as the session finishes (`f1_sessions` in `ci-state.json`). OpenF1 refuses free requests from a session's start until 30 minutes after its scheduled end (HTTP 401), so a results card comes about half an hour after a session's scheduled end, at the first check after OpenF1 opens again (a race, scheduled for 2 hours, often finishes earlier). The weekend's schedule and Grand Prix details are saved whenever OpenF1 answers (`f1_schedule`, `f1_meetings`), so the start cards work during that time. Formula 1's own live timing feed would have the order at the flag, but it refuses GitHub's servers (HTTP 403), so it isn't used.
 
 The cards use the F1 Live site's light look: white panels on light grey and the site's driver tags (the car number on the team colour, the three-letter name tinted with it).
 
@@ -46,7 +46,7 @@ After each race, the **Drivers' and Teams' Championships** follow as two swipeab
 
 `python3 watch.py f1check` (the **f1check** option when running the workflow by hand) has LINE check the cards, built from the latest race, without sending anything; LINE takes at most 30 KB a card, and a drivers' standings card that would be bigger is sent without faces.
 
-Times on the cards are Thai time, and race lengths are written as "1h 42m 00.785s". Results come from Formula 1's live timing feed straight after a session, otherwise (and standings and team colours) from the free [OpenF1](https://openf1.org) API. Driver photos are formula1.com's portraits for the current season, cropped to the face. OpenF1's own photo links are last season's, in old team suits, and rookies have none.
+Times on the cards are Thai time, and race lengths are written as "1h 42m 00.785s". Results, standings and team colours come from the free [OpenF1](https://openf1.org) API. Driver photos are formula1.com's portraits for the current season, cropped to the face. OpenF1's own photo links are last season's, in old team suits, and rookies have none.
 
 ## Editing the lists
 
@@ -94,7 +94,7 @@ You can also edit the files directly:
   - **ping** sends a test card.
   - **richmenu** installs the LINE menu.
   - **f1check** has LINE check every kind of card (anime, manga, and the F1 results, standings and live cards, built from the latest race) without sending anything.
-  - **sites** checks which anime sources GitHub can read right now (animegojo, suba-anime and the two episode feeds), and Formula 1's live timing feed.
+  - **sites** checks which anime sources GitHub can read right now (animegojo, suba-anime and the two episode feeds).
 - `python3 watch.py test` runs the self-checks.
 - [line/Code.gs](line/Code.gs) is the LINE command webhook. It runs on Google Apps Script with these script properties: `LINE_TOKEN`, `GITHUB_TOKEN`, `OWNER_ID`. After you change it, redeploy it with **Manage deployments → New version**.
 - The `gh-pages` branch holds the website:
