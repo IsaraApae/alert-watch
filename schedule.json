@@ -1,5 +1,5 @@
 {
- "updated": 1792943436,
+ "updated": 1792947708,
  "shows": [
   {
    "name": "As a Reincarnated Aristocrat Season 3",
@@ -240,11 +240,6 @@
    "where": "Bilibili",
    "episodes": [
     {
-     "ep": 3,
-     "at": 1792256400.0,
-     "watch": "https://animegojos.com/list/3211/#ep-3"
-    },
-    {
      "ep": 4,
      "at": 1792861200.0,
      "watch": "https://animegojos.com/list/3211/#ep-4"
@@ -290,11 +285,6 @@
    "total": null,
    "where": "Netflix",
    "episodes": [
-    {
-     "ep": 3,
-     "at": 1792256400.0,
-     "watch": "https://animeruka.com/ep/ranma-%c2%bd-season-3-ep-3/"
-    },
     {
      "ep": 4,
      "at": 1792861200.0,
@@ -579,6 +569,10 @@
     {
      "ep": 11,
      "at": 1797526800.0
+    },
+    {
+     "ep": 12,
+     "at": 1798131600.0
     }
    ]
   },
