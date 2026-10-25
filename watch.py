@@ -313,7 +313,8 @@ def f1_card(meeting, session, when, rows, replay_key=None):
     table = [{"type": "box", "layout": "horizontal", "paddingStart": "8px", "paddingEnd": "8px", "paddingBottom": "4px", "contents": [
         t("POS · DRIVER", size="xxs", weight="bold", color=F1C["dim"], flex=1), t("TIME", size="xxs", weight="bold", color=F1C["dim"], flex=0)]}]
     table += [row(i, *r) for i, r in enumerate(rows[3:])]
-    body = [{"type": "box", "layout": "horizontal", "spacing": "md", "contents": [podium(*r) for r in rows[:3]]},
+    top = [rows[i] for i in (1, 0, 2) if i < len(rows)] if len(rows) >= 3 else rows[:3]   # a podium: P2, P1 in the middle, P3
+    body = [{"type": "box", "layout": "horizontal", "spacing": "md", "contents": [podium(*r) for r in top]},
             {"type": "separator", "margin": "lg", "color": F1C["line"]},
             {"type": "box", "layout": "vertical", "margin": "md", "contents": table}]
     return {"type": "bubble", "size": "mega", "header": f1_head(meeting, session, when),
@@ -1775,6 +1776,9 @@ if __name__ == "__main__":
                 print(f"sites {name} via read_feed: readable feed ({len(page)} bytes)")
             except Exception as e:
                 print(f"sites {name} via read_feed: FAILED {type(e).__name__}: {e}")
+        feed = f1_feed()   # Formula 1's live timing feed, for the F1 results straight after a session
+        info = (feed or {}).get("SessionInfo") or {}
+        print(f"sites F1 feed: {'readable: ' + (info.get('Meeting') or {}).get('Name', '?') + ' ' + info.get('Name', '?') + ', ' + str((feed.get('SessionStatus') or {}).get('Status')) if feed else 'FAILED'}")
     elif sys.argv[1:] == ["f1check"]:
         # LINE checks the F1 cards (the latest race's results, standings and a live card) without sending anything
         token = os.environ["LINE_TOKEN"]
