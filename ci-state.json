@@ -3074,7 +3074,8 @@
   "178083:4",
   "191656:4",
   "209872:4",
-  "202250:4"
+  "202250:4",
+  "189123:4"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3941,6 +3942,16 @@
    "published": 1792865909,
    "scheduled": 1792864800,
    "notified": true
+  },
+  "189123:4": {
+   "title": "Blue Box Season 2",
+   "episode": 4,
+   "version": "ซับไทย",
+   "first": "animeruka",
+   "url": "https://animeruka.com/ep/ao-no-hako-blue-box-season-2-ep-4/",
+   "detected": 1792920637,
+   "published": 1792920301,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4014,7 +4025,8 @@
   "178083:4": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-4/",
   "191656:4": "https://animegojos.com/list/3211/#ep-4",
   "209872:4": "https://animegojos.com/list/3197/#ep-4",
-  "202250:4": "https://isaraapae.github.io/alert-watch/b.html?v=9WgIdBi9wmw"
+  "202250:4": "https://isaraapae.github.io/alert-watch/b.html?v=9WgIdBi9wmw",
+  "189123:4": "https://animeruka.com/ep/ao-no-hako-blue-box-season-2-ep-4/"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4083,7 +4095,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792920045,
+ "anime_checked": 1792920637,
  "mal_totals": {
   "60601": [
    null,
