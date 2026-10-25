@@ -25,13 +25,13 @@ The F1 site moved to its own repo, [IsaraApae/f1-live](https://github.com/IsaraA
 
 ## Live session card
 
-From 15 minutes before an F1 session starts to 30 minutes after, LINE gets one card, "LIVE NOW" (or "STARTING SOON"), with a button that opens the F1 Live page (`f1_live` in `ci-state.json`).
+When an F1 session starts, LINE gets one card, "LIVE NOW", with a button that opens the F1 Live page (`f1_live` in `ci-state.json`). The check before the start waits for it, so the card comes at the start time; if the session starts more than a few minutes after a check, the next check sends it (up to 30 minutes in). How long a check can wait: the workflow notes when its job began (`JOB_START`), and watch.py keeps 2.5 minutes of the job's 9 for everything else.
 
 ## Formula 1 results
 
-A card with the official F1 logo after every session of each Grand Prix weekend: **Practice 1, 2 and 3, Sprint Qualifying, Sprint, Qualifying and Race**, sent once each when the results come out (`f1_sessions` in `ci-state.json`).
+A card with the official F1 logo after every session of each Grand Prix weekend: **Practice 1, 2 and 3, Sprint Qualifying, Sprint, Qualifying and Race**, sent once each as soon as the session finishes (`f1_sessions` in `ci-state.json`). The order comes from Formula 1's own live timing feed (free, the one the F1 Live site uses): it counts as final when the feed says so, or 3 minutes after the chequered flag, and a check that finds a session about to finish waits for it. OpenF1 refuses free requests during a session (HTTP 401), so the weekend's schedule and Grand Prix details are saved whenever it answers (`f1_schedule`, `f1_meetings`), and if the feed can't be read, the card comes from OpenF1 once it opens again.
 
-The cards use the F1 Live page's look: navy panels and the page's driver tags (the car number on the team colour, the three-letter name tinted with it).
+The cards use the F1 Live site's light look: white panels on light grey and the site's driver tags (the car number on the team colour, the three-letter name tinted with it).
 
 - Header: the F1 logo, the Grand Prix with its flag, the session, and the Thai start time.
 - The top 3 with their photos on their team colour, P1 in red, each with their driver tag and time.
@@ -42,11 +42,11 @@ The cards use the F1 Live page's look: navy panels and the page's driver tags (t
   - qualifying and sprint qualifying: the lap from the last part reached (Q3 for the top 10);
   - sprint and race: total time, then the gap, laps down, or DNF/DNS/DSQ. An unclassified driver is shown as NC in the position column.
 
-After each race, the **Drivers' and Teams' Championships** follow as two swipeable cards in the same style, with driver photos and white team logos (as on the page in dark mode). Each line shows the position, the change since before the race (+1 in green, -1 in red), and the points with how many were gained (`f1_standings` in `ci-state.json`).
+After each race, the **Drivers' and Teams' Championships** follow as two swipeable cards in the same style, with driver photos and team logos in their own colours (as on the site in light mode). Each line shows the position, the change since before the race (+1 in green, -1 in red), and the points with how many were gained (`f1_standings` in `ci-state.json`).
 
 `python3 watch.py f1check` (the **f1check** option when running the workflow by hand) has LINE check the cards, built from the latest race, without sending anything; LINE takes at most 30 KB a card, and a drivers' standings card that would be bigger is sent without faces.
 
-Times on the cards are Thai time, and race lengths are written as "1h 42m 00.785s". Results, standings and team colours come from the free [OpenF1](https://openf1.org) API. Driver photos are formula1.com's portraits for the current season, cropped to the face. OpenF1's own photo links are last season's, in old team suits, and rookies have none.
+Times on the cards are Thai time, and race lengths are written as "1h 42m 00.785s". Results come from Formula 1's live timing feed straight after a session, otherwise (and standings and team colours) from the free [OpenF1](https://openf1.org) API. Driver photos are formula1.com's portraits for the current season, cropped to the face. OpenF1's own photo links are last season's, in old team suits, and rookies have none.
 
 ## Editing the lists
 
