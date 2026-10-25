@@ -4095,7 +4095,7 @@
   "11388"
  ],
  "f1_live": [],
- "anime_checked": 1792926630,
+ "anime_checked": 1792927232,
  "mal_totals": {
   "60601": [
    null,
@@ -4734,6 +4734,140 @@
    "coverImage": {
     "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx213805-Nokui3uWlIlw.png"
    }
+  }
+ },
+ "f1_schedule": [
+  {
+   "session_key": 11389,
+   "session_name": "Practice 1",
+   "date_start": "2026-10-23T17:30:00+00:00",
+   "date_end": "2026-10-23T18:30:00+00:00",
+   "meeting_key": 1297,
+   "year": 2026,
+   "country_name": "United States"
+  },
+  {
+   "session_key": 11390,
+   "session_name": "Practice 2",
+   "date_start": "2026-10-23T21:00:00+00:00",
+   "date_end": "2026-10-23T22:00:00+00:00",
+   "meeting_key": 1297,
+   "year": 2026,
+   "country_name": "United States"
+  },
+  {
+   "session_key": 11391,
+   "session_name": "Practice 3",
+   "date_start": "2026-10-24T17:30:00+00:00",
+   "date_end": "2026-10-24T18:30:00+00:00",
+   "meeting_key": 1297,
+   "year": 2026,
+   "country_name": "United States"
+  },
+  {
+   "session_key": 11392,
+   "session_name": "Qualifying",
+   "date_start": "2026-10-24T21:00:00+00:00",
+   "date_end": "2026-10-24T22:00:00+00:00",
+   "meeting_key": 1297,
+   "year": 2026,
+   "country_name": "United States"
+  },
+  {
+   "session_key": 11396,
+   "session_name": "Race",
+   "date_start": "2026-10-25T20:00:00+00:00",
+   "date_end": "2026-10-25T22:00:00+00:00",
+   "meeting_key": 1297,
+   "year": 2026,
+   "country_name": "United States"
+  },
+  {
+   "session_key": 11397,
+   "session_name": "Practice 1",
+   "date_start": "2026-10-30T18:30:00+00:00",
+   "date_end": "2026-10-30T19:30:00+00:00",
+   "meeting_key": 1298,
+   "year": 2026,
+   "country_name": "Mexico"
+  },
+  {
+   "session_key": 11398,
+   "session_name": "Practice 2",
+   "date_start": "2026-10-30T22:00:00+00:00",
+   "date_end": "2026-10-30T23:00:00+00:00",
+   "meeting_key": 1298,
+   "year": 2026,
+   "country_name": "Mexico"
+  },
+  {
+   "session_key": 11399,
+   "session_name": "Practice 3",
+   "date_start": "2026-10-31T17:30:00+00:00",
+   "date_end": "2026-10-31T18:30:00+00:00",
+   "meeting_key": 1298,
+   "year": 2026,
+   "country_name": "Mexico"
+  },
+  {
+   "session_key": 11400,
+   "session_name": "Qualifying",
+   "date_start": "2026-10-31T21:00:00+00:00",
+   "date_end": "2026-10-31T22:00:00+00:00",
+   "meeting_key": 1298,
+   "year": 2026,
+   "country_name": "Mexico"
+  },
+  {
+   "session_key": 11404,
+   "session_name": "Race",
+   "date_start": "2026-11-01T20:00:00+00:00",
+   "date_end": "2026-11-01T22:00:00+00:00",
+   "meeting_key": 1298,
+   "year": 2026,
+   "country_name": "Mexico"
+  }
+ ],
+ "f1_meetings": {
+  "1298": {
+   "meeting_key": 1298,
+   "meeting_name": "Mexico City Grand Prix",
+   "meeting_official_name": "FORMULA 1 GRAN PREMIO DE LA CIUDAD DE MÉXICO 2026",
+   "location": "Mexico City",
+   "country_key": 8,
+   "country_code": "MEX",
+   "country_name": "Mexico",
+   "country_flag": "https://media.formula1.com/content/dam/fom-website/2018-redesign-assets/Flags%2016x9/mexico-flag.png",
+   "circuit_key": 65,
+   "circuit_short_name": "Mexico City",
+   "circuit_type": "Permanent",
+   "circuit_info_url": "https://api.multiviewer.app/api/v1/circuits/65/2026",
+   "circuit_image": "https://media.formula1.com/content/dam/fom-website/2018-redesign-assets/Track%20icons%204x3/Mexico%20carbon.png",
+   "gmt_offset": "-06:00:00",
+   "date_start": "2026-10-30T18:30:00+00:00",
+   "date_end": "2026-11-01T22:00:00+00:00",
+   "year": 2026,
+   "is_cancelled": false
+  },
+  "1297": {
+   "meeting_key": 1297,
+   "meeting_name": "United States Grand Prix",
+   "meeting_official_name": "FORMULA 1 MSC CRUISES UNITED STATES GRAND PRIX 2026",
+   "location": "Austin",
+   "country_key": 19,
+   "country_code": "USA",
+   "country_name": "United States",
+   "country_flag": "https://media.formula1.com/content/dam/fom-website/2018-redesign-assets/Flags%2016x9/united-states-flag.png",
+   "circuit_key": 9,
+   "circuit_short_name": "Austin",
+   "circuit_type": "Permanent",
+   "circuit_info_url": "https://api.multiviewer.app/api/v1/circuits/9/2026",
+   "circuit_image": "https://media.formula1.com/content/dam/fom-website/2018-redesign-assets/Track%20icons%204x3/United States%20carbon.png",
+   "gmt_offset": "-05:00:00",
+   "date_start": "2026-10-23T17:30:00+00:00",
+   "date_end": "2026-10-25T22:00:00+00:00",
+   "year": 2026,
+   "is_cancelled": false
   }
  }
 }
