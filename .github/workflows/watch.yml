@@ -29,11 +29,8 @@ jobs:
     timeout-minutes: 9  # a stuck run must end before the next one starts
     steps:
       - uses: actions/checkout@v5
-      # when the job began, so watch.py knows how long it can wait for an F1 session to start or finish (the job has 9 minutes);
-      # websockets: for Formula 1's own live feed, which has the results straight after a session
-      - run: |
-          echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
-          python3 -m pip install -q --user --break-system-packages websockets || python3 -m pip install -q --user websockets
+      # when the job began, so watch.py knows how long it can wait for an F1 session to start (the job has 9 minutes)
+      - run: echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
       - name: Read anime feeds through a Thai VPN
         if: ${{ !inputs.ping && !inputs.richmenu && !inputs.f1check }}
         continue-on-error: true
