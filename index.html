@@ -450,10 +450,14 @@ function setTheme(choice) {
   document.querySelectorAll("[data-choice]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.choice === choice)));
   stripColour();
 }
-// the browser's status bar strip follows theme-color: give it --edge for the theme in use (both metas, so a chosen theme beats the device's)
+// the browser's status bar strip follows theme-color. The two metas already give --edge for the device's light and dark
+// themes; only a chosen theme that differs from the device's needs them rewritten (both, so it beats the device's). Left
+// alone otherwise: iPhone Safari stops showing the site's icon once a script changes theme-color.
+const STRIP = [...document.querySelectorAll('meta[name="theme-color"]')].map(m => [m, m.content]);
 function stripColour() {
-  const c = getComputedStyle(document.documentElement).getPropertyValue("--edge").trim();
-  document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.content = c);
+  const chosen = document.documentElement.dataset.theme, device = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  const c = chosen && chosen !== device ? getComputedStyle(document.documentElement).getPropertyValue("--edge").trim() : null;
+  for (const [m, original] of STRIP) { const want = c || original; if (m.content !== want) m.content = want; }
 }
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", stripColour);
 document.querySelectorAll("[data-choice]").forEach(b => b.onclick = () => setTheme(b.dataset.choice));
