@@ -4166,7 +4166,7 @@
  "f1_live": [
   "11396"
  ],
- "anime_checked": 1793127312,
+ "anime_checked": 1793127626,
  "mal_totals": {
   "60601": [
    null,
@@ -4881,6 +4881,15 @@
    "session_name": "Practice 1",
    "date_start": "2026-11-06T15:30:00+00:00",
    "date_end": "2026-11-06T16:30:00+00:00",
+   "meeting_key": 1299,
+   "year": 2026,
+   "country_name": "Brazil"
+  },
+  {
+   "session_key": 11406,
+   "session_name": "Practice 2",
+   "date_start": "2026-11-06T19:00:00+00:00",
+   "date_end": "2026-11-06T20:00:00+00:00",
    "meeting_key": 1299,
    "year": 2026,
    "country_name": "Brazil"
