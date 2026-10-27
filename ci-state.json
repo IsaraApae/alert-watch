@@ -3080,7 +3080,8 @@
   "189123:4",
   "185756:5",
   "199426:4",
-  "213657:3"
+  "213657:3",
+  "207329:4"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3990,6 +3991,17 @@
    "published": null,
    "notified": true,
    "order": "estimated"
+  },
+  "207329:4": {
+   "title": "The Laid-Off Cheat-Granting Mage Enjoys a Second Lease on Life",
+   "episode": 4,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=deQREi1FxCg",
+   "detected": 1793115024,
+   "published": 1793115008,
+   "scheduled": 1793115000,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4067,7 +4079,8 @@
   "189123:4": "https://animeruka.com/ep/ao-no-hako-blue-box-season-2-ep-4/",
   "185756:5": "https://isaraapae.github.io/alert-watch/b.html?v=0lFMaXXoYsQ",
   "199426:4": "https://isaraapae.github.io/alert-watch/b.html?v=xtvcQHeP8lg",
-  "213657:3": "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/ep-15"
+  "213657:3": "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/ep-15",
+  "207329:4": "https://isaraapae.github.io/alert-watch/b.html?v=deQREi1FxCg"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4140,7 +4153,7 @@
  "f1_live": [
   "11396"
  ],
- "anime_checked": 1793114713,
+ "anime_checked": 1793115024,
  "mal_totals": {
   "60601": [
    null,
@@ -4362,7 +4375,6 @@
   "213805:10": 1796309760.0,
   "213805:11": 1796914560.0,
   "213805:12": 1797519360.0,
-  "185756:1": 1790521200.0,
   "185756:2": 1791125100.0,
   "185756:3": 1791729000.0,
   "185756:4": 1792333800.0,
@@ -4374,6 +4386,7 @@
   "185756:10": 1795962600.0,
   "185756:11": 1796567400.0,
   "185756:12": 1797172200.0,
+  "185756:1": 1790692200.0,
   "185756:13": 1798119000.0,
   "152677:1": 1791376200.0,
   "152677:2": 1791981000.0,
@@ -4858,6 +4871,15 @@
    "meeting_key": 1298,
    "year": 2026,
    "country_name": "Mexico"
+  },
+  {
+   "session_key": 11405,
+   "session_name": "Practice 1",
+   "date_start": "2026-11-06T15:30:00+00:00",
+   "date_end": "2026-11-06T16:30:00+00:00",
+   "meeting_key": 1299,
+   "year": 2026,
+   "country_name": "Brazil"
   }
  ],
  "f1_meetings": {
@@ -4898,6 +4920,26 @@
    "gmt_offset": "-05:00:00",
    "date_start": "2026-10-23T17:30:00+00:00",
    "date_end": "2026-10-25T22:00:00+00:00",
+   "year": 2026,
+   "is_cancelled": false
+  },
+  "1299": {
+   "meeting_key": 1299,
+   "meeting_name": "São Paulo Grand Prix",
+   "meeting_official_name": "FORMULA 1 MSC CRUISES GRANDE PRÊMIO DE SÃO PAULO 2026",
+   "location": "São Paulo",
+   "country_key": 10,
+   "country_code": "BRA",
+   "country_name": "Brazil",
+   "country_flag": "https://media.formula1.com/content/dam/fom-website/2018-redesign-assets/Flags%2016x9/brazil-flag.png",
+   "circuit_key": 14,
+   "circuit_short_name": "Interlagos",
+   "circuit_type": "Permanent",
+   "circuit_info_url": "https://api.multiviewer.app/api/v1/circuits/14/2026",
+   "circuit_image": "https://media.formula1.com/content/dam/fom-website/2018-redesign-assets/Track%20icons%204x3/Brazil%20carbon.png",
+   "gmt_offset": "-03:00:00",
+   "date_start": "2026-11-06T15:30:00+00:00",
+   "date_end": "2026-11-08T19:00:00+00:00",
    "year": 2026,
    "is_cancelled": false
   }
