@@ -1,6 +1,6 @@
 name: watch
 on:
-  # Started every 10 minutes by an external scheduler (cron-job.org) calling the dispatch API:
+  # Started every 5 minutes by an external scheduler (cron-job.org) calling the dispatch API:
   # GitHub's own `schedule` trigger never fired for this repository.
   workflow_dispatch:
     inputs:
@@ -30,9 +30,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       # when the job began, so watch.py knows how long it can wait for an F1 session to start (the job has 9 minutes)
-      - run: echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
-      # vpn_feeds.py reads the anime-waku and animeruka feeds through a Thai VPN in the background while watch.py does
-      # its other checks; watch.py waits for it (feeds/done) only when it gets to those feeds. It never fails the job.
+      # (and the OpenVPN cache's name below: the runner's Ubuntu version and this month, so the packages are renewed monthly)
+      - run: |
+          echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
+          echo "DEBS_KEY=openvpn-$(. /etc/os-release && echo "$VERSION_ID")-$(date +%Y-%m)" >> "$GITHUB_ENV"
+      # the OpenVPN packages vpn_feeds.py installs (debs/), kept between runs so it needn't download them each time
+      - uses: actions/cache@v4
+        if: ${{ !inputs.ping && !inputs.richmenu && !inputs.f1check }}
+        with:
+          path: debs
+          key: ${{ env.DEBS_KEY }}
+      # vpn_feeds.py reads the animeruka feed through a Thai VPN in the background while watch.py does its other
+      # checks; watch.py waits for it (feeds/done) only when it gets to that feed. It never fails the job.
       - run: |
           if ${{ !inputs.ping && !inputs.richmenu && !inputs.f1check }}; then
             mkdir -p feeds && rm -f feeds/*
@@ -50,6 +59,8 @@ jobs:
           git config user.name manga-watch
           git config user.email manga-watch@users.noreply.github.com
           git add ci-state.json schedule.json library.json anime.txt thai_times_auto.json
+          # the VPN server that last worked (vpn_feeds.py), once there is one
+          if [ -f vpn_last.ovpn ]; then git add vpn_last.ovpn; fi
           git diff --cached --quiet && exit 0
           git commit -qm "update state"
           # pull first: LINE commands or another push may have changed the repo. If the same file changed on both sides,
