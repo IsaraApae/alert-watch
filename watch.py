@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Notify (macOS) when a watched manga page lists a chapter it didn't list last run."""
-import email.utils, html, json, os, re, shutil, subprocess, sys, time, unicodedata, urllib.error, urllib.request
+import email.utils, html, json, os, re, shutil, subprocess, sys, threading, time, unicodedata, urllib.error, urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote, unquote, urlparse
@@ -67,7 +68,7 @@ def webtoon_chapters(url, state):
     count it (Juvenile Prison's "S2 Ep.12" is chapter 112); WEBTOON's own episode number counts notices and extras too.
     Episodes locked behind coins or ads exist only in the WEBTOON app, so they aren't counted."""
     list_url = url.replace("://m.webtoons.com", "://www.webtoons.com").replace("/rss?", "/list?")
-    rss = get(list_url.replace("/list?", "/rss?"))
+    rss = get(webtoon_rss(url))
     seasons = state.setdefault("webtoon_seasons", {}).setdefault(re.search(r"title_no=(\d+)", url)[1], {})
     out = {}
     for title, n in re.findall(r"<item>\s*<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</title>.*?episode_no=(\d+)", rss, re.S):
@@ -83,22 +84,42 @@ def chapter_number(c):
     return float(found[0].replace("_", ".")) if found else 0.0
 
 
+def webtoon_rss(url):
+    """A WEBTOON series' RSS feed (its latest free episodes), from its list or feed address."""
+    return url.replace("://m.webtoons.com", "://www.webtoons.com").replace("/list?", "/rss?")
+
+
 def webtoon(url):
     """LINE Webtoon: {"EP.216": link} from the series' RSS feed, which lists its latest free episodes."""
-    rss = get(url.replace("://m.webtoons.com", "://www.webtoons.com").replace("/list?", "/rss?"))
+    rss = get(webtoon_rss(url))
     return {f"EP.{n}": link.replace("&amp;", "&") for link, n in re.findall(r"<link>([^<]*episode_no=(\d+))</link>", rss)}
 
 
 SLOW = set()  # sites that timed out this run: skipped for the rest of it, so one dead site can't hold the run up for 15 minutes
+EARLY = {}  # url -> the page being read in the background since the run began (prefetch); get() waits for it
+POOL = ThreadPoolExecutor(8)
+SITES = {}  # host -> at most 3 requests to one site at a time
+
+
+def prefetch(urls):
+    """Start reading these pages now, eight at a time, while the run does other things: each is read once, and get() takes it."""
+    for url in urls:
+        EARLY.setdefault(url, POOL.submit(fetch, url))
 
 
 def get(url):
+    early = EARLY.get(url)
+    return early.result() if early else fetch(url)
+
+
+def fetch(url):
     host = urlparse(url).netloc
     if host in SLOW:
         raise TimeoutError(f"{host} skipped: it timed out earlier in this run")
     req = urllib.request.Request(quote(url, safe=":/%?&="), headers={"User-Agent": UA})
     try:
-        return urllib.request.urlopen(req, timeout=20).read().decode("utf-8", "replace")
+        with SITES.setdefault(host, threading.Semaphore(3)):
+            return urllib.request.urlopen(req, timeout=20).read().decode("utf-8", "replace")
     except (TimeoutError, urllib.error.URLError) as e:
         if isinstance(e, TimeoutError) or isinstance(getattr(e, "reason", None), TimeoutError):
             SLOW.add(host)
@@ -1383,6 +1404,10 @@ def library(state):
 
 def main():
     state = json.loads(STATE.read_text()) if STATE.exists() else {}
+    # the manga and WEBTOON pages, read in the background while the anime, F1 and schedule checks run (the loop below takes them)
+    urls = (HERE / "urls.txt").read_text().split()
+    twins = [WEBTOON_TWINS[u] for u in urls if u in WEBTOON_TWINS and re.search(r"title_no=(\d+)", WEBTOON_TWINS[u])[1] not in WEBTOON_WEEKLY]
+    prefetch([webtoon_rss(u) if "webtoons.com" in u else u for u in urls] + [webtoon_rss(t) for t in twins])
     try:
         complete_anime()
     except Exception as e:  # a short entry still works with AniList times, so this must never stop the alerts
@@ -1401,7 +1426,7 @@ def main():
     state.pop("webtoon_reach", None)  # replaced by chapter_labels
     labels = state.setdefault("chapter_labels", {})  # {WEBTOON series: "Chapter 140", its newest (in the app), for the LINE list}
     newest = state.setdefault("webtoon_newest", {})  # {WEBTOON series: its newest free chapter}, for the series in WEBTOON_TWINS
-    for url in (HERE / "urls.txt").read_text().split():
+    for url in urls:
         name = series_slug(url)
         try:
             found = webtoon(url) if "webtoons.com" in url else chapters(url, get(url))
