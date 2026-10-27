@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Read the anime-waku and animeruka feeds through free Thai VPN Gate servers, alongside watch.py.
+"""Read the animeruka feed through free Thai VPN Gate servers, alongside watch.py.
 
-Both sites only answer visitors in Thailand, so GitHub's own servers can't read them. This runs in the background while
-watch.py does its other checks: it connects to several Thai servers from VPN Gate (a free volunteer network run by the
-University of Tsukuba) at once, reads the feeds through the first one that works, saves each to feeds/<site>.xml and
-writes feeds/done, which watch.py waits for before it reads them. The tunnels carry only these requests (curl is tied to
-the tunnel by name): the runner's own routes and DNS never change, so watch.py, git and LINE are unaffected throughout.
-Ordinary requests only (watch.py's usual user agent): this changes where the request comes from, not what it looks like.
-It never fails the job: when no Thai server works, watch.py reads the feeds directly and reports the failure as before.
+animeruka only answers visitors in Thailand, so GitHub's own servers can't read it. This runs in the background while
+watch.py does its other checks: it connects to every usable Thai server from VPN Gate (a free volunteer network run by
+the University of Tsukuba) at once, reads the feed through each one as soon as it's up, saves the first good copy to
+feeds/animeruka.xml and writes feeds/done, which watch.py waits for before it reads it. The tunnels carry only these
+requests (curl is tied to the tunnel by name): the runner's own routes and DNS never change, so watch.py, git and LINE
+are unaffected throughout. Ordinary requests only (watch.py's usual user agent): this changes where the request comes
+from, not what it looks like. It never fails the job: when no Thai server works, watch.py reads the feed directly and
+reports the failure as before.
 """
 import base64, csv, io, shutil, signal, socket, subprocess, sys, tempfile, time, urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -15,13 +16,15 @@ from pathlib import Path
 
 from watch import FEEDS, UA
 
+SITE = "animeruka"
+URL = FEEDS[SITE]
 SERVER_LIST = "http://www.vpngate.net/api/iphone/"  # VPN Gate's live server list (CSV)
 TRACE = "https://www.cloudflare.com/cdn-cgi/trace"  # says which country this connection comes from (loc=TH)
 OUT = Path(__file__).parent / "feeds"
 DONE = OUT / "done"  # written when this has finished, whatever happened: watch.py waits for it (watch.FEED_WAIT)
-# Thai servers connecting at once, servers tried in all, seconds each may take to connect, seconds for everything
-# (keep under watch.py's FEED_WAIT), seconds to check a server's port before trying it
-AT_ONCE, TRIES, CONNECT_WAIT, DEADLINE, PROBE_WAIT = 4, 8, 30, 150, 3
+# servers tried (all at once), seconds each may take to connect, seconds for everything (keep under watch.py's
+# FEED_WAIT), seconds to check a server's port before trying it, seconds curl may take to read the feed
+TRIES, CONNECT_WAIT, DEADLINE, PROBE_WAIT, READ_WAIT = 10, 30, 150, 3, 15
 START = time.time()
 # VPN Gate's servers use older encryption than Ubuntu's OpenVPN allows by default; these options let it connect.
 # --route-nopull: the server's routes (its "send everything through me") are ignored, so only curl uses the tunnel.
@@ -73,9 +76,9 @@ def answers(config):
 
 
 def curl(url, dev):
-    """A page's text through this tunnel only; '' if it fails."""
-    r = subprocess.run(["curl", "-s", "--max-time", "20", "--noproxy", "*", "--interface", f"if!{dev}", "-A", UA, url],
-                       capture_output=True)
+    """A page's text through this tunnel only; '' if it fails. --compressed: the feed comes gzipped, much smaller."""
+    r = subprocess.run(["curl", "-s", "--compressed", "--connect-timeout", "5", "--max-time", str(READ_WAIT),
+                        "--noproxy", "*", "--interface", f"if!{dev}", "-A", UA, url], capture_output=True)
     return r.stdout.decode("utf-8", "replace") if r.returncode == 0 else ""
 
 
@@ -113,54 +116,48 @@ class Tunnel:
 
 
 def read_through(tunnel):
-    """Save the feeds if this tunnel comes out in Thailand. The site names saved."""
-    # ask where the connection comes from and fetch both feeds at once; the feeds are kept only if it's Thailand
-    with ThreadPoolExecutor(len(FEEDS) + 1) as pool:
-        trace = pool.submit(curl, TRACE, tunnel.dev)
-        pages = {site: pool.submit(curl, url, tunnel.dev) for site, url in FEEDS.items()}
-        loc = next((l[4:] for l in trace.result().splitlines() if l.startswith("loc=")), "?")
-        pages = {site: page.result() for site, page in pages.items()}
-    if loc != "TH":
-        print(f"VPN: {tunnel.ip} connected but exits in {loc}, not Thailand")
-        return []
-    saved = []
-    for site, page in pages.items():
-        if "<rss" in page[:1000]:
-            (OUT / f"{site}.xml").write_text(page, encoding="utf-8")
-            saved.append(site)
-        else:
-            print(f"VPN: {site} didn't send its feed through {tunnel.ip}: {' '.join(page[:120].split())!r}")
-    return saved
+    """The feed through this tunnel; '' if the site didn't send it (and says why). Getting the feed at all proves the
+    tunnel comes out in Thailand, so where it comes out is only asked when it fails."""
+    page = curl(URL, tunnel.dev)
+    if "<rss" in page[:1000]:
+        return page
+    loc = next((l[4:] for l in curl(TRACE, tunnel.dev).splitlines() if l.startswith("loc=")), "?")
+    why = f"it exits in {loc}, not Thailand" if loc != "TH" else repr(" ".join(page[:120].split()))
+    print(f"VPN: {SITE} didn't send its feed through {tunnel.ip}: {why}")
+    return ""
 
 
 def connect_and_read(servers):
-    """Connect to up to AT_ONCE servers at a time, best first; read the feeds through the first Thai one that works."""
-    queue, live = list(enumerate(servers[:TRIES])), []
-    with tempfile.TemporaryDirectory() as d:
+    """Connect to all the servers at once and read the feed through each as soon as it's up, in the background so a
+    slow one holds up no other; the first copy of the feed wins."""
+    with tempfile.TemporaryDirectory() as d, ThreadPoolExecutor(TRIES) as pool:
         try:
-            while queue or live:
-                while queue and len(live) < AT_ONCE and time.time() < START + DEADLINE - 5:
-                    n, (ip, score, config) = queue.pop(0)
-                    print(f"VPN: trying Thai server {ip} (score {score})")
-                    live.append(Tunnel(n, ip, config, Path(d)))
-                if not live:
-                    break
+            live, reading = [], {}  # tunnels connecting; {feed being read: its tunnel}
+            for n, (ip, score, config) in enumerate(servers[:TRIES]):
+                print(f"VPN: trying Thai server {ip} (score {score})")
+                live.append(Tunnel(n, ip, config, Path(d)))
+            while (live or reading) and time.time() < START + DEADLINE:
                 for t in list(live):
                     state = t.state()
                     if state == "waiting":
                         continue
                     live.remove(t)
                     if state == "up":
-                        saved = read_through(t)
-                        if saved:
-                            print(f"VPN: Thai server {t.ip} ok after {time.time() - START:.0f}s, saved {', '.join(saved)}")
-                            return True
+                        reading[pool.submit(read_through, t)] = t
                     else:
                         print(f"VPN: {t.ip} didn't connect: {state}")
+                        t.stop()
+                for f in [f for f in reading if f.done()]:
+                    t = reading.pop(f)
+                    page = f.result() if not f.exception() else ""
+                    if page:
+                        (OUT / f"{SITE}.xml").write_text(page, encoding="utf-8")
+                        print(f"VPN: Thai server {t.ip} ok after {time.time() - START:.0f}s, saved {SITE}")
+                        return True
                     t.stop()
                 time.sleep(0.2)
             return False
-        finally:
+        finally:  # before the pool closes: reads still going through the other tunnels then end at once
             subprocess.run(["sudo", "pkill", "-x", "openvpn"], capture_output=True)
 
 
@@ -187,11 +184,11 @@ def main():
         if install.poll() is None:
             install.kill()
     if not shutil.which("openvpn"):
-        print("VPN: couldn't install OpenVPN; watch.py reads the feeds directly")
+        print("VPN: couldn't install OpenVPN; watch.py reads the feed directly")
         return
     print(f"VPN: ready after {time.time() - START:.0f}s")
     if not connect_and_read(servers):
-        print("VPN: no Thai server worked; watch.py reads the feeds directly")
+        print("VPN: no Thai server worked; watch.py reads the feed directly")
 
 
 if __name__ == "__main__":
