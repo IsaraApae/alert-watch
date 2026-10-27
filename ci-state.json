@@ -4166,7 +4166,7 @@
  "f1_live": [
   "11396"
  ],
- "anime_checked": 1793125511,
+ "anime_checked": 1793125817,
  "mal_totals": {
   "60601": [
    null,
@@ -4813,15 +4813,6 @@
   }
  },
  "f1_schedule": [
-  {
-   "session_key": 11391,
-   "session_name": "Practice 3",
-   "date_start": "2026-10-24T17:30:00+00:00",
-   "date_end": "2026-10-24T18:30:00+00:00",
-   "meeting_key": 1297,
-   "year": 2026,
-   "country_name": "United States"
-  },
   {
    "session_key": 11392,
    "session_name": "Qualifying",
