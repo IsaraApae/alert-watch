@@ -3079,7 +3079,8 @@
   "202250:4",
   "189123:4",
   "185756:5",
-  "199426:4"
+  "199426:4",
+  "213657:3"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -3978,6 +3979,17 @@
    "published": 1792943109,
    "scheduled": 1792943100,
    "notified": true
+  },
+  "213657:3": {
+   "title": "Mission: Yozakura Family Season 2 Cour 2",
+   "episode": 3,
+   "version": "ซับไทย",
+   "first": "suba-anime",
+   "url": "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/ep-15",
+   "detected": 1793102423,
+   "published": null,
+   "notified": true,
+   "order": "estimated"
   }
  },
  "watch_links": {
@@ -4054,7 +4066,8 @@
   "202250:4": "https://isaraapae.github.io/alert-watch/b.html?v=9WgIdBi9wmw",
   "189123:4": "https://animeruka.com/ep/ao-no-hako-blue-box-season-2-ep-4/",
   "185756:5": "https://isaraapae.github.io/alert-watch/b.html?v=0lFMaXXoYsQ",
-  "199426:4": "https://isaraapae.github.io/alert-watch/b.html?v=xtvcQHeP8lg"
+  "199426:4": "https://isaraapae.github.io/alert-watch/b.html?v=xtvcQHeP8lg",
+  "213657:3": "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/ep-15"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4127,7 +4140,7 @@
  "f1_live": [
   "11396"
  ],
- "anime_checked": 1793102112,
+ "anime_checked": 1793102423,
  "mal_totals": {
   "60601": [
    null,
@@ -4234,9 +4247,6 @@
   "https://www.webtoons.com/th/romance/the-mafia-nanny/list?title_no=6553": "Chapter 63",
   "https://www.webtoons.com/th/action/dead-mansion/list?title_no=6865": "Chapter 51",
   "https://www.webtoons.com/th/fantasy/my-virtual-god-is-a-teenage-girl/list?title_no=6957": "Chapter 48"
- },
- "suba_dropped": {
-  "213657": "animegojo"
  },
  "https://manga-lc.net/manga/the-money-keeps-piling-up-even-if-i-spend-it-ยิ่งใช้เงินทำไมมั/": [
   "ซีซั่น-1/ตอนที่-1",
