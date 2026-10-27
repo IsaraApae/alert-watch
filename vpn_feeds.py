@@ -2,16 +2,17 @@
 """Read the animeruka feed through free Thai VPN Gate servers, alongside watch.py.
 
 animeruka only answers visitors in Thailand, so GitHub's own servers can't read it. This runs in the background while
-watch.py does its other checks: it connects to every usable Thai server from VPN Gate (a free volunteer network run by
-the University of Tsukuba) at once, reads the feed through each one as soon as it's up, saves the first good copy to
-feeds/animeruka.xml and writes feeds/done, which watch.py waits for before it reads it. The tunnels carry only these
+watch.py does its other checks: it connects to the server that worked last time straight away, and to every usable
+Thai server from VPN Gate (a free volunteer network run by the University of Tsukuba) at once as soon as VPN Gate's list
+comes. It reads the feed through each one as soon as it's up, saves the first good copy to feeds/animeruka.xml and
+writes feeds/done, which watch.py waits for before it reads it. The tunnels carry only these
 requests (curl is tied to the tunnel by name): the runner's own routes and DNS never change, so watch.py, git and LINE
 are unaffected throughout. Ordinary requests only (watch.py's usual user agent): this changes where the request comes
 from, not what it looks like. It never fails the job: when no Thai server works, watch.py reads the feed directly and
 reports the failure as before.
 """
-import base64, csv, io, shutil, signal, socket, subprocess, sys, tempfile, time, urllib.request
-from concurrent.futures import ThreadPoolExecutor
+import base64, csv, io, shlex, shutil, signal, socket, subprocess, sys, tempfile, threading, time, urllib.request
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 
 from watch import FEEDS, UA
@@ -33,13 +34,23 @@ OPENVPN_OPTS = ["--data-ciphers", "AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305:AES
                 "--connect-retry-max", "1", "--connect-timeout", "10", "--verb", "3"]
 CONNECTED = "Initialization Sequence Completed"
 GAVE_UP = ("SIGUSR1[soft", "SIGTERM", "AUTH_FAILED", "Exiting due to fatal error")  # OpenVPN failed or is starting over
-# Install OpenVPN without `apt-get update` (slow on GitHub's runners, which list many extra repositories) unless the
-# runner's package list is too old; skip the recommended extras and the manual-page index rebuild, neither is needed.
+DEBS = Path(__file__).parent / "debs"  # the OpenVPN packages, kept between runs by the workflow's cache step
+LAST = Path(__file__).parent / "vpn_last.ovpn"  # the last server that worked, tried first (committed with the state)
+# Install OpenVPN from the packages kept from an earlier run: no package lists to read, nothing to download. Without
+# them (the first run, or the runner changed Ubuntu version), apt downloads them into debs/ for the cache to keep,
+# without `apt-get update` (slow on GitHub's runners, which list many extra repositories) unless the runner's package
+# list is too old. Either way: skip the recommended extras and the manual-page index rebuild, and don't wait for each
+# file to reach the disk (--force-unsafe-io; the runner is thrown away after the job). If the kept packages no longer
+# fit the runner, apt -f fills in what's missing. lock and partial/ are apt's own, and the cache can't read them.
 # rp_filter off: answers arriving through a tunnel would otherwise be dropped, the runner's way out being its own network.
 INSTALL = ("sudo sysctl -qw net.ipv4.conf.all.rp_filter=0 net.ipv4.conf.default.rp_filter=0; "
            "command -v openvpn >/dev/null && exit 0; sudo rm -f /var/lib/man-db/auto-update; "
-           "a='sudo apt-get install -y -qq --no-install-recommends openvpn'; "
-           "$a || { sudo apt-get update -qq && $a; }")
+           f"d={shlex.quote(str(DEBS))}; "
+           "a() { sudo apt-get install -y -qq --no-install-recommends -o Dpkg::Options::=--force-unsafe-io \"$@\"; }; "
+           "if ls \"$d\"/*.deb >/dev/null 2>&1; then sudo dpkg --force-unsafe-io -i \"$d\"/*.deb >/dev/null || a -f; "
+           "command -v openvpn >/dev/null && exit 0; fi; "
+           "sudo rm -rf \"$d\"; mkdir -p \"$d/partial\"; o=\"-oDir::Cache::Archives=$d/\"; "
+           "a \"$o\" openvpn || { sudo apt-get update -qq && a \"$o\" openvpn; }; sudo rm -rf \"$d/partial\" \"$d/lock\"")
 
 
 def thai_servers():
@@ -86,7 +97,7 @@ class Tunnel:
     """One OpenVPN connection to one server, on its own tun device."""
 
     def __init__(self, n, ip, config, tmp):
-        self.ip, self.dev = ip, f"tun{n}"
+        self.ip, self.dev, self.config = ip, f"tun{n}", config
         cfg, auth, self.log, self.pid = (tmp / f"vpn{n}.{x}" for x in ("ovpn", "auth", "log", "pid"))
         cfg.write_text(config)
         auth.write_text("vpn\nvpn\n")  # VPN Gate's public login
@@ -127,16 +138,53 @@ def read_through(tunnel):
     return ""
 
 
-def connect_and_read(servers):
-    """Connect to all the servers at once and read the feed through each as soon as it's up, in the background so a
-    slow one holds up no other; the first copy of the feed wins."""
+def usable_servers():
+    """VPN Gate's Thai servers that answer, best first: [(ip, score, config text)]."""
+    servers = thai_servers()
+    if not servers:
+        print("VPN: no Thai servers in VPN Gate's list right now")
+        return []
+    with ThreadPoolExecutor(len(servers)) as pool:
+        up = list(pool.map(answers, (config for _, _, config in servers)))
+    if not all(up):
+        print(f"VPN: {up.count(False)} of {len(servers)} Thai servers don't answer, skipped")
+    return [s for s, ok in zip(servers, up) if ok]
+
+
+def last_server():
+    """The server that read the feed last time, as (ip, None, config text), or None. vpn_last.ovpn is its OpenVPN
+    config under two comment lines, the first just its IP."""
+    try:
+        ip, _, config = LAST.read_text().split("\n", 2)
+    except (OSError, ValueError):
+        return None
+    return (ip[2:].strip(), None, config) if ip.startswith("# ") and config.strip() else None
+
+
+def connect_and_read(first, listed):
+    """Connect to the last server that worked straight away, and to the others as soon as VPN Gate's list comes
+    (listed, a Future), all at once. Read the feed through each as soon as it's up, in the background so a slow one
+    holds up no other. The first copy of the feed wins, and its server is kept for next time."""
     with tempfile.TemporaryDirectory() as d, ThreadPoolExecutor(TRIES) as pool:
         try:
-            live, reading = [], {}  # tunnels connecting; {feed being read: its tunnel}
-            for n, (ip, score, config) in enumerate(servers[:TRIES]):
-                print(f"VPN: trying Thai server {ip} (score {score})")
-                live.append(Tunnel(n, ip, config, Path(d)))
-            while (live or reading) and time.time() < START + DEADLINE:
+            live, reading, tried = [], {}, set()  # tunnels connecting; {feed being read: its tunnel}; IPs tried
+
+            def start(servers):
+                for ip, score, config in servers:
+                    if ip not in tried and len(tried) < TRIES and time.time() < START + DEADLINE - 5:
+                        print(f"VPN: trying Thai server {ip} ({f'score {score}' if score else 'worked last time'})")
+                        live.append(Tunnel(len(tried), ip, config, Path(d)))
+                        tried.add(ip)
+
+            start([first] if first else [])
+            have_list = False
+            while (live or reading or not have_list) and time.time() < START + DEADLINE:
+                if not have_list and listed.done():
+                    have_list = True
+                    try:
+                        start(listed.result())
+                    except Exception as e:
+                        print(f"VPN: couldn't read VPN Gate's list: {type(e).__name__}: {e}")
                 for t in list(live):
                     state = t.state()
                     if state == "waiting":
@@ -153,6 +201,9 @@ def connect_and_read(servers):
                     if page:
                         (OUT / f"{SITE}.xml").write_text(page, encoding="utf-8")
                         print(f"VPN: Thai server {t.ip} ok after {time.time() - START:.0f}s, saved {SITE}")
+                        if not first or t.ip != first[0]:
+                            LAST.write_text(f"# {t.ip}\n# the VPN Gate server that last read the {SITE} feed: "
+                                            f"vpn_feeds.py tries it first\n{t.config}")
                         return True
                     t.stop()
                 time.sleep(0.2)
@@ -166,28 +217,26 @@ def main():
     for f in [*OUT.glob("*.xml"), DONE]:
         f.unlink(missing_ok=True)
     install = subprocess.Popen(["bash", "-c", INSTALL], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    try:
-        servers = thai_servers()
-        if not servers:
-            print("VPN: no Thai servers in VPN Gate's list right now")
-            return
-        with ThreadPoolExecutor(len(servers)) as pool:
-            up = list(pool.map(answers, (config for _, _, config in servers)))
-        if not all(up):
-            print(f"VPN: {up.count(False)} of {len(servers)} Thai servers don't answer, skipped")
-        servers = [s for s, ok in zip(servers, up) if ok]
+    # VPN Gate's list is read in the background meanwhile: the last server that worked needn't wait for it. A thread of
+    # its own (daemon) so that a slow list never keeps this from finishing once the feed is in.
+    listed = Future()
+
+    def read_list():
         try:
-            install.wait(timeout=max(1, START + DEADLINE - CONNECT_WAIT - time.time()))
-        except subprocess.TimeoutExpired:
-            pass  # reported below as not installed
-    finally:
-        if install.poll() is None:
-            install.kill()
+            listed.set_result(usable_servers())
+        except Exception as e:
+            listed.set_exception(e)
+
+    threading.Thread(target=read_list, daemon=True).start()
+    try:
+        install.wait(timeout=max(1, START + DEADLINE - CONNECT_WAIT - time.time()))
+    except subprocess.TimeoutExpired:
+        install.kill()  # reported below as not installed
     if not shutil.which("openvpn"):
         print("VPN: couldn't install OpenVPN; watch.py reads the feed directly")
         return
     print(f"VPN: ready after {time.time() - START:.0f}s")
-    if not connect_and_read(servers):
+    if not connect_and_read(last_server(), listed):
         print("VPN: no Thai server worked; watch.py reads the feed directly")
 
 
