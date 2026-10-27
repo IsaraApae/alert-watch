@@ -3081,7 +3081,8 @@
   "185756:5",
   "199426:4",
   "213657:3",
-  "207329:4"
+  "207329:4",
+  "198727:3"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4002,6 +4003,17 @@
    "published": 1793115008,
    "scheduled": 1793115000,
    "notified": true
+  },
+  "198727:3": {
+   "title": "Chitose Is in the Ramune Bottle 2nd Cour",
+   "episode": 3,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=RJOhg0vBFEA",
+   "detected": 1793118621,
+   "published": 1793118607,
+   "scheduled": 1793118600,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4080,7 +4092,8 @@
   "185756:5": "https://isaraapae.github.io/alert-watch/b.html?v=0lFMaXXoYsQ",
   "199426:4": "https://isaraapae.github.io/alert-watch/b.html?v=xtvcQHeP8lg",
   "213657:3": "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/ep-15",
-  "207329:4": "https://isaraapae.github.io/alert-watch/b.html?v=deQREi1FxCg"
+  "207329:4": "https://isaraapae.github.io/alert-watch/b.html?v=deQREi1FxCg",
+  "198727:3": "https://isaraapae.github.io/alert-watch/b.html?v=RJOhg0vBFEA"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4153,7 +4166,7 @@
  "f1_live": [
   "11396"
  ],
- "anime_checked": 1793118310,
+ "anime_checked": 1793118621,
  "mal_totals": {
   "60601": [
    null,
