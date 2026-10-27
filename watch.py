@@ -837,12 +837,20 @@ FEED_PROXY = os.environ.get("FEED_PROXY", "")  # a Cloudflare Worker that fetche
 
 
 FEED_DIR = os.environ.get("FEED_DIR", "")  # feeds saved this run by vpn_feeds.py through a Thai VPN server
+FEED_WAIT = 160  # the longest to wait for vpn_feeds.py, which runs alongside this and gives up after 150 seconds
+RUN_START = time.time()
 
 
 def read_feed(url):
     """A site's RSS feed; an error when the site answers with anything else (a bot check, a block page)."""
     site = next((n for n, u in FEEDS.items() if u == url), "")
     saved = HERE / FEED_DIR / f"{site}.xml" if FEED_DIR and site else None
+    if saved:  # vpn_feeds.py writes "done" when it has saved the feeds or given up
+        waited = time.time()
+        while not (HERE / FEED_DIR / "done").exists() and time.time() < RUN_START + FEED_WAIT:
+            time.sleep(0.2)
+        if time.time() - waited > 1:
+            print(f"waited {time.time() - waited:.0f}s for the VPN feeds")
     try:
         if saved and saved.exists():
             page, status = saved.read_text(encoding="utf-8"), "vpn"

@@ -31,17 +31,19 @@ jobs:
       - uses: actions/checkout@v5
       # when the job began, so watch.py knows how long it can wait for an F1 session to start (the job has 9 minutes)
       - run: echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
-      - name: Read anime feeds through a Thai VPN
-        if: ${{ !inputs.ping && !inputs.richmenu && !inputs.f1check }}
-        continue-on-error: true
-        timeout-minutes: 4
-        run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq openvpn > /dev/null
-          python3 vpn_feeds.py
-      - run: python3 -u watch.py ${{ inputs.ping && 'ping' || '' }}${{ inputs.richmenu && 'richmenu' || '' }}${{ inputs.f1check && 'f1check' || '' }}${{ inputs.sites && 'sites' || '' }}
+      # vpn_feeds.py reads the anime-waku and animeruka feeds through a Thai VPN in the background while watch.py does
+      # its other checks; watch.py waits for it (feeds/done) only when it gets to those feeds. It never fails the job.
+      - run: |
+          if ${{ !inputs.ping && !inputs.richmenu && !inputs.f1check }}; then
+            mkdir -p feeds && rm -f feeds/*
+            export FEED_DIR=feeds
+            timeout 180 python3 -u vpn_feeds.py &
+          fi
+          python3 -u watch.py ${{ inputs.ping && 'ping' || '' }}${{ inputs.richmenu && 'richmenu' || '' }}${{ inputs.f1check && 'f1check' || '' }}${{ inputs.sites && 'sites' || '' }} || status=$?
+          wait
+          exit ${status:-0}
         env:
           MANGA_STATE: ci-state.json
-          FEED_DIR: feeds
           LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
           YOUTUBE_KEY: ${{ secrets.YOUTUBE_KEY }}
       - run: |
