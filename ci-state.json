@@ -4205,7 +4205,7 @@
  "f1_live": [
   "11396"
  ],
- "anime_checked": 1793224510,
+ "anime_checked": 1793224825,
  "mal_totals": {
   "60601": [
    null,
@@ -4856,15 +4856,6 @@
  },
  "f1_schedule": [
   {
-   "session_key": 11396,
-   "session_name": "Race",
-   "date_start": "2026-10-25T20:00:00+00:00",
-   "date_end": "2026-10-25T22:00:00+00:00",
-   "meeting_key": 1297,
-   "year": 2026,
-   "country_name": "United States"
-  },
-  {
    "session_key": 11397,
    "session_name": "Practice 1",
    "date_start": "2026-10-30T18:30:00+00:00",
@@ -4964,26 +4955,6 @@
    "gmt_offset": "-06:00:00",
    "date_start": "2026-10-30T18:30:00+00:00",
    "date_end": "2026-11-01T22:00:00+00:00",
-   "year": 2026,
-   "is_cancelled": false
-  },
-  "1297": {
-   "meeting_key": 1297,
-   "meeting_name": "United States Grand Prix",
-   "meeting_official_name": "FORMULA 1 MSC CRUISES UNITED STATES GRAND PRIX 2026",
-   "location": "Austin",
-   "country_key": 19,
-   "country_code": "USA",
-   "country_name": "United States",
-   "country_flag": "https://media.formula1.com/content/dam/fom-website/2018-redesign-assets/Flags%2016x9/united-states-flag.png",
-   "circuit_key": 9,
-   "circuit_short_name": "Austin",
-   "circuit_type": "Permanent",
-   "circuit_info_url": "https://api.multiviewer.app/api/v1/circuits/9/2026",
-   "circuit_image": "https://media.formula1.com/content/dam/fom-website/2018-redesign-assets/Track%20icons%204x3/United States%20carbon.png",
-   "gmt_offset": "-05:00:00",
-   "date_start": "2026-10-23T17:30:00+00:00",
-   "date_end": "2026-10-25T22:00:00+00:00",
    "year": 2026,
    "is_cancelled": false
   },
