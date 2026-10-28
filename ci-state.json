@@ -3084,7 +3084,8 @@
   "207329:4",
   "198727:3",
   "176314:4",
-  "152677:4"
+  "152677:4",
+  "159042:5"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4038,6 +4039,17 @@
    "published": 1793194207,
    "scheduled": 1793194200,
    "notified": true
+  },
+  "159042:5": {
+   "title": "Reincarnated as a Sword Season 2",
+   "episode": 5,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=IGOoHJ_WtQg",
+   "detected": 1793201420,
+   "published": 1793201410,
+   "scheduled": 1793201400,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4119,7 +4131,8 @@
   "207329:4": "https://isaraapae.github.io/alert-watch/b.html?v=deQREi1FxCg",
   "198727:3": "https://isaraapae.github.io/alert-watch/b.html?v=RJOhg0vBFEA",
   "176314:4": "https://isaraapae.github.io/alert-watch/b.html?v=jxgkllSPv90",
-  "152677:4": "https://isaraapae.github.io/alert-watch/b.html?v=03Vh_K8laLs"
+  "152677:4": "https://isaraapae.github.io/alert-watch/b.html?v=03Vh_K8laLs",
+  "159042:5": "https://isaraapae.github.io/alert-watch/b.html?v=IGOoHJ_WtQg"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4192,7 +4205,7 @@
  "f1_live": [
   "11396"
  ],
- "anime_checked": 1793201111,
+ "anime_checked": 1793201420,
  "mal_totals": {
   "60601": [
    null,
