@@ -3082,7 +3082,8 @@
   "199426:4",
   "213657:3",
   "207329:4",
-  "198727:3"
+  "198727:3",
+  "176314:4"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4014,6 +4015,17 @@
    "published": 1793118607,
    "scheduled": 1793118600,
    "notified": true
+  },
+  "176314:4": {
+   "title": "Sasaki and Peeps Season 2",
+   "episode": 4,
+   "version": "ซับไทย",
+   "first": "Muse Thailand",
+   "url": "https://www.youtube.com/watch?v=jxgkllSPv90",
+   "detected": 1793192425,
+   "published": 1793192410,
+   "scheduled": 1793192400,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4093,7 +4105,8 @@
   "199426:4": "https://isaraapae.github.io/alert-watch/b.html?v=xtvcQHeP8lg",
   "213657:3": "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/ep-15",
   "207329:4": "https://isaraapae.github.io/alert-watch/b.html?v=deQREi1FxCg",
-  "198727:3": "https://isaraapae.github.io/alert-watch/b.html?v=RJOhg0vBFEA"
+  "198727:3": "https://isaraapae.github.io/alert-watch/b.html?v=RJOhg0vBFEA",
+  "176314:4": "https://isaraapae.github.io/alert-watch/b.html?v=jxgkllSPv90"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4166,7 +4179,7 @@
  "f1_live": [
   "11396"
  ],
- "anime_checked": 1793192111,
+ "anime_checked": 1793192425,
  "mal_totals": {
   "60601": [
    null,
