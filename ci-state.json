@@ -4205,7 +4205,7 @@
  "f1_live": [
   "11396"
  ],
- "anime_checked": 1793210110,
+ "anime_checked": 1793210424,
  "mal_totals": {
   "60601": [
    null,
@@ -4932,6 +4932,15 @@
    "session_name": "Practice 3",
    "date_start": "2026-11-07T14:30:00+00:00",
    "date_end": "2026-11-07T15:30:00+00:00",
+   "meeting_key": 1299,
+   "year": 2026,
+   "country_name": "Brazil"
+  },
+  {
+   "session_key": 11408,
+   "session_name": "Qualifying",
+   "date_start": "2026-11-07T18:00:00+00:00",
+   "date_end": "2026-11-07T19:00:00+00:00",
    "meeting_key": 1299,
    "year": 2026,
    "country_name": "Brazil"
