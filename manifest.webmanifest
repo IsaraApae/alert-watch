@@ -2,7 +2,7 @@
   "name": "Alert Watch Anime",
   "short_name": "Anime",
   "id": "./",
-  "start_url": "./",
+  "start_url": "./anime/",
   "scope": "./",
   "display": "browser",
   "background_color": "#1C060D",
