@@ -2,7 +2,7 @@
 
 Sends a LINE message (official account **Alert Watch**) when a tracked manga chapter, Webtoon episode or anime episode comes out, and after every Formula 1 session. It runs on GitHub Actions, so it works with your Mac off.
 
-- **Website:** https://isaraapae.github.io/alert-watch/. It has a countdown to the next episode, the next 7 days, and the episodes that aired in the past week with their Watch buttons (**Next episode**), plus a Monday–Sunday **Weekly timetable** (`?v=week`). Times are Thai time.
+- **Website:** https://isaraapae.github.io/alert-watch/anime/ (the old address, https://isaraapae.github.io/alert-watch/, forwards there; the move gave iPhone Safari a fresh address after it had remembered "no icon" for the old one). It has a countdown to the next episode, the next 7 days, and the episodes that aired in the past week with their Watch buttons (**Next episode**), plus a Monday–Sunday **Weekly timetable** (`?v=week`). Times are Thai time.
 - **F1 Live:** https://isaraapae.github.io/f1-live/, its own site and repo ([IsaraApae/f1-live](https://github.com/IsaraApae/f1-live)): live timing, the track on a real map, calendar, standings, replays and lap battles.
 - **LINE menu:** three buttons: **Next episode**, **Timetable** and **F1 Live**. The menu image is [richmenu.png](richmenu.png).
 
