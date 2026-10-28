@@ -1363,7 +1363,7 @@ def setup_richmenu():
             print(f"FAIL line {method} {url}: {e} {e.read()[:300]}", file=sys.stderr)
             raise
 
-    site = "https://isaraapae.github.io/alert-watch/"
+    site = "https://isaraapae.github.io/alert-watch/anime/"
     menu = {"size": {"width": 2500, "height": 843}, "selected": True, "name": "Alert Watch", "chatBarText": "Menu",
             "areas": [{"bounds": {"x": 0, "y": 0, "width": 833, "height": 843}, "action": {"type": "uri", "label": "Next episode", "uri": site}},
                       {"bounds": {"x": 833, "y": 0, "width": 834, "height": 843}, "action": {"type": "uri", "label": "Timetable", "uri": site + "?v=week"}},
