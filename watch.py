@@ -750,6 +750,64 @@ def youtube_episode(videos, pattern, eps, aired):
     return None
 
 
+def thai_title(title):
+    """The show's Thai name in an official upload's title: "คุรุมิจัง นักสู้ FX ตอนที่ 5  [ซับไทย]【Ani-One Thailand】" -> "คุรุมิจัง
+    นักสู้ fx". The part before the episode number, without bracketed tags, the piece (of "Thai / English") with Thai
+    letters in it; None if there's none."""
+    head = re.split(r"ตอนที่|\bep\.?\s*\d|\bepisode\s*\d", title, maxsplit=1, flags=re.I)[0]
+    head = re.sub(r"[\[【(（].*?[\]】)）]", " ", head)
+    for part in re.split(r"\s+[/|｜]\s+|\s*/\s*", head):
+        if re.search(r"[\u0E00-\u0E7F]", part):
+            name = re.sub(r"\s+", " ", part).strip(" -:|/").lower()
+            return name if len(name) >= 4 else None
+    return None
+
+
+literal = lambda text: re.sub(r"([.^$*+?{}\[\]\\|()])", r"\\\1", text)   # text as a keyword that matches itself (spaces kept readable)
+
+
+def learn_thai_titles(shows, videos, due, thai):
+    """Muse and Ani-One sometimes title an upload only in Thai (Kurumi-chan's episode 5: "คุรุมิจัง นักสู้ FX ตอนที่ 5"),
+    which the English keywords miss. So every show's Thai name is learned from the channels' Thai-sub uploads and added
+    to its keywords in anime.txt, where every check uses it: (1) from an upload the keywords already match (its title
+    had both names), and (2) from an upload nothing matches, when it's the only tracked show on that channel with that
+    episode number due within 45 minutes of the upload (Muse and Ani-One post on the dot). Returns [(show, name)]."""
+    learned = []
+    match = lambda t: [i for i, s in shows.items() if s["yt"] and re.search(s["yt"], t)]
+    for title, link, published, channel in videos:
+        t = title.lower()
+        name = thai_title(title)
+        if "ซับไทย" not in t or "พากย์ไทย" in t or not name:
+            continue
+        hit = match(t)
+        if not hit:   # by timing: that channel's show with this episode number due now
+            n = re.search(r"ตอนที่\s*0*(\d+)(?![\d.])", t)
+            hit = n and [i for i, s in shows.items() if i in thai and thai[i][0] == channel
+                         and any(int(n[1]) in {e, e + s["offset"], e + max(s["first"][0], 1) - 1} and abs(at - published) <= 45 * 60
+                                 for (j, e), at in due.items() if j == i)]
+        if not hit or len(hit) > 1:
+            continue
+        i = hit[0]
+        if (shows[i]["yt"] and re.search(shows[i]["yt"], name)) or match(name):   # known already, or another show's words
+            continue
+        shows[i]["yt"] = "|".join(x for x in (shows[i]["yt"], literal(name)) if x)
+        learned.append((i, name))
+    if learned:
+        path = HERE / "anime.txt"
+        lines = path.read_text().splitlines()
+        for n, line in enumerate(lines):
+            r = [x.strip() for x in line.split("|", 5)]
+            if len(r) >= 2 and r[1].isdigit() and int(r[1]) in {i for i, _ in learned}:
+                i = int(r[1])
+                # a short line ("name | id") keeps the Thai name in its last field, which completing it later keeps
+                lines[n] = f"{line.rstrip()}|{literal(dict(learned)[i])}" if len(r) == 6 and r[5] else \
+                    " | ".join((r + [""] * 6)[:5] + [shows[i]["yt"]])
+        path.write_text("\n".join(lines) + "\n")
+        for i, name in learned:
+            print(f"learned Thai title for {shows[i]['name']}: {name}")
+    return learned
+
+
 def specials(videos, shows, since):
     """[(AniList id, episode number text, link, published, channel)] for Thai-sub uploads of tracked shows numbered 0 or
     with a decimal ("ตอนที่ 13.5"): specials no TV or AniList schedule lists. Only uploads posted at or after `since`."""
@@ -1182,6 +1240,7 @@ def anime(state):
     aired = {k: t for k, t in aired.items() if t <= now}
     pending = state.setdefault("watch_later", {})  # episodes alerted before their Thai-sub video showed up: {key: release}
     videos = youtube_videos() if not seed else []  # every check, for animegojo and the specials below
+    learn_thai_titles(shows, videos, due, thai)  # (new Thai names go into anime.txt and shows, before anything matches)
     log = state.setdefault("first_source", {})  # per episode: where it was first seen with Thai subs, link, times, alerted
     # YouTube's list of a channel's newest uploads doesn't always include the newest video (it depends on which server answers),
     # so a video found once, by an earlier check or the schedule, counts: {key: YouTube link or None}
@@ -1537,6 +1596,25 @@ if __name__ == "__main__":
              ("ซวยเหลือหลายเกิดใหม่กลายเป็นดาบ ซีซั่น 2 ตอนที่ 1 [ซับไทย]", "sub", 1790782200.0)]
         assert youtube_episode(v, "กลายเป็นดาบ", {1}, 1790782200) == "sub"  # Thai-sub, this season, right episode
         assert youtube_episode(v, "กลายเป็นดาบ", {2}, 1790782200) is None
+        # Thai names learned from the channels' uploads (into a scratch anime.txt)
+        assert thai_title("คุรุมิจัง นักสู้ FX ตอนที่ 5  [ซับไทย]【Ani-One Thailand】") == "คุรุมิจัง นักสู้ fx"
+        assert thai_title("FX Fighter Kurumi-chan ตอนที่ 2 [ซับไทย]") is None
+        assert thai_title("เกิดใหม่เป็นขุนนาง ภาค 3 / Tensei Kizoku 3 ตอนที่ 4 [ซับไทย]") == "เกิดใหม่เป็นขุนนาง ภาค 3"
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp, mock.patch(__name__ + ".HERE", Path(tmp)):
+            Path(tmp, "anime.txt").write_text("Kurumi | 1 | 0 | 1 | 0 | kurumi-chan\nSword | 2 | 0 | 1 | 0 | tensei shitara ken\nNew | 3\n")
+            sh = {1: {"name": "Kurumi", "yt": "kurumi-chan", "offset": 0, "first": [1]}, 2: {"name": "Sword", "yt": "tensei shitara ken", "offset": 0, "first": [1]},
+                  3: {"name": "New", "yt": "", "offset": 0, "first": [1]}}
+            th = {1: ("Ani-One Thailand",), 2: ("Ani-One Thailand",), 3: ("Muse Thailand",)}
+            vids = [("คุรุมิจัง นักสู้ FX ตอนที่ 5 [ซับไทย]", "a", 1000, "Ani-One Thailand"),          # nothing matches: by timing (ep 5 due at 1000)
+                    ("กลายเป็นดาบ / Tensei shitara Ken ตอนที่ 3 [ซับไทย]", "b", 5000, "Ani-One Thailand"),  # matched by English: its Thai name too
+                    ("อนิเมะใหม่ ตอนที่ 1 [ซับไทย]", "c", 900000, "Muse Thailand"),                     # nothing due then: not learned
+                    ("อีกเรื่อง ตอนที่ 5 [ซับไทย]", "d", 1000, "Muse Thailand")]                        # due on Ani-One, posted on Muse: no
+            got = learn_thai_titles(sh, vids, {(1, 5): 1100, (3, 1): 100}, th)
+            assert got == [(1, "คุรุมิจัง นักสู้ fx"), (2, "กลายเป็นดาบ")], got
+            assert Path(tmp, "anime.txt").read_text() == ("Kurumi | 1 | 0 | 1 | 0 | kurumi-chan|คุรุมิจัง นักสู้ fx\n"
+                                                          "Sword | 2 | 0 | 1 | 0 | tensei shitara ken|กลายเป็นดาบ\nNew | 3\n")
+            assert re.search(sh[1]["yt"], "คุรุมิจัง นักสู้ fx ตอนที่ 6 [ซับไทย]") and learn_thai_titles(sh, vids, {(1, 5): 1100}, th) == []
         assert f1_time(92.274) == "1:32.274" and f1_time(6120.785) == "1:42:00.785" and f1_time(61.05) == "1:01.050"
         hadjar = {"full_name": "Isack HADJAR", "team_name": "Red Bull Racing", "year": 2026,
                   "headshot_url": "https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/I/ISAHAD01_Isack_Hadjar/isahad01.png.transform/1col/image.png"}
