@@ -35,7 +35,7 @@ jobs:
           echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
           echo "DEBS_KEY=openvpn-$(. /etc/os-release && echo "$VERSION_ID")-$(date +%Y-%m)" >> "$GITHUB_ENV"
       # the OpenVPN packages vpn_feeds.py installs (debs/), kept between runs so it needn't download them each time
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         if: ${{ !inputs.ping && !inputs.richmenu && !inputs.f1check }}
         with:
           path: debs
