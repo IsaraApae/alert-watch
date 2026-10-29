@@ -3088,7 +3088,8 @@
   "152677:4",
   "159042:5",
   "206401:5",
-  "213805:5"
+  "213805:5",
+  "212503:4"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4077,6 +4078,17 @@
    "published": null,
    "notified": true,
    "order": "estimated"
+  },
+  "212503:4": {
+   "title": "The Iceblade Sorcerer Shall Rule the World Season 2",
+   "episode": 4,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=MaiFbEUDziI",
+   "detected": 1793293224,
+   "published": 1793293208,
+   "scheduled": 1793293200,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4161,7 +4173,8 @@
   "152677:4": "https://isaraapae.github.io/alert-watch/b.html?v=03Vh_K8laLs",
   "159042:5": "https://isaraapae.github.io/alert-watch/b.html?v=IGOoHJ_WtQg",
   "206401:5": "https://isaraapae.github.io/alert-watch/b.html?v=yeMPSOTEJPE",
-  "213805:5": "https://animegojos.com/list/3165/#ep-5"
+  "213805:5": "https://animegojos.com/list/3165/#ep-5",
+  "212503:4": "https://isaraapae.github.io/alert-watch/b.html?v=MaiFbEUDziI"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4234,7 +4247,7 @@
  "f1_live": [
   "11396"
  ],
- "anime_checked": 1793292911,
+ "anime_checked": 1793293224,
  "mal_totals": {
   "60601": [
    null,
@@ -4962,6 +4975,15 @@
    "session_name": "Qualifying",
    "date_start": "2026-11-07T18:00:00+00:00",
    "date_end": "2026-11-07T19:00:00+00:00",
+   "meeting_key": 1299,
+   "year": 2026,
+   "country_name": "Brazil"
+  },
+  {
+   "session_key": 11412,
+   "session_name": "Race",
+   "date_start": "2026-11-08T17:00:00+00:00",
+   "date_end": "2026-11-08T19:00:00+00:00",
    "meeting_key": 1299,
    "year": 2026,
    "country_name": "Brazil"
