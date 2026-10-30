@@ -565,7 +565,7 @@ def cover(url):
 
 
 WEBTOON_APP = "https://isaraapae.github.io/alert-watch/w.html?t="  # redirect page on the gh-pages branch; opens linewebtoon://
-WEBTOON_SERIES_PAGE = {"6227", "9274"}  # Enrolling in the Transcendent Academy, Zodiac Girls: cards open the series page, not the episode
+WEBTOON_SERIES_PAGE = {"6227", "9274", "6957"}  # Enrolling in the Transcendent Academy, Zodiac Girls, My Virtual God: cards open the series page, not the episode
 # manga-site series that are also on WEBTOON Thai (found by their Thai titles there). They're alerted when the manga site
 # posts a chapter, the fastest source the watcher can read. The card and the LINE list open the series in the WEBTOON app when
 # WEBTOON's app has that chapter (webtoon_newest in the state), and the manga site when the site is ahead. WEBTOON's newest
@@ -576,8 +576,8 @@ WEBTOON_SERIES_PAGE = {"6227", "9274"}  # Enrolling in the Transcendent Academy,
 # ponytail: fixed numbers; if WEBTOON changes how many it locks, update them from the app.
 WEBTOON_LOCKED = {"6842": 2, "4395": 2, "7294": 3, "5823": 1, "5899": 1, "6718": 1, "7562": 2, "8314": 3, "6392": 3, "7637": 2,
                   "2433": 3,
-                  "6227": 2}  # Enrolling in the Transcendent Academy (WEBTOON only): its cards and the LINE list give the app's
-                  # newest episode ("Ep.140": 138 free + 2), so you know which episode to read
+                  "6227": 2, "6957": 2}  # Enrolling in the Transcendent Academy, My Virtual God (WEBTOON only): their cards and the LINE
+                  # list give the app's newest episode ("Ep.140": 138 free + 2), so you know which episode to read
 # series whose app count can't be worked out from the free ones (WEBTOON's website shows Reborn Rich only up to Ep.10, Bad Guy
 # up to Ep.55): the app
 # gets one more every week at a set time, counted from a known episode: {WEBTOON series number: (episode, when it came out)}.
