@@ -3095,7 +3095,8 @@
   "213805:5",
   "212503:4",
   "210482:6",
-  "195516:5"
+  "195516:5",
+  "178083:5"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4118,6 +4119,17 @@
    "detected": 1793376310,
    "published": 1793376270,
    "notified": true
+  },
+  "178083:5": {
+   "title": "Tokyo Revengers Season 4",
+   "episode": 5,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/3171/#ep-5",
+   "detected": 1793381111,
+   "published": null,
+   "notified": true,
+   "order": "estimated"
   }
  },
  "watch_links": {
@@ -4205,7 +4217,8 @@
   "213805:5": "https://animegojos.com/list/3165/#ep-5",
   "212503:4": "https://isaraapae.github.io/alert-watch/b.html?v=MaiFbEUDziI",
   "210482:6": "https://animegojos.com/list/2831/#ep-7",
-  "195516:5": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-5/"
+  "195516:5": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-5/",
+  "178083:5": "https://animegojos.com/list/3171/#ep-5"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4278,7 +4291,7 @@
  "f1_live": [
   "11396"
  ],
- "anime_checked": 1793380813,
+ "anime_checked": 1793381111,
  "mal_totals": {
   "60601": [
    12,
