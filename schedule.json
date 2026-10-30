@@ -1,5 +1,5 @@
 {
- "updated": 1793376318,
+ "updated": 1793377830,
  "shows": [
   {
    "name": "As a Reincarnated Aristocrat Season 3",
@@ -699,6 +699,10 @@
     {
      "ep": 11,
      "at": 1797957000.0
+    },
+    {
+     "ep": 12,
+     "at": 1798561800.0
     }
    ]
   },
