@@ -3099,7 +3099,8 @@
   "212503:4",
   "210482:6",
   "195516:5",
-  "178083:5"
+  "178083:5",
+  "191656:5"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4133,6 +4134,17 @@
    "published": null,
    "notified": true,
    "order": "estimated"
+  },
+  "191656:5": {
+   "title": "Even the Student Council Has Its Holes!",
+   "episode": 5,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/3211/#ep-5",
+   "detected": 1793466613,
+   "published": null,
+   "notified": true,
+   "order": "estimated"
   }
  },
  "watch_links": {
@@ -4221,7 +4233,8 @@
   "212503:4": "https://isaraapae.github.io/alert-watch/b.html?v=MaiFbEUDziI",
   "210482:6": "https://animegojos.com/list/2831/#ep-7",
   "195516:5": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-5/",
-  "178083:5": "https://animegojos.com/list/3171/#ep-5"
+  "178083:5": "https://animegojos.com/list/3171/#ep-5",
+  "191656:5": "https://animegojos.com/list/3211/#ep-5"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4298,7 +4311,7 @@
   "11397",
   "11398"
  ],
- "anime_checked": 1793466313,
+ "anime_checked": 1793466613,
  "mal_totals": {
   "60601": [
    12,
