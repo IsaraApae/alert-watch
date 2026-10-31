@@ -3100,7 +3100,8 @@
   "210482:6",
   "195516:5",
   "178083:5",
-  "191656:5"
+  "191656:5",
+  "209872:5"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4145,6 +4146,17 @@
    "published": null,
    "notified": true,
    "order": "estimated"
+  },
+  "209872:5": {
+   "title": "Ranma 1/2 Season 3",
+   "episode": 5,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/3197/#ep-5",
+   "detected": 1793467509,
+   "published": null,
+   "notified": true,
+   "order": "estimated"
   }
  },
  "watch_links": {
@@ -4234,7 +4246,8 @@
   "210482:6": "https://animegojos.com/list/2831/#ep-7",
   "195516:5": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-5/",
   "178083:5": "https://animegojos.com/list/3171/#ep-5",
-  "191656:5": "https://animegojos.com/list/3211/#ep-5"
+  "191656:5": "https://animegojos.com/list/3211/#ep-5",
+  "209872:5": "https://animegojos.com/list/3197/#ep-5"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4309,9 +4322,10 @@
  "f1_live": [
   "11396",
   "11397",
-  "11398"
+  "11398",
+  "11399"
  ],
- "anime_checked": 1793467212,
+ "anime_checked": 1793467509,
  "mal_totals": {
   "60601": [
    12,
@@ -4470,7 +4484,6 @@
   "206401:10": 1796301000.0,
   "206401:11": 1796905800.0,
   "206401:12": 1797510600.0,
-  "206401:1": 1790873700.0,
   "206401:13": 1798115400.0,
   "202250:1": 1791045000.0,
   "202250:2": 1791649800.0,
