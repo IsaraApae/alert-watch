@@ -4381,7 +4381,7 @@
   "11400",
   "11404"
  ],
- "anime_checked": 1793575510,
+ "anime_checked": 1793575816,
  "mal_totals": {
   "60601": [
    12,
@@ -5076,7 +5076,7 @@
    "session_key": 11404,
    "session_name": "Race",
    "date_start": "2026-11-01T20:00:00+00:00",
-   "date_end": "2026-11-01T22:00:00+00:00",
+   "date_end": "2026-11-01T23:00:00+00:00",
    "meeting_key": 1298,
    "year": 2026,
    "country_name": "Mexico"
