@@ -1410,7 +1410,7 @@ def anime(state):
 
 
 def setup_richmenu():
-    """Install the Alert Watch menu at the bottom of the LINE chat: three buttons, the anime countdown, its timetable and F1 Live.
+    """Install the Alert Watch menu at the bottom of the LINE chat: four buttons, the anime countdown, its timetable, what aired and F1 Live.
     Run once (workflow input richmenu); replaces any earlier menu this created."""
     auth = {"Authorization": f"Bearer {os.environ['LINE_TOKEN']}"}
 
@@ -1424,9 +1424,8 @@ def setup_richmenu():
 
     site = "https://isaraapae.github.io/alert-watch/anime/"
     menu = {"size": {"width": 2500, "height": 843}, "selected": True, "name": "Alert Watch", "chatBarText": "Menu",
-            "areas": [{"bounds": {"x": 0, "y": 0, "width": 833, "height": 843}, "action": {"type": "uri", "label": "Next episode", "uri": site}},
-                      {"bounds": {"x": 833, "y": 0, "width": 834, "height": 843}, "action": {"type": "uri", "label": "Timetable", "uri": site + "?v=week"}},
-                      {"bounds": {"x": 1667, "y": 0, "width": 833, "height": 843}, "action": {"type": "uri", "label": "F1 Live", "uri": F1_PAGE}}]}
+            "areas": [{"bounds": {"x": 625 * n, "y": 0, "width": 625, "height": 843}, "action": {"type": "uri", "label": label, "uri": uri}}
+                      for n, (label, uri) in enumerate([("Next", site), ("Timetable", site + "?v=week"), ("Aired", site + "?v=aired"), ("F1 Live", F1_PAGE)])]}
     old = [m["richMenuId"] for m in call("GET", "https://api.line.me/v2/bot/richmenu/list")["richmenus"] if m["name"] == "Alert Watch"]
     rid = call("POST", "https://api.line.me/v2/bot/richmenu", json.dumps(menu).encode())["richMenuId"]
     call("POST", f"https://api-data.line.me/v2/bot/richmenu/{rid}/content", (HERE / "richmenu.png").read_bytes(), "image/png")

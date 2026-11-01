@@ -1,0 +1,18 @@
+<!doctype html>
+<!-- The LINE chat menu, in the ป้าคีน style. To change it: edit this, screenshot it at 1250 x 422 with a device scale of 2 (headless Chrome),
+     crop to 2500 x 843, save as richmenu.png, and run the watch workflow with "richmenu". The four boxes match setup_richmenu in watch.py. -->
+<html><head><meta charset="utf-8"><style>
+html, body { margin: 0; width: 1250px; height: 422px; overflow: hidden; background: #F5F5F7; }
+body { display: grid; grid-template-columns: repeat(4, 1fr); padding: 20px 10px; box-sizing: border-box; font-family: -apple-system, "SF Pro Text", Helvetica, sans-serif; color: #17171A; }
+.tile { margin: 0 10px; background: #FFF; border-radius: 52px; box-shadow: 0 1px 3px #0000000A, 0 14px 30px -14px #00000033; display: grid; justify-items: center; align-content: center; text-align: center; }
+.icon { width: 122px; height: 122px; border-radius: 38px; display: grid; place-items: center; margin-bottom: 22px; }
+.icon svg { width: 66px; height: 66px; fill: none; stroke: #17171A; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.icon img { width: 92px; }
+b { font-size: 46px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+span { font-size: 23px; color: #6B6B73; margin-top: 8px; }
+</style></head><body>
+<div class="tile"><div class="icon" style="background:#E58C8438"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><b>Next</b><span>What airs next</span></div>
+<div class="tile"><div class="icon" style="background:#86B2DE38"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div><b>Timetable</b><span>Which day each airs</span></div>
+<div class="tile"><div class="icon" style="background:#E8AC7238"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></div><b>Aired</b><span>The past week</span></div>
+<div class="tile"><div class="icon" style="background:#9F9DDA38"><img src="https://isaraapae.github.io/alert-watch/f1-logo.png" alt=""></div><b>F1 Live</b><span>Timing and replays</span></div>
+</body></html>
