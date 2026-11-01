@@ -6,6 +6,15 @@ Sends a LINE message (official account **Alert Watch**) when a tracked manga cha
 - **F1 Live:** https://isaraapae.github.io/f1-live/, its own site and repo ([IsaraApae/f1-live](https://github.com/IsaraApae/f1-live)): live timing, the track on a real map, calendar, standings, replays and lap battles.
 - **LINE menu:** four buttons, in the same style as the website: **Next**, **Timetable**, **Aired** and **F1 Live**. The menu image is [richmenu.png](richmenu.png), drawn from [richmenu.html](richmenu.html).
 
+<p>
+  <img src="docs/next.jpg" width="200" alt="Website: countdown to the next episode and today's episodes">
+  <img src="docs/timetable.jpg" width="200" alt="Website: the week's timetable">
+  <img src="docs/aired.jpg" width="200" alt="Website: episodes aired over the past week, with Watch buttons">
+  <img src="docs/dark.jpg" width="200" alt="Website in dark mode">
+</p>
+
+<img src="richmenu.png" width="600" alt="LINE menu: Next, Timetable, Aired and F1 Live">
+
 ## What gets an alert
 
 | Kind | Card opens |
