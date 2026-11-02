@@ -81,7 +81,7 @@ You can also edit the files directly:
 
 ## How it runs
 
-- [cron-job.org](https://cron-job.org) starts [watch.yml](.github/workflows/watch.yml) every 10 minutes through GitHub's dispatch API. GitHub's own schedule never fired for this repo.
+- [cron-job.org](https://cron-job.org) starts [watch.yml](.github/workflows/watch.yml) every 5 minutes through GitHub's dispatch API. GitHub's own schedule never fired for this repo.
 - [watch.py](watch.py) checks the sources, sends the LINE alerts, and commits `ci-state.json` (what has been sent), `schedule.json` (website data) and `library.json` (data for the LINE `list` command).
 - Sources:
   - Manga: the sites' pages.
