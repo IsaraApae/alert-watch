@@ -45,13 +45,15 @@ The cards use the F1 Live site's light look: white panels on light grey and the 
 - Header: the F1 logo, the Grand Prix with its flag, the session, and the Thai start time.
 - The top 3 as a podium (P2, P1 in the middle, P3) with their photos on their team colour, P1 in red, each with their driver tag and time.
 - Everyone else as the page's timing table: position, driver tag, name and time, in striped rows.
-- A red **Watch replay** button that opens the session's replay on the F1 Live page.
+- A red **Watch replay** button that opens the session's replay on the F1 Live page, and **Full result**, which opens the weekend's page on the F1 Live site scrolled to that session with every driver (it always shows the result as it stands, penalties after the race included).
 - The time column shows:
   - practice: best lap, then the gap to the fastest;
   - qualifying and sprint qualifying: the lap from the last part reached (Q3 for the top 10);
   - sprint and race: total time, then the gap, laps down, or DNF/DNS/DSQ. An unclassified driver is shown as NC in the position column.
 
 After each race, the **Drivers' and Teams' Championships** follow as two swipeable cards in the same style, with driver photos and team logos in their own colours (as on the site in light mode). Each line shows the position, the change since before the race (+1 in green, -1 in red), and the points with how many were gained (`f1_standings` in `ci-state.json`).
+
+**Results that change after the flag.** A race or sprint is followed for 3 days after its card (`f1_final` in `ci-state.json`). If its result changes (the stewards' post-race penalties: in Mexico 2026 Hirakawa went from 13th to 10th and Piastri out of the points), a **Result updated** card follows with who moved ("HIR P13 → P10 (+1 pt)"), and after a race the championship cards come again, marked updated. The championship points are always each driver's and team's points before the race plus their points in its result, because OpenF1's own championship can stay on the result from before the penalties.
 
 `python3 watch.py f1check` (the **f1check** option when running the workflow by hand) has LINE check the cards, built from the latest race, without sending anything; LINE takes at most 30 KB a card, and a drivers' standings card that would be bigger is sent without faces.
 
