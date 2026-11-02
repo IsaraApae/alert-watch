@@ -1144,7 +1144,7 @@ def schedule(state=None):
     """Write schedule.json for the countdown page: every show's episodes from a week ago to two months ahead,
     with the same times and numbering as the alerts. Rewritten only when something changed, so it isn't committed every run."""
     shows, now = anime_list(), int(time.time())
-    q = "query($ids:[Int]){Page(perPage:50){media(id_in:$ids){id idMal episodes season seasonYear format coverImage{large} airingSchedule(perPage:50){nodes{episode airingAt}}}}}"
+    q = "query($ids:[Int]){Page(perPage:50){media(id_in:$ids){id idMal status episodes season seasonYear format coverImage{large} airingSchedule(perPage:50){nodes{episode airingAt}}}}}"
     state = {} if state is None else state
     try:
         info = {m["id"]: m for m in anilist(q, {"ids": list(shows)})["Page"]["media"]}
@@ -1214,6 +1214,8 @@ def schedule(state=None):
                 r["watch"] = series_page(r["watch"])
         rows += [{"ep": n, "at": p, "watch": in_brave(link)} for link, (a, n, p) in kept.items() if a == i]
         rows.sort(key=lambda r: r["at"])
+        if m.get("status") == "FINISHED" and not rows:  # ended, its last episode over a week ago (off Aired too): off the site
+            continue
         total = episode_total(m, state)
         out.append({"name": s["name"], "label": season_label(m), "cover": (m.get("coverImage") or {}).get("large"),
                     "total": total and total + s["offset"], "where": thai[i][0] if i in thai else None,
