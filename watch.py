@@ -320,9 +320,17 @@ def f1_button(label, uri):
         {"type": "button", "style": "primary", "color": F1C["red"], "height": "sm", "action": {"type": "uri", "label": label, "uri": uri}}]}
 
 
-def f1_card(meeting, session, when, rows, replay_key=None):
+def f1_buttons(*buttons):
+    """Buttons side by side, the first red and the others plain: [(label, uri)]."""
+    return {"type": "box", "layout": "horizontal", "spacing": "sm", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": [
+        {"type": "button", "style": "primary" if not i else "secondary", "height": "sm", **({"color": F1C["red"]} if not i else {}),
+         "action": {"type": "uri", "label": label, "uri": uri}} for i, (label, uri) in enumerate(buttons)]}
+
+
+def f1_card(meeting, session, when, rows, replay_key=None, note=None):
     """A results card in the F1 Live page's style: the top 3 with faces on their team colour, then the timing table:
-    position, driver tag, name and time, rows striped like the page; a button opens the session's replay."""
+    position, driver tag, name and time, rows striped like the page; buttons open the session's replay and its full
+    result on the site (which follows the official result, penalties after the flag included). note: a red line on top."""
     t = lambda text, **k: {"type": "text", "text": text, **k}
     colour = lambda d: "#" + (d.get("team_colour") or "777777")
 
@@ -347,12 +355,14 @@ def f1_card(meeting, session, when, rows, replay_key=None):
         t("POS · DRIVER", size="xxs", weight="bold", color=F1C["dim"], flex=1), t("TIME", size="xxs", weight="bold", color=F1C["dim"], flex=0)]}]
     table += [row(i, *r) for i, r in enumerate(rows[3:])]
     top = [rows[i] for i in (1, 0, 2) if i < len(rows)] if len(rows) >= 3 else rows[:3]   # a podium: P2, P1 in the middle, P3
-    body = [{"type": "box", "layout": "horizontal", "spacing": "md", "contents": [podium(*r) for r in top]},
+    body = ([t(note, size="xs", weight="bold", color=F1C["red"], wrap=True, margin="none")] if note else []) + [
+            {"type": "box", "layout": "horizontal", "spacing": "md", "margin": "md" if note else "none", "contents": [podium(*r) for r in top]},
             {"type": "separator", "margin": "lg", "color": F1C["line"]},
             {"type": "box", "layout": "vertical", "margin": "md", "contents": table}]
     return {"type": "bubble", "size": "mega", "header": f1_head(meeting, session, when),
             "body": {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "contents": body},
-            **({"footer": f1_button("Watch replay", f"{F1_SITE}?replay={replay_key}")} if replay_key else {})}
+            **({"footer": f1_buttons(("Watch replay", f"{F1_SITE}?replay={replay_key}"), ("Full result", f"{F1_SITE}?result={replay_key}"))}
+               if replay_key else {})}
 
 
 def f1_standings_card(title, sub_title, rows, colour_of):
@@ -379,18 +389,22 @@ def f1_standings_card(title, sub_title, rows, colour_of):
             "body": {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "contents": [row(i, *r) for i, r in enumerate(rows)]}}
 
 
-def f1_standings(state, token, s, meeting):
-    """After a race: the drivers' and teams' championships as two swipeable cards, sent once (when OpenF1 has them)."""
+def f1_standings(state, token, s, meeting, again=False):
+    """After a race: the drivers' and teams' championships as two swipeable cards, sent once (when OpenF1 has them), and
+    again (again=True) when the race's result changes after the flag. The points are each one's points before the race plus
+    their points in its result: OpenF1's own championship can stay on the result from before post-race penalties (Mexico
+    2026: Hirakawa 0 points, Piastri 150, while the result had Hirakawa 10th with 1 and Piastri out of the points)."""
     sent = state.setdefault("f1_standings", [])
     key = str(s["session_key"])
-    if key in sent:
+    if key in sent and not again:
         return
     try:
         champ_d = json.loads(get(f"{OPENF1}/championship_drivers?session_key={key}"))
         champ_t = json.loads(get(f"{OPENF1}/championship_teams?session_key={key}"))
         if not champ_d or not champ_t:
             return  # not published yet: tried again on the next check
-        drivers = f1_drivers(s)
+        results = json.loads(get(f"{OPENF1}/session_result?session_key={key}"))
+        drivers = f1_drivers(s, {x["driver_number"] for x in results})
     except Exception as e:
         print(f"FAIL f1 standings: {e}", file=sys.stderr)
         return
@@ -403,31 +417,91 @@ def f1_standings(state, token, s, meeting):
             print(f"FAIL f1 driver {n}: {e}", file=sys.stderr)
             drivers[n] = {"full_name": f"#{n}"}
     colour = {d.get("team_name"): "#" + (d.get("team_colour") or "999999") for d in drivers.values()}
-    rank = lambda c: c.get("position_current") or 99
-    move = lambda c: (c.get("position_start") or c.get("position_current") or 0) - (c.get("position_current") or 0)
-    gained = lambda c: (c.get("points_current") or 0) - (c.get("points_start") or 0)
-    drows = [(c["position_current"], move(c), "#" + (drivers[c["driver_number"]].get("team_colour") or "999999"),
+    scored = {x["driver_number"]: x.get("points") or 0 for x in results}
+    if not any("points" in x for x in results):  # a result without points: OpenF1's championship as it is
+        scored = {c["driver_number"]: (c.get("points_current") or 0) - (c.get("points_start") or 0) for c in champ_d}
+    team_scored = {}
+    for n, p in scored.items():
+        team = (drivers.get(n) or {}).get("team_name")
+        team_scored[team] = team_scored.get(team, 0) + p
+
+    def table(champ, gain):
+        """[(entry, position, points)] by points after the race; level on points: OpenF1's order (it knows the countback)."""
+        now = [(c, (c.get("points_start") or 0) + gain(c)) for c in champ]
+        now.sort(key=lambda e: (-e[1], e[0].get("position_current") or 99))
+        return [(c, i + 1, p) for i, (c, p) in enumerate(now)]
+    move = lambda c, pos: (c.get("position_start") or pos) - pos
+    drows = [(pos, move(c, pos), "#" + (drivers[c["driver_number"]].get("team_colour") or "999999"),
               f1_photo(drivers[c["driver_number"]], 96), f1_name(drivers[c["driver_number"]]),
-              drivers[c["driver_number"]].get("team_name") or "", c.get("points_current") or 0, gained(c)) for c in sorted(champ_d, key=rank)]
-    trows = [(c["position_current"], move(c), colour.get(c["team_name"], "#999999"), f1_logo(c["team_name"], s.get("year") or datetime.now(THAI).year), c["team_name"], "",
-              c.get("points_current") or 0, gained(c)) for c in sorted(champ_t, key=rank)]
+              drivers[c["driver_number"]].get("team_name") or "", p, p - (c.get("points_start") or 0))
+             for c, pos, p in table(champ_d, lambda c: scored.get(c["driver_number"], 0))]
+    trows = [(pos, move(c, pos), colour.get(c["team_name"], "#999999"), f1_logo(c["team_name"], s.get("year") or datetime.now(THAI).year), c["team_name"], "",
+              p, p - (c.get("points_start") or 0)) for c, pos, p in table(champ_t, lambda c: team_scored.get(c["team_name"], 0))]
     name = meeting.get("meeting_name") or "Formula 1"
+    after = f"After the {name}" + (" · updated" if again else "")
     top = lambda rows: ", ".join(f"{r[0]} {r[4]} {r[6]:g}" for r in rows[:3])
     if not token:  # on the Mac: show what would be sent
-        print(f"F1 standings after {name} | drivers: {top(drows)} | teams: {top(trows)}")
-        sent.append(key)
+        print(f"F1 standings {after[:1].lower()}{after[1:]} | drivers: {top(drows)} | teams: {top(trows)}")
+        if key not in sent:
+            sent.append(key)
         return
-    dcard = f1_standings_card("Drivers' Championship", f"After the {name}", drows, colour)
+    dcard = f1_standings_card("Drivers' Championship", after, drows, colour)
     if len(json.dumps(dcard, separators=(",", ":"))) > 29000:  # LINE takes at most 30 KB a card: without faces it always fits
-        dcard = f1_standings_card("Drivers' Championship", f"After the {name}", [r[:3] + (None,) + r[4:] for r in drows], colour)
-    card = {"type": "flex", "altText": f"F1 standings after {name}: {top(drows)}"[:400], "contents": {"type": "carousel", "contents": [
-        dcard, f1_standings_card("Teams' Championship", f"After the {name}", trows, colour)]}}
-    plain = {"type": "text", "text": f"F1 standings after the {name}\n\nDrivers\n" + "\n".join(
+        dcard = f1_standings_card("Drivers' Championship", after, [r[:3] + (None,) + r[4:] for r in drows], colour)
+    card = {"type": "flex", "altText": f"F1 standings {after[:1].lower()}{after[1:]}: {top(drows)}"[:400], "contents": {"type": "carousel", "contents": [
+        dcard, f1_standings_card("Teams' Championship", after, trows, colour)]}}
+    plain = {"type": "text", "text": f"F1 standings {after[:1].lower()}{after[1:]}\n\nDrivers\n" + "\n".join(
         f"{r[0]} ({'+' if r[1] > 0 else ''}{r[1] or '–'}) {r[4]} {r[6]:g}" for r in drows) + "\n\nTeams\n" + "\n".join(
         f"{r[0]} ({'+' if r[1] > 0 else ''}{r[1] or '–'}) {r[4]} {r[6]:g}" for r in trows)}
-    if line_send(token, card) or line_send(token, plain):
+    if (line_send(token, card) or line_send(token, plain)) and key not in sent:
         sent.append(key)
     del sent[:-50]
+
+
+def f1_sig(results):
+    """A race's or sprint's result in short, to notice when it changes: [[car number, position, points]]."""
+    return sorted([x["driver_number"], x.get("position"), x.get("points")] for x in results)
+
+
+def f1_recheck(state, token, s, meeting):
+    """A race or sprint whose card is out: if its result changes after the flag (penalties), a "Result updated" card with
+    who moved, and for a race the championship cards again. A session sent before this was followed (Mexico 2026) is
+    only noted, so the first change from then on is what gets sent."""
+    final = state.setdefault("f1_final", {})  # {session: f1_sig of the result as last sent}
+    key = str(s["session_key"])
+    results = json.loads(get(f"{OPENF1}/session_result?session_key={key}"))
+    if not results:
+        return
+    sig = f1_sig(results)
+    if key not in final or final[key] == sig:
+        final[key] = sig
+        return
+    was = {n: (p, pts) for n, p, pts in final[key]}
+    drivers = f1_drivers(s, {x["driver_number"] for x in results})
+    pos = lambda p: f"P{p}" if isinstance(p, int) else "NC"
+    moved = []
+    for x in sorted(results, key=lambda x: x["position"] if isinstance(x.get("position"), int) else 99):
+        old_pos, old_pts = was.get(x["driver_number"], (None, None))
+        if (old_pos, old_pts) != (x.get("position"), x.get("points")):
+            gain = (x.get("points") or 0) - (old_pts or 0)
+            moved.append(f"{(drivers.get(x['driver_number']) or {}).get('name_acronym') or x['driver_number']} {pos(old_pos)} → {pos(x.get('position'))}"
+                         + (f" ({'+' if gain > 0 else ''}{gain:g} pt{'s' if abs(gain) != 1 else ''})" if gain else ""))
+    rows = f1_rows(results, drivers)
+    name, session = meeting.get("meeting_name") or s.get("country_name") or "Formula 1", s["session_name"]
+    when = datetime.fromisoformat(s["date_start"]).astimezone(THAI).strftime("%a %d %b %Y · %H:%M")
+    note = "Result changed after the race: " + ", ".join(moved[:8]) + (f" and {len(moved) - 8} more" if len(moved) > 8 else "")
+    if not token:  # on the Mac: show what would be sent
+        print(f"F1 {session} · {name} · result updated | {note}")
+    else:
+        card = {"type": "flex", "altText": f"F1 {session} · {name}: result updated. {note}"[:400],
+                "contents": f1_card(meeting, f"{session} · Updated", when, rows, key, note)}
+        plain = {"type": "text", "text": f"F1 {session} · {name}: result updated\n{note}\n\n" + "\n".join(
+            f"{p} {f1_name(d)} ({d.get('team_name') or ''}) {v}" for p, d, v in rows)}
+        if not (line_send(token, card) or line_send(token, plain)):
+            return  # tried again on the next check
+    final[key] = sig
+    if session == "Race":
+        f1_standings(state, token, s, meeting, again=True)
 
 
 # the F1 Live site (its own repo, IsaraApae/f1-live): "?live" opens its Live tab, "?replay=KEY" a session's replay
@@ -528,6 +602,12 @@ def f1(state):
                 continue
         key = str(s["session_key"])
         if key in sent:
+            if s["session_name"] in ("Race", "Sprint"):  # its card is out: follow its result for changes after the flag
+                try:
+                    f1_recheck(state, token, s, meetings.get(s["meeting_key"]) or
+                               meetings.setdefault(s["meeting_key"], (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0]))
+                except Exception as e:
+                    print(f"FAIL f1 recheck {s['session_name']}: {e}", file=sys.stderr)
             continue
         try:
             results = json.loads(get(f"{OPENF1}/session_result?session_key={key}"))
@@ -542,16 +622,21 @@ def f1(state):
             if not token:  # on the Mac: show what would be sent
                 print(f"F1 {session} · {name} · {when} | {top}")
                 sent.append(key)
+                state.setdefault("f1_final", {})[key] = f1_sig(results)
                 continue
             plain = {"type": "text", "text": f"F1 {session} · {name}\n{when}\n" + "\n".join(f"{p} {f1_name(d)} ({d.get('team_name') or ''}) {v}" for p, d, v in rows)}
             card = {"type": "flex", "altText": f"F1 {session} · {name}: {top}"[:400], "contents": f1_card(meeting, session, when, rows, key)}
             if line_send(token, card) or line_send(token, plain):
                 sent.append(key)
+                state.setdefault("f1_final", {})[key] = f1_sig(results)  # the result as sent: a later change gets its own card
                 if session == "Race":
                     f1_standings(state, token, s, meeting)
         except Exception as e:  # one session's trouble never stops the next one's card (it's tried again on the next check)
             print(f"FAIL f1 {s['session_name']}: {e}", file=sys.stderr)
     del sent[:-100]
+    following = {str(s["session_key"]) for s in sessions}
+    for k in [k for k in state.get("f1_final", {}) if k not in following]:  # out of the 3-day window: no longer followed
+        del state["f1_final"][k]
 
 
 COVER_OVERRIDES = {  # series whose own cover LINE can't show (AVIF): a JPEG copy on the GitHub Pages site
@@ -1740,6 +1825,8 @@ if __name__ == "__main__":
                                                                                    "Episode 01/?\nNetflix · 15 Oct 2026 22:30", sample, "https://www.youtube.com/")},
                  "manga card": {"type": "flex", "altText": "check", "contents": card("New chapter: Reality Quest", "ตอนที่ 225", sample, "https://example.com/")},
                  "results": {"type": "flex", "altText": "check", "contents": f1_card(meeting, "Race", when, rows, key)},
+                 "updated results": {"type": "flex", "altText": "check", "contents": f1_card(meeting, "Race · Updated", when, rows, key,
+                                     "Result changed after the race: HIR P13 → P10 (+1 pt), PIA P7 → P13 (-6 pts)")},
                  "live": {"type": "flex", "altText": "check", "contents": f1_live_card(meeting, "Race", when, True)}}
         captured, line_send = [], lambda token, message: captured.append(message) or True   # module level: f1_standings now captures instead of sending
         f1_standings({}, token, s, meeting)
