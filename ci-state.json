@@ -4386,7 +4386,7 @@
   "11400",
   "11404"
  ],
- "anime_checked": 1793660113,
+ "anime_checked": 1793660425,
  "mal_totals": {
   "60601": [
    12,
@@ -5060,15 +5060,6 @@
   }
  },
  "f1_schedule": [
-  {
-   "session_key": 11398,
-   "session_name": "Practice 2",
-   "date_start": "2026-10-30T22:00:00+00:00",
-   "date_end": "2026-10-30T23:00:00+00:00",
-   "meeting_key": 1298,
-   "year": 2026,
-   "country_name": "Mexico"
-  },
   {
    "session_key": 11399,
    "session_name": "Practice 3",
