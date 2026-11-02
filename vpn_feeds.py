@@ -5,7 +5,8 @@ animeruka only answers visitors in Thailand, so GitHub's own servers can't read 
 watch.py does its other checks: it connects to the server that worked last time straight away, and to every usable
 Thai server from VPN Gate (a free volunteer network run by the University of Tsukuba) at once as soon as VPN Gate's list
 comes. It reads the feed through each one as soon as it's up, saves the first good copy to feeds/animeruka.xml and
-writes feeds/done, which watch.py waits for before it reads it. The tunnels carry only these
+writes feeds/done at once, which watch.py waits for before it reads it; the reads still going through the other
+servers are then stopped, not waited for. The tunnels carry only these
 requests (curl is tied to the tunnel by name): the runner's own routes and DNS never change, so watch.py, git and LINE
 are unaffected throughout. Ordinary requests only (watch.py's usual user agent): this changes where the request comes
 from, not what it looks like. It never fails the job: when no Thai server works, watch.py reads the feed directly and
@@ -86,11 +87,34 @@ def answers(config):
         return False
 
 
+STOP = threading.Event()  # the feed is in: the reads still going through other tunnels are stopped, not waited for
+CURLS, CURLS_LOCK = set(), threading.Lock()
+
+
+def stop_reads():
+    STOP.set()
+    with CURLS_LOCK:
+        for p in CURLS:
+            p.kill()
+
+
 def curl(url, dev):
-    """A page's text through this tunnel only; '' if it fails. --compressed: the feed comes gzipped, much smaller."""
-    r = subprocess.run(["curl", "-s", "--compressed", "--connect-timeout", "5", "--max-time", str(READ_WAIT),
-                        "--noproxy", "*", "--interface", f"if!{dev}", "-A", UA, url], capture_output=True)
-    return r.stdout.decode("utf-8", "replace") if r.returncode == 0 else ""
+    """A page's text through this tunnel only; '' if it fails or once the feed is in. --compressed: the feed comes
+    gzipped, much smaller."""
+    if STOP.is_set():
+        return ""
+    p = subprocess.Popen(["curl", "-s", "--compressed", "--connect-timeout", "5", "--max-time", str(READ_WAIT),
+                          "--noproxy", "*", "--interface", f"if!{dev}", "-A", UA, url], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    with CURLS_LOCK:
+        CURLS.add(p)
+    if STOP.is_set():  # stopped while it was starting
+        p.kill()
+    try:
+        out, _ = p.communicate()
+    finally:
+        with CURLS_LOCK:
+            CURLS.discard(p)
+    return out.decode("utf-8", "replace") if p.returncode == 0 else ""
 
 
 class Tunnel:
@@ -132,6 +156,8 @@ def read_through(tunnel):
     page = curl(URL, tunnel.dev)
     if "<rss" in page[:1000]:
         return page
+    if STOP.is_set():  # stopped because another server had it: nothing to report
+        return ""
     loc = next((l[4:] for l in curl(TRACE, tunnel.dev).splitlines() if l.startswith("loc=")), "?")
     why = f"it exits in {loc}, not Thailand" if loc != "TH" else repr(" ".join(page[:120].split()))
     print(f"VPN: {SITE} didn't send its feed through {tunnel.ip}: {why}")
@@ -200,6 +226,8 @@ def connect_and_read(first, listed):
                     page = f.result() if not f.exception() else ""
                     if page:
                         (OUT / f"{SITE}.xml").write_text(page, encoding="utf-8")
+                        DONE.touch()  # watch.py can read it now, not once the other tunnels' reads have timed out
+                        stop_reads()
                         print(f"VPN: Thai server {t.ip} ok after {time.time() - START:.0f}s, saved {SITE}")
                         if not first or t.ip != first[0]:
                             LAST.write_text(f"# {t.ip}\n# the VPN Gate server that last read the {SITE} feed: "
@@ -209,6 +237,7 @@ def connect_and_read(first, listed):
                 time.sleep(0.2)
             return False
         finally:  # before the pool closes: reads still going through the other tunnels then end at once
+            stop_reads()
             subprocess.run(["sudo", "pkill", "-x", "openvpn"], capture_output=True)
 
 
