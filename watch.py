@@ -259,7 +259,19 @@ def f1_name(d):
     words = (d.get("full_name") or d.get("name_acronym") or "?").split()
     last = [w for w in words if w.isupper() and len(w) > 1] or words[-1:]
     first = [w for w in words if w not in last]
-    return f"{first[0][0]}. " * bool(first) + " ".join(last).title()
+    return (f"{first[0][0]}. " if first else "") + " ".join(last).title()
+
+
+def f1_drivers(s, wanted=()):
+    """{car number: driver} for a session. OpenF1 can leave a driver out of a session (Lawson, Mexico 2026 Practice 3) or blank
+    his name and team (Hirakawa, Ocon's stand-in, in that race), so those come from the weekend's other sessions."""
+    drivers = {d["driver_number"]: {**d, "year": s.get("year")} for d in json.loads(get(f"{OPENF1}/drivers?session_key={s['session_key']}"))}
+    blank = {n for n, d in drivers.items() if not d.get("team_name")} | (set(wanted) - set(drivers))
+    if blank:
+        for d in json.loads(get(f"{OPENF1}/drivers?meeting_key={s['meeting_key']}")):
+            if d["driver_number"] in blank and d.get("team_name"):
+                drivers[d["driver_number"]] = {**d, "year": s.get("year")}
+    return drivers
 
 
 # the F1 Live site's light look: white panels on light grey, team-colour driver tags (car number on the team colour, the
@@ -378,7 +390,7 @@ def f1_standings(state, token, s, meeting):
         champ_t = json.loads(get(f"{OPENF1}/championship_teams?session_key={key}"))
         if not champ_d or not champ_t:
             return  # not published yet: tried again on the next check
-        drivers = {d["driver_number"]: {**d, "year": s.get("year")} for d in json.loads(get(f"{OPENF1}/drivers?session_key={key}"))}
+        drivers = f1_drivers(s)
     except Exception as e:
         print(f"FAIL f1 standings: {e}", file=sys.stderr)
         return
@@ -510,10 +522,10 @@ def f1(state):
         if s["session_name"] == "Race" and str(s["session_key"]) in sent:  # race card out: then the championship tables
             try:
                 m = meetings.setdefault(s["meeting_key"], (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0])
-            except Exception as e:
-                print(f"FAIL f1 meeting: {e}", file=sys.stderr)
+                f1_standings(state, token, s, m)
+            except Exception as e:  # never stops the other sessions' cards
+                print(f"FAIL f1 standings: {e}", file=sys.stderr)
                 continue
-            f1_standings(state, token, s, m)
         key = str(s["session_key"])
         if key in sent:
             continue
@@ -521,25 +533,24 @@ def f1(state):
             results = json.loads(get(f"{OPENF1}/session_result?session_key={key}"))
             if not results:
                 continue  # not published yet: tried again on the next check
-            drivers = {d["driver_number"]: {**d, "year": s.get("year")} for d in json.loads(get(f"{OPENF1}/drivers?session_key={key}"))}
+            drivers = f1_drivers(s, {x["driver_number"] for x in results})
             meeting = meetings.get(str(s["meeting_key"])) or (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0]
-        except Exception as e:
+            rows = f1_rows(results, drivers)
+            name, session = meeting.get("meeting_name") or s.get("country_name") or "Formula 1", s["session_name"]
+            when = datetime.fromisoformat(s["date_start"]).astimezone(THAI).strftime("%a %d %b %Y · %H:%M")
+            top = ", ".join(f"{p} {d.get('name_acronym', '?')}" for p, d, _ in rows[:3])
+            if not token:  # on the Mac: show what would be sent
+                print(f"F1 {session} · {name} · {when} | {top}")
+                sent.append(key)
+                continue
+            plain = {"type": "text", "text": f"F1 {session} · {name}\n{when}\n" + "\n".join(f"{p} {f1_name(d)} ({d.get('team_name') or ''}) {v}" for p, d, v in rows)}
+            card = {"type": "flex", "altText": f"F1 {session} · {name}: {top}"[:400], "contents": f1_card(meeting, session, when, rows, key)}
+            if line_send(token, card) or line_send(token, plain):
+                sent.append(key)
+                if session == "Race":
+                    f1_standings(state, token, s, meeting)
+        except Exception as e:  # one session's trouble never stops the next one's card (it's tried again on the next check)
             print(f"FAIL f1 {s['session_name']}: {e}", file=sys.stderr)
-            continue
-        rows = f1_rows(results, drivers)
-        name, session = meeting.get("meeting_name") or s.get("country_name") or "Formula 1", s["session_name"]
-        when = datetime.fromisoformat(s["date_start"]).astimezone(THAI).strftime("%a %d %b %Y · %H:%M")
-        top = ", ".join(f"{p} {d.get('name_acronym', '?')}" for p, d, _ in rows[:3])
-        if not token:  # on the Mac: show what would be sent
-            print(f"F1 {session} · {name} · {when} | {top}")
-            sent.append(key)
-            continue
-        plain = {"type": "text", "text": f"F1 {session} · {name}\n{when}\n" + "\n".join(f"{p} {f1_name(d)} ({d.get('team_name', '')}) {v}" for p, d, v in rows)}
-        card = {"type": "flex", "altText": f"F1 {session} · {name}: {top}"[:400], "contents": f1_card(meeting, session, when, rows, key)}
-        if line_send(token, card) or line_send(token, plain):
-            sent.append(key)
-            if session == "Race":
-                f1_standings(state, token, s, meeting)
     del sent[:-100]
 
 
@@ -1619,7 +1630,7 @@ if __name__ == "__main__":
                   "headshot_url": "https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/I/ISAHAD01_Isack_Hadjar/isahad01.png.transform/1col/image.png"}
         assert f1_photo(hadjar, 96).endswith("/common/f1/2026/redbullracing/isahad01/2026redbullracingisahad01right.png")
         assert "/2026/audi/nichul01/" in f1_photo({"full_name": "Nico HÜLKENBERG", "team_name": "Audi", "year": 2026}, 96)  # no link: from the name
-        assert f1_name({"full_name": "Andrea Kimi ANTONELLI"}) == "A. Antonelli" and f1_name({"full_name": "Nico HÜLKENBERG"}) == "N. Hülkenberg"
+        assert f1_name({"full_name": "Andrea Kimi ANTONELLI"}) == "A. Antonelli" and f1_name({"full_name": "Nico HÜLKENBERG"}) == "N. Hülkenberg" and f1_name({"name_acronym": "LAW"}) == "Law" and f1_name({}) == "?"
         drv = {3: {"full_name": "Max VERSTAPPEN"}, 16: {"full_name": "Charles LECLERC"}, 10: {"full_name": "Pierre GASLY"}, 18: {"full_name": "Lance STROLL"}}
         race = [{"position": None, "driver_number": 18, "dnf": True, "duration": None, "gap_to_leader": None},
                 {"position": 1, "driver_number": 3, "duration": 6120.785, "gap_to_leader": 0},

@@ -55,7 +55,7 @@ After each race, the **Drivers' and Teams' Championships** follow as two swipeab
 
 `python3 watch.py f1check` (the **f1check** option when running the workflow by hand) has LINE check the cards, built from the latest race, without sending anything; LINE takes at most 30 KB a card, and a drivers' standings card that would be bigger is sent without faces.
 
-Times on the cards are Thai time, and race lengths are written as "1h 42m 00.785s". Results, standings and team colours come from the free [OpenF1](https://openf1.org) API. Driver photos are formula1.com's portraits for the current season, cropped to the face. OpenF1's own photo links are last season's, in old team suits, and rookies have none.
+Times on the cards are Thai time, and race lengths are written as "1h 42m 00.785s". When OpenF1 leaves a driver out of a session or blanks his name and team (a stand-in, like Hirakawa in Mexico 2026), he is filled in from the weekend's other sessions, and one session's trouble never holds up the next one's card. Results, standings and team colours come from the free [OpenF1](https://openf1.org) API. Driver photos are formula1.com's portraits for the current season, cropped to the face. OpenF1's own photo links are last season's, in old team suits, and rookies have none.
 
 ## Editing the lists
 
