@@ -799,7 +799,17 @@ YT_CHANNELS = {"UCn8hjQOnGYR1AZtYYMYP5jQ": "Muse Thailand", "UCw2bdNSXh4x6e0NCdu
 BILIBILI_SCHEDULE = "https://api.bilibili.tv/intl/gateway/web/v2/ogv/timeline?s_locale=th_TH&platform=web"  # Bilibili Thailand's week; it only fills in for connections from Thailand, so the cloud learns nothing from it and keeps what was learned before
 
 
+VIDEOS = []  # the run's one reading of the channels' uploads (main starts it first): the alerts and the schedule share it
+
+
 def youtube_videos():
+    """The official channels' newest uploads, read once a run (read_youtube) and shared."""
+    if not VIDEOS:
+        VIDEOS.append(POOL.submit(read_youtube))
+    return VIDEOS[0].result()
+
+
+def read_youtube():
     """[(title, link, published timestamp, channel)] for the official channels' newest uploads. With a YOUTUBE_KEY, from
     YouTube's data service, current within seconds; otherwise (or if that fails) from the public feeds, which GitHub
     can get as a copy hours old."""
@@ -1566,16 +1576,26 @@ def main():
     # the manga and WEBTOON pages, read in the background while the anime, F1 and schedule checks run (the loop below takes them)
     urls = (HERE / "urls.txt").read_text().split()
     twins = [WEBTOON_TWINS[u] for u in urls if u in WEBTOON_TWINS and re.search(r"title_no=(\d+)", WEBTOON_TWINS[u])[1] not in WEBTOON_WEEKLY]
+    # first in the queue: the uploads both the alerts and the schedule need, and Bilibili's week (slow, seconds)
+    if not VIDEOS:
+        VIDEOS.append(POOL.submit(read_youtube))
+    prefetch([BILIBILI_SCHEDULE])
     prefetch([webtoon_rss(u) if "webtoons.com" in u else u for u in urls] + [webtoon_rss(t) for t in twins])
+
+    def run_f1():
+        try:
+            f1(state)
+        except Exception as e:  # F1 results must never stop the other alerts
+            print(f"FAIL f1: {e}", file=sys.stderr)
+    # F1 alongside the anime check, which mostly waits for the Thai VPN feed; it touches only its own f1_* keys
+    f1_thread = threading.Thread(target=run_f1)
+    f1_thread.start()
     try:
         complete_anime()
     except Exception as e:  # a short entry still works with AniList times, so this must never stop the alerts
         print(f"FAIL completing anime: {e}", file=sys.stderr)
     anime(state)
-    try:
-        f1(state)
-    except Exception as e:  # F1 results must never stop the other alerts
-        print(f"FAIL f1: {e}", file=sys.stderr)
+    f1_thread.join()
     try:
         schedule(state)
     except Exception as e:  # the countdown page must never stop the alerts
