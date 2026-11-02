@@ -218,7 +218,7 @@ def f1_rows(results, drivers):
         elif isinstance(gap, (int, float)):
             val = f"+{gap:.3f}"
         else:
-            val = str(gap or "").replace("LAPS", "Laps").replace("LAP", "Lap")
+            val = str(gap or "").replace("LAPS", "Laps").replace("LAP", "Lap") or "No time"  # LINE refuses a card with an empty text
         rows.append((pos, drivers.get(x["driver_number"], {}), val))
     return rows
 
@@ -1631,6 +1631,7 @@ if __name__ == "__main__":
         assert f1_photo(hadjar, 96).endswith("/common/f1/2026/redbullracing/isahad01/2026redbullracingisahad01right.png")
         assert "/2026/audi/nichul01/" in f1_photo({"full_name": "Nico HÜLKENBERG", "team_name": "Audi", "year": 2026}, 96)  # no link: from the name
         assert f1_name({"full_name": "Andrea Kimi ANTONELLI"}) == "A. Antonelli" and f1_name({"full_name": "Nico HÜLKENBERG"}) == "N. Hülkenberg" and f1_name({"name_acronym": "LAW"}) == "Law" and f1_name({}) == "?"
+        assert f1_rows([{"position": 21, "driver_number": 5, "duration": None, "gap_to_leader": None}], {})[0][2] == "No time"  # practice, no lap set
         drv = {3: {"full_name": "Max VERSTAPPEN"}, 16: {"full_name": "Charles LECLERC"}, 10: {"full_name": "Pierre GASLY"}, 18: {"full_name": "Lance STROLL"}}
         race = [{"position": None, "driver_number": 18, "dnf": True, "duration": None, "gap_to_leader": None},
                 {"position": 1, "driver_number": 3, "duration": 6120.785, "gap_to_leader": 0},
