@@ -2,7 +2,7 @@
 
 Sends a LINE message (official account **Alert Watch**) when a tracked manga chapter, Webtoon episode or anime episode comes out, and after every Formula 1 session. It runs on GitHub Actions, so it works with your Mac off.
 
-- **Website:** https://isaraapae.github.io/alert-watch/anime/ (the old address, https://isaraapae.github.io/alert-watch/, forwards there; the move gave iPhone Safari a fresh address after it had remembered "no icon" for the old one). In the same style as [ป้าคีน](https://github.com/IsaraApae/paakeen): a floating menu (Next, Timetable, Aired) and a round Appearance button at the top. It has a countdown to the next episode, the next 7 days, and the episodes that aired in the past week with their Watch buttons (**Next episode**), plus a Monday–Sunday **Weekly timetable** (`?v=week`). Times are Thai time.
+- **Website:** https://isaraapae.github.io/alert-watch/anime/ (the old address, https://isaraapae.github.io/alert-watch/, forwards there; the move gave iPhone Safari a fresh address after it had remembered "no icon" for the old one). In the same style as [ป้าคีน](https://github.com/IsaraApae/paakeen): a floating menu (Next, Timetable, Aired) and a round Appearance button at the top. It has a countdown to the next episode and the next 7 days (**Next**), a Monday–Sunday **Timetable** (`?v=week`), and the episodes that aired in the past week with their Watch buttons (**Aired**, `?v=aired`). Times are Thai time.
 - **F1 Live:** https://isaraapae.github.io/f1-live/, its own site and repo ([IsaraApae/f1-live](https://github.com/IsaraApae/f1-live)): live timing, the track on a real map, calendar, standings, replays and lap battles.
 - **LINE menu:** four buttons, in the same style as the website: **Next**, **Timetable**, **Aired** and **F1 Live**. The menu image is [richmenu.png](richmenu.png), drawn from [richmenu.html](richmenu.html).
 
@@ -109,9 +109,11 @@ You can also edit the files directly:
 - `python3 watch.py test` runs the self-checks.
 - [line/Code.gs](line/Code.gs) is the LINE command webhook. It runs on Google Apps Script with these script properties: `LINE_TOKEN`, `GITHUB_TOKEN`, `OWNER_ID`. After you change it, redeploy it with **Manage deployments → New version**.
 - The `site/` folder holds the website. `.github/workflows/pages.yml` publishes it to GitHub Pages whenever it changes (in **Settings → Pages** the source is **GitHub Actions**):
-  - `index.html`, which forwards to `anime/` (the anime site);
-  - `w.html`, which opens a link in the WEBTOON app;
-  - `b.html`, which opens a link in Brave;
-  - `covers/`;
+  - `anime/`, the anime site, one page that reads `schedule.json` from this repo;
+  - `index.html`, which forwards to `anime/`;
+  - `w.html`, which opens a series or episode in the WEBTOON app;
+  - `b.html`, which opens a YouTube video in Brave;
+  - `covers/`, JPEG copies of series covers LINE can't show (AVIF), for the cards (`COVER_OVERRIDES` in `watch.py`);
   - `f1.html`, which forwards to the F1 Live site (old links);
-  - `f1-logo.png`, the official F1 logo used in the F1 LINE cards.
+  - `f1-logo.png`, the official F1 logo used in the F1 LINE cards;
+  - the icons (`favicon.svg`, `favicon-32.png`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`) and `manifest.webmanifest`.
