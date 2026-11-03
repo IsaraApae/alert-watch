@@ -14,6 +14,13 @@
 <link rel="icon" href="../icon-192.png?v=2" type="image/png" sizes="192x192">
 <link rel="manifest" href="../manifest.webmanifest?v=2">
 <script>try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<script>
+// Data comes from schedule.json, which the Alert Watch cloud job rewrites whenever the schedule changes. It's asked for
+// here, while the rest of the page still arrives, instead of once it has: LINE opens the page cold. load() takes this answer.
+const DATA = "https://raw.githubusercontent.com/IsaraApae/alert-watch/main/schedule.json";
+let early = fetch(DATA + "?t=" + Date.now(), { cache: "no-store" });
+early.catch(() => {});   // handled in load()
+</script>
 <style>
 /* The ป้าคีน look: a plain background, solid cards with soft shadows, a large title and a floating menu at the bottom.
    Views: next episode (countdown, then today and the next six days), a Monday-to-Sunday timetable, and what aired this past week. */
@@ -157,8 +164,6 @@ svg.ico { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: rou
 </nav></div>
 
 <script>
-// Data comes from schedule.json, which the Alert Watch cloud job rewrites whenever the schedule changes.
-const DATA = "https://raw.githubusercontent.com/IsaraApae/alert-watch/main/schedule.json";
 const TZ = "Asia/Bangkok";
 const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" });
 const hhmm = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
@@ -357,7 +362,9 @@ try { const saved = localStorage.getItem(SAVED); if (saved) show(JSON.parse(save
 async function load() {
   const sub = document.getElementById("sub");
   try {
-    const r = await fetch(DATA + "?t=" + Date.now(), { cache: "no-store" });
+    const req = early || fetch(DATA + "?t=" + Date.now(), { cache: "no-store" });
+    early = null;   // the request from <head> answers the first load only (a failed one isn't reused)
+    const r = await req;
     if (!r.ok) throw new Error(r.status);
     const text = await r.text();
     show(JSON.parse(text));
