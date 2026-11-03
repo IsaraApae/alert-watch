@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F0F11" media="(prefers-color-scheme: dark)">
+<meta name="robots" content="noindex">
+<title>Open in WEBTOON</title>
+<link rel="icon" href="favicon.svg?v=2" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
+<script>try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<style>
+/* the anime site's look (anime/index.html): plain background, a solid card, pill buttons; its Light/Dark choice carries over */
+:root {
+  --bg: #F5F5F7; --card: #FFFFFF; --fill: #7676801A; --text: #17171A; --text-2: #6B6B73; --accent: #C24A44;
+  --shadow: 0 1px 2px #0000000A, 0 10px 28px -14px #00000029; --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --app: #00D564; --app-ink: #fff; --btn: #00D564; --btn-ink: #000;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Sukhumvit Set", "Thonburi", "Noto Sans Thai", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0F0F11; --card: #1C1C1F; --fill: #7676803D; --text: #F2F2F7; --text-2: #A1A1A8; --accent: #FF6961; --shadow: 0 10px 28px -14px #000000B3; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #0F0F11; --card: #1C1C1F; --fill: #7676803D; --text: #F2F2F7; --text-2: #A1A1A8; --accent: #FF6961; --shadow: 0 10px 28px -14px #000000B3; color-scheme: dark; }
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; background: var(--bg); }
+body { margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; background: var(--bg); color: var(--text);
+  font: 17px/1.45 var(--font); -webkit-font-smoothing: antialiased;
+  padding: calc(env(safe-area-inset-top, 0px) + 24px) 16px calc(env(safe-area-inset-bottom, 0px) + 24px); }
+.card { width: 100%; max-width: 360px; background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 28px 20px 20px; display: grid; justify-items: center; text-align: center; }
+.app { width: 64px; height: 64px; border-radius: 16px; display: grid; place-items: center; background: var(--app); color: var(--app-ink); }
+.app { box-shadow: inset 0 0 0 .5px #0000001F; }
+.app svg { width: 40px; height: 40px; fill: currentColor; }
+h1 { margin: 16px 0 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -.01em; }
+p { margin: 4px 0 0; font-size: 15px; color: var(--text-2); text-wrap: balance; }
+.spin { width: 18px; height: 18px; margin: 18px 0 2px; border-radius: 50%; border: 2px solid var(--fill); border-top-color: var(--text-2); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.go { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 50px; margin-top: 20px; border-radius: 999px;
+  background: var(--btn); color: var(--btn-ink); text-decoration: none; font-weight: 600; font-size: 17px; transition: transform .35s var(--ease); }
+.go:active { transform: scale(.96); }
+.back { margin-top: 12px; padding: 8px; color: var(--text-2); text-decoration: none; font-size: 15px; font-weight: 500; }
+.bad .spin, .bad .go, .done .spin { display: none; }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } .go { transition: none; } }
+</style>
+</head>
+<body>
+<main class="card" id="card">
+  <div class="app" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M15.023 15.26c.695 0 1.014-.404 1.014-1.051 0-.551-.308-1.01-.984-1.01-.58 0-.912.404-.912 1.016 0 .543.32 1.045.882 1.045zM10.135 15.447c.764 0 1.113-.443 1.113-1.154 0-.604-.338-1.109-1.082-1.109-.637 0-1.002.445-1.002 1.115 0 .597.352 1.148.971 1.148zM24 10.201l-3.15.029.83-9.686L1.958 3.605l1.686 6.248H0l3.734 11.488 8.713-1.283v3.396l10.113-4.641L24 10.201zm-9.104-3.594c0-.049.039-.092.088-.094l1.879-.125.446-.029c.524-.035 1.634.063 1.634 1.236 0 .83-.619 1.184-.619 1.184s.75.189.707 1.092c0 1.602-1.943 1.389-1.943 1.389l-.225-.006-1.908-.053a.089.089 0 0 1-.086-.09l.027-4.504zm-3.675.243c0-.047.039-.09.088-.092l3.064-.203a.08.08 0 0 1 .087.08v.943c0 .049-.039.09-.087.092l-1.9.08a.094.094 0 0 0-.088.09l-.005.394a.083.083 0 0 0 .086.084l1.646-.066a.082.082 0 0 1 .086.084l-.02 1.012a.089.089 0 0 1-.089.086h-1.63a.089.089 0 0 0-.088.088v.416c0 .047.039.088.088.088l1.87.033a.09.09 0 0 1 .087.09v.951a.084.084 0 0 1-.087.084l-3.063-.123a.09.09 0 0 1-.087-.09l.042-4.121zm-6.01.312l.975-.064a.101.101 0 0 1 .105.08l.458 2.205c.01.047.027.047.039 0l.576-2.281a.132.132 0 0 1 .108-.09l.921-.061a.108.108 0 0 1 .109.078l.564 2.342c.012.047.029.047.041 0l.6-2.424a.131.131 0 0 1 .108-.092l.996-.064c.048-.004.077.031.065.078l-1.09 4.104a.113.113 0 0 1-.109.082l-1.121-.031a.12.12 0 0 1-.109-.086l-.535-1.965c-.012-.047-.033-.047-.045 0l-.522 1.934a.12.12 0 0 1-.11.082l-1.109-.031a.123.123 0 0 1-.108-.088l-.873-3.618c-.011-.047.019-.088.066-.09zm-.288 9.623v-3.561a.089.089 0 0 0-.087-.088l-1.252-.029a.095.095 0 0 1-.091-.09l-.046-1.125a.082.082 0 0 1 .083-.086l4.047.096c.048 0 .087.041.085.088l-.022 1.088a.093.093 0 0 1-.089.088l-1.139.004a.09.09 0 0 0-.087.088v3.447c0 .049-.039.09-.087.092l-1.227.07a.08.08 0 0 1-.088-.082zm2.834-2.379c0-1.918 1.321-2.482 2.416-2.482s2.339.73 2.339 2.316c0 1.9-1.383 2.482-2.416 2.482-1.033.001-2.339-.724-2.339-2.316zm5.139-.115c0-1.746 1.166-2.238 2.162-2.238s2.129.664 2.129 2.107c0 1.729-1.259 2.26-2.198 2.26s-2.093-.68-2.093-2.129zm7.259 1.711a.175.175 0 0 1-.139-.064l-1.187-1.631c-.029-.039-.053-.031-.053.018v1.67c0 .047-.039.09-.086.092l-1.052.061a.082.082 0 0 1-.087-.082l.039-3.842c0-.047.039-.086.088-.084l.881.02a.2.2 0 0 1 .137.074l1.293 1.902c.027.041.051.033.051-.014l.032-1.846a.087.087 0 0 1 .089-.086l.963.029c.047 0 .085.041.083.09l-.138 3.555a.097.097 0 0 1-.091.092l-.823.046zM16.258 8.23l.724-.014s.47.018.47-.434c0-.357-.411-.33-.411-.33l-.782.008a.09.09 0 0 0-.088.088v.598a.083.083 0 0 0 .087.084zM16.229 10.191h.99c.024 0 .35-.051.35-.404 0-.293-.229-.402-.441-.398l-.898.029a.089.089 0 0 0-.087.09v.596a.086.086 0 0 0 .086.087z"/></svg></div>
+  <h1 id="msg">Opening WEBTOON…</h1>
+  <p id="hint">If WEBTOON doesn't open, tap the button.</p>
+  <div class="spin" aria-hidden="true"></div>
+  <a class="go" id="go" href="#">Open in the WEBTOON app</a>
+  <a class="back" href="anime/">Back to Anime</a>
+</main>
+<script>
+// Alert Watch: hands a series number to the WEBTOON app, since LINE only makes https:// links tappable.
+const q = new URLSearchParams(location.search), t = q.get("t") || "", e = q.get("e") || "";
+if (/^\d{1,9}$/.test(t) && /^\d{0,6}$/.test(e)) {  // numbers only, so this page can't be used to open anything else
+  const app = e ? "linewebtoon://viewer/webtoon?titleNo=" + t + "&episodeNo=" + e  // that episode
+                : "linewebtoon://episodeList/webtoon?titleNo=" + t;                   // the series' episode list
+  document.getElementById("go").href = app;
+  location.href = app;
+} else {
+  document.getElementById("card").classList.add("bad"); document.getElementById("msg").textContent = "Missing or invalid series number."; document.getElementById("hint").textContent = "This link is broken. Open it again from the LINE card.";
+}
+// once the app has taken over, close this page: as it hides, and again on coming back (some browsers only allow it then).
+// A browser that won't let a page close itself (LINE's own browser) keeps it, now showing that it's done.
+let left = false;
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { left = true; window.close(); return; }
+  if (!left) return;
+  window.close();
+  document.getElementById("card").classList.add("done");
+  document.getElementById("msg").textContent = "Opened in WEBTOON";
+  document.getElementById("hint").textContent = "You can close this page.";
+  document.getElementById("go").textContent = "Open again";
+});
+</script>
+</body>
+</html>

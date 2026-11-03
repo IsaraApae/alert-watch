@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F1 Live</title>
+<meta name="robots" content="noindex">
+<script>
+  // The F1 Live page moved to its own site. Older LINE cards still link here: send them on
+  // (?replay=KEY to that replay, anything else to the Live tab).
+  (function () {
+    var q = new URLSearchParams(location.search), key = q.get("replay");
+    location.replace("https://isaraapae.github.io/f1-live/" + (key && /^\d+$/.test(key) ? "?replay=" + key : "?live"));
+  })();
+</script>
+<style>body { margin: 0; background: #0b0b10; color: #f2f2f6; font: 15px/1.5 system-ui, sans-serif; display: grid; place-items: center; min-height: 100vh; } a { color: #ff4d4d; }</style>
+</head>
+<body>
+<p>F1 Live has moved to <a href="https://isaraapae.github.io/f1-live/?live">isaraapae.github.io/f1-live</a>.</p>
+</body>
+</html>

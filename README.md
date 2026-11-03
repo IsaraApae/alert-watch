@@ -30,7 +30,7 @@ Anime alerts use the time the **Thai-sub** episode comes out (never dubbed, neve
 
 ## F1 Live
 
-The F1 site moved to its own repo, [IsaraApae/f1-live](https://github.com/IsaraApae/f1-live), published at https://isaraapae.github.io/f1-live/. The LINE cards link there: "Open F1 Live" and the menu's **F1 Live** button to `?live` (its Live tab), "Watch replay" to `?replay=<session key>`. The old address, `f1.html` on this repo's `gh-pages` branch, now forwards to the new site, so older cards still work.
+The F1 site moved to its own repo, [IsaraApae/f1-live](https://github.com/IsaraApae/f1-live), published at https://isaraapae.github.io/f1-live/. The LINE cards link there: "Open F1 Live" and the menu's **F1 Live** button to `?live` (its Live tab), "Watch replay" to `?replay=<session key>`. The old address, `f1.html` in this repo's website (`site/`), now forwards to the new site, so older cards still work.
 
 ## Live session card
 
@@ -108,8 +108,8 @@ You can also edit the files directly:
   - **sites** checks which anime sources GitHub can read right now (animegojo, suba-anime, animeruka and its episode feed).
 - `python3 watch.py test` runs the self-checks.
 - [line/Code.gs](line/Code.gs) is the LINE command webhook. It runs on Google Apps Script with these script properties: `LINE_TOKEN`, `GITHUB_TOKEN`, `OWNER_ID`. After you change it, redeploy it with **Manage deployments → New version**.
-- The `gh-pages` branch holds the website:
-  - `index.html`;
+- The `site/` folder holds the website. `.github/workflows/pages.yml` publishes it to GitHub Pages whenever it changes (in **Settings → Pages** the source is **GitHub Actions**):
+  - `index.html`, which forwards to `anime/` (the anime site);
   - `w.html`, which opens a link in the WEBTOON app;
   - `b.html`, which opens a link in Brave;
   - `covers/`;

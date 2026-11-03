@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F0F11" media="(prefers-color-scheme: dark)">
+<title>Alert Watch Anime</title>
+<link rel="preconnect" href="https://raw.githubusercontent.com" crossorigin>
+<link rel="preconnect" href="https://s4.anilist.co">
+<link rel="icon" href="../favicon.svg?v=2" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png?v=2" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png?v=2">
+<link rel="icon" href="../icon-192.png?v=2" type="image/png" sizes="192x192">
+<link rel="manifest" href="../manifest.webmanifest?v=2">
+<script>try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<style>
+/* The ป้าคีน look: a plain background, solid cards with soft shadows, a large title and a floating menu at the bottom.
+   Views: next episode (countdown, then today and the next six days), a Monday-to-Sunday timetable, and what aired this past week. */
+:root {
+  --bg: #F5F5F7;  /* one solid colour: Safari colours its top and bottom bars from it (also the theme-color metas) */
+  --card: #FFFFFF;
+  --menu: #FFFFFF;
+  --menu-edge: #0000000A;
+  --menu-shadow: 0 1px 2px #0000000F, 0 12px 32px -10px #00000040;
+  --fill: #7676801A;
+  --tint: #FF696126;
+  --text: #17171A;
+  --text-2: #6B6B73;
+  --hairline: #3C3C4326;
+  --accent: #C24A44;
+  --menu-on: #FF6961;
+  --shadow: 0 1px 2px #0000000A, 0 10px 28px -14px #00000029;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Sukhumvit Set", "Thonburi", "Noto Sans Thai", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F0F11; --card: #1C1C1F; --menu: #2A2A2E; --menu-edge: #FFFFFF14; --menu-shadow: 0 12px 32px -8px #000000CC;
+    --fill: #7676803D; --text: #F2F2F7; --text-2: #A1A1A8; --hairline: #54545899; --accent: #FF6961; --shadow: 0 10px 28px -14px #000000B3;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F0F11; --card: #1C1C1F; --menu: #2A2A2E; --menu-edge: #FFFFFF14; --menu-shadow: 0 12px 32px -8px #000000CC;
+  --fill: #7676803D; --text: #F2F2F7; --text-2: #A1A1A8; --hairline: #54545899; --accent: #FF6961; --shadow: 0 10px 28px -14px #000000B3;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }  /* sections set display: grid, which would otherwise override hiding */
+html { -webkit-text-size-adjust: 100%; background: var(--bg); }
+body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font: 17px/1.45 var(--font); -webkit-font-smoothing: antialiased; }
+::selection { background: var(--tint); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+a { color: var(--accent); }
+
+.page {
+  max-width: 640px; margin: 0 auto; padding-inline: 16px; display: grid; gap: 12px;
+  padding-block: calc(env(safe-area-inset-top, 0px) + 28px) calc(env(safe-area-inset-bottom, 0px) + 84px);
+}
+section { display: grid; gap: 12px; scroll-margin-top: 90px; }
+.press { transition: transform 0.35s var(--ease); }
+.press:active { transform: scale(0.94); }
+
+header.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-inline: 4px; }
+h1 { margin: 0; font-size: 34px; line-height: 1.15; font-weight: 700; letter-spacing: -.02em; }
+.sub { margin: 2px 0 0; font-size: 15px; color: var(--text-2); }
+svg.ico { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.round {
+  flex: none; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: .5px solid var(--menu-edge); border-radius: 50%;
+  background: var(--card); color: var(--text); box-shadow: var(--shadow); cursor: pointer;
+}
+.round svg { width: 22px; height: 22px; }
+
+.label { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 14px 4px -4px; font-size: 13px; color: var(--text-2); }
+.label b { font-size: 17px; font-weight: 600; color: var(--text); }
+
+.card { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 18px 20px; min-width: 0; }
+.card.list { padding: 0; overflow: hidden; }
+.cover { object-fit: cover; background: var(--fill); flex: none; width: 44px; height: 60px; border-radius: 12px; }
+.meta { font-size: 13px; color: var(--text-2); }
+
+/* the top card: one big number, then tinted panels */
+.hero { padding: 18px 10px 10px; }
+.hero .head { padding: 0 10px; }
+.hero .cap { font-size: 15px; color: var(--text-2); }
+.hero .big { font-size: 40px; line-height: 1.15; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.hero .show { display: flex; gap: 12px; align-items: center; padding: 12px 10px 14px; }
+.hero .name { font-size: 17px; font-weight: 600; line-height: 1.25; text-wrap: balance; }
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.split > div { background: var(--fill); border-radius: 16px; padding: 10px 12px; min-width: 0; }
+.split span { display: block; font-size: 13px; color: var(--text-2); }
+.split b { display: block; font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+
+/* list rows */
+.row { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 20px; position: relative; }
+.row + .row::before { content: ""; position: absolute; top: 0; left: 20px; right: 20px; border-top: 0.5px solid var(--hairline); }
+.row .info { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.row .name { font-weight: 500; font-size: 17px; line-height: 1.25; overflow-wrap: anywhere; }
+.row .side { text-align: right; display: grid; gap: 4px; justify-items: end; font-variant-numeric: tabular-nums; }
+.time { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.until { font-size: 13px; color: var(--text-2); white-space: nowrap; }
+.watch {
+  display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 12px; border-radius: 999px;
+  background: var(--tint); color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 600;
+}
+.watch svg { width: 15px; height: 15px; }
+.empty { margin: 0; padding: 14px 20px; font-size: 15px; color: var(--text-2); }
+.primary { border: 0; border-radius: 999px; min-height: 44px; padding: 0 20px; cursor: pointer; background: linear-gradient(135deg, #FF6961, #C24A44); color: #fff; font: 600 16px var(--font); }
+
+/* content fades into --bg behind the menu, solid over the safe area: since this layer touches the bottom edge, iPhone
+   Safari paints about that much (its floating toolbar is inside the safe area) in theme-color (= --bg), so the strip
+   carries on from the fade instead of the list showing through behind the menu and the address bar */
+.fade-bottom { position: fixed; z-index: 2; left: 0; right: 0; bottom: 0; height: calc(env(safe-area-inset-bottom, 0px) + 68px); pointer-events: none;
+  background: linear-gradient(transparent, var(--bg) calc(100% - 12px - env(safe-area-inset-bottom, 0px))); }
+
+/* the floating menu at the bottom */
+.dock { position: fixed; z-index: 3; left: 0; right: 0; bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) - 14px));  /* low, just clear of the home indicator */
+  display: flex; justify-content: center; padding: 0 16px; pointer-events: none; }
+.tabs {
+  pointer-events: auto; width: 100%; max-width: 340px; display: grid; grid-template-columns: repeat(3, 1fr); padding: 4px; border-radius: 999px;
+  background: var(--menu); border: .5px solid var(--menu-edge); box-shadow: var(--menu-shadow);
+}
+.tabs a { display: grid; justify-items: center; gap: 1px; padding: 6px 0 5px; border-radius: 999px; color: var(--text); text-decoration: none; font-size: 11px; font-weight: 500; }
+.tabs a[aria-current="page"] { color: var(--menu-on); font-weight: 600; }
+.tabs svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+@media (prefers-reduced-motion: reduce) {
+  .press, .press:active { transition: none; transform: none; }
+}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="top">
+    <div>
+      <h1>Anime</h1>
+      <p class="sub" id="sub">Loading the schedule…</p>
+    </div>
+    <button type="button" class="round press" id="look"></button>
+  </header>
+
+  <section id="next-up" aria-label="Next episode">
+    <div class="card" id="next"><p class="meta" style="margin:0">Loading the schedule…</p></div>
+  </section>
+
+  <section id="week" aria-label="Schedule"></section>
+</main>
+
+<div class="fade-bottom" aria-hidden="true"></div>
+<div class="dock"><nav class="tabs" aria-label="View">
+  <a href="./" class="press" data-view="next"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Next</span></a>
+  <a href="?v=week" class="press" data-view="week"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Timetable</span></a>
+  <a href="?v=aired" class="press" data-view="aired"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg><span>Aired</span></a>
+</nav></div>
+
+<script>
+// Data comes from schedule.json, which the Alert Watch cloud job rewrites whenever the schedule changes.
+const DATA = "https://raw.githubusercontent.com/IsaraApae/alert-watch/main/schedule.json";
+const TZ = "Asia/Bangkok";
+const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" });
+const hhmm = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
+const dateLong = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, weekday: "short", day: "numeric", month: "short" });
+const weekdayLong = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, weekday: "long" });
+const dayDate = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, day: "numeric", month: "short" });
+const PLAY = '<svg class="ico" viewBox="0 0 24 24"><path d="M8 5.5v13l10-6.5z"/></svg>';
+
+let shows = [], episodes = [], selected = null;
+
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const pad = n => String(n).padStart(2, "0");
+const epText = (ep, total, end) => typeof ep === "string" ? `Special · EP ${ep}`  // specials: "0", "13.5"
+  : `EP ${pad(ep)}` + (end ? `-${pad(end)}` : "") + (total ? `/${pad(total)}` : "");  // end: a batch released together, "EP 01-10/10"
+// episodes of a show released at the same moment (a whole Netflix season) are one row: "EP 01-10"
+const together = eps => eps.reduce((out, e) => {
+  const last = out[out.length - 1];
+  if (last && last.at === e.at && typeof e.ep === "number" && typeof last.ep === "number" && e.ep === (last.epEnd || last.ep) + 1) {
+    last.epEnd = e.ep; last.watch = last.watch || e.watch;
+  } else out.push({ ...e });
+  return out;
+}, []);
+const on = (show, e) => (e && e.where) || show.where ? ` · ${(e && e.where) || show.where}` : "";  // where to watch: Netflix, Bilibili, Muse Thailand; suba-anime only on episodes found there
+
+function parts(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return { d: Math.floor(s / 86400), h: Math.floor(s / 3600) % 24, m: Math.floor(s / 60) % 60, s: s % 60 };
+}
+function until(at) {
+  const ms = at - Date.now();
+  if (ms <= 0) return "Aired";
+  const p = parts(ms);
+  if (p.d) return `in ${p.d}d ${p.h}h`;
+  if (p.h) return `in ${p.h}h ${pad(p.m)}m`;
+  return `in ${p.m}m ${pad(p.s)}s`;
+}
+
+function cover(show, cls, eager) {
+  const img = el("img", "cover " + cls);
+  img.alt = ""; img.loading = eager ? "eager" : "lazy"; img.decoding = "async";
+  if (show.cover) img.src = show.cover;
+  return img;
+}
+function watchLink(href) {
+  const a = el("a", "watch press"); a.href = href; a.target = "_blank"; a.rel = "noopener";
+  a.innerHTML = PLAY; a.append("Watch"); a.setAttribute("aria-label", "Watch the Thai-sub episode");
+  return a;
+}
+
+function renderNext() {
+  const box = document.getElementById("next");
+  box.replaceChildren();
+  const next = episodes.find(e => e.at > Date.now());
+  box.classList.toggle("hero", !!next);
+  if (!next) { box.append(el("p", "meta", "No upcoming episodes in the schedule yet.")); return; }
+  const head = el("div", "head"), count = el("div", "big");
+  count.id = "count"; count.dataset.at = next.at; count.setAttribute("role", "timer"); count.setAttribute("aria-label", "Time until it airs");
+  head.append(el("div", "cap", "Next episode in"), count);
+  const show = el("div", "show"), info = el("div", "info");
+  info.append(el("div", "name", next.show.name), ...(on(next.show, next) ? [el("div", "meta", on(next.show, next).slice(3))] : []));
+  show.append(cover(next.show, "", true), info);
+  const split = el("div", "split");
+  for (const [k, v] of [["Episode", epText(next.ep, next.show.total, next.epEnd)], [`Airs ${dateLong.format(next.at).replace(",", "")}`, hhmm.format(next.at)]]) {
+    const d = el("div"); d.append(el("span", null, k), el("b", null, v)); split.append(d);
+  }
+  box.append(head, show, split);
+  tickNext();
+}
+function tickNext() {
+  const c = document.getElementById("count");
+  if (!c) return;
+  const ms = Number(c.dataset.at) - Date.now();
+  if (ms <= 0) { renderAll(); return; }
+  const p = parts(ms);
+  c.textContent = `${p.d ? p.d + "d " : ""}${pad(p.h)}:${pad(p.m)}:${pad(p.s)}`;
+}
+
+// ?v=week opens the Monday-to-Sunday timetable (the LINE menu's right button), ?v=aired the past week; anything else opens the next-episode view
+const asked = new URLSearchParams(location.search).get("v");
+let VIEW = asked === "week" || location.hash === "#week" ? "week" : asked === "aired" ? "aired" : "next";
+const WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+function episodeRow(e) {
+  const row = el("div", "row");
+  const info = el("div", "info");
+  info.append(el("div", "name", e.show.name), el("div", "meta", epText(e.ep, e.show.total, e.epEnd) + on(e.show, e)));
+  const side = el("div", "side");
+  const u = el("div", "until" + (e.at <= Date.now() ? " aired" : ""), until(e.at)); u.dataset.at = e.at;
+  side.append(el("div", "time", hhmm.format(e.at)), u);
+  if (e.watch && e.at <= Date.now()) side.append(watchLink(e.watch));
+  row.append(cover(e.show, ""), info, side);
+  return row;
+}
+function group(box, title, today, rows, emptyText) {
+  const label = el("p", "label"); label.append(el("b", null, title));
+  if (rows.length) label.append(el("span", null, rows.length === 1 ? "1 episode" : `${rows.length} episodes`));
+  const card = el("div", "card list");
+  if (rows.length) rows.forEach(r => card.append(r)); else card.append(el("p", "empty", emptyText));
+  box.append(label, card);
+}
+function renderDays() {  // next-episode view: today and the six days after it (2 Oct -> 8 Oct), under the countdown
+  const box = document.getElementById("week");
+  box.replaceChildren();
+  for (let i = 0; i < 7; i++) {
+    const t = Date.now() + i * 86400000, key = dayKey.format(t);
+    const name = i === 0 ? "Today" : i === 1 ? "Tomorrow" : weekdayLong.format(t);
+    group(box, `${name} · ${dayDate.format(t)}`, false, episodes.filter(e => dayKey.format(e.at) === key).map(episodeRow), "No episodes");
+  }
+}
+function renderAired() {  // aired view: what's already out today, then the 6 days before, newest day first, to catch up
+  const box = document.getElementById("week");
+  box.replaceChildren();
+  const now = Date.now();
+  for (let i = 0; i <= 6; i++) {
+    const t = now - i * 86400000, key = dayKey.format(t);
+    const rows = episodes.filter(e => dayKey.format(e.at) === key && e.at <= now).map(episodeRow);
+    if (rows.length) group(box, `${i === 0 ? "Today" : i === 1 ? "Yesterday" : weekdayLong.format(t)} · ${dayDate.format(t)}`, false, rows, "");
+  }
+  if (!box.children.length) { const c = el("div", "card"); c.append(el("p", "meta", "Nothing aired this past week.")); box.append(c); }
+}
+function renderTimetable() {  // timetable view: each show under the weekday it airs, Monday to Sunday
+  const box = document.getElementById("week");
+  box.replaceChildren();
+  const now = Date.now(), today = weekdayLong.format(now);
+  const slots = Object.fromEntries(WEEK.map(d => [d, []]));
+  const undated = [];
+  for (const s of shows) {
+    const next = s.eps.find(e => e.at > now), ref = next || [...s.eps].reverse()[0];
+    if (!next) { undated.push(s); continue; }
+    slots[weekdayLong.format(ref.at)].push({ s, next });
+  }
+  for (const day of WEEK) {
+    const rows = slots[day].sort((a, b) => hhmm.format(a.next.at).localeCompare(hhmm.format(b.next.at))).map(({ s, next }) => {
+      const row = el("div", "row");
+      const info = el("div", "info");
+      info.append(el("div", "name", s.name), el("div", "meta", `Next ${epText(next.ep, s.total, next.epEnd)} · ${dayDate.format(next.at)}${on(s, next)}`));
+      const side = el("div", "side");
+      const u = el("div", "until", until(next.at)); u.dataset.at = next.at;
+      side.append(el("div", "time", hhmm.format(next.at)), u);
+      row.append(cover(s, ""), info, side);
+      return row;
+    });
+    group(box, day === today ? `${day} · Today` : day, day === today, rows, "Nothing airs");
+  }
+  if (undated.length) {
+    group(box, "No date yet", false, undated.map(s => {
+      const row = el("div", "row"); const info = el("div", "info");
+      info.append(el("div", "name", s.name), el("div", "meta", "Next episode not announced"));
+      row.append(cover(s, ""), info); return row;
+    }), "");
+  }
+}
+let season = "";
+function updateHeader() {
+  document.querySelector("h1").textContent = { next: "Anime", week: "Timetable", aired: "Aired" }[VIEW];
+  document.getElementById("sub").textContent = `${season ? season + " · " : ""}${shows.length} shows`;
+  document.querySelectorAll("[data-view]").forEach(a => a.setAttribute("aria-current", a.dataset.view === VIEW ? "page" : "false"));
+}
+document.querySelectorAll("[data-view]").forEach(a => a.onclick = ev => {  // switch views in place; the address changes so a reload keeps the view
+  ev.preventDefault();
+  VIEW = a.dataset.view;
+  history.replaceState(null, "", VIEW === "next" ? location.pathname : "?v=" + VIEW);
+  updateHeader(); renderAll(); window.scrollTo(0, 0);
+});
+function renderAll() {
+  document.getElementById("next-up").hidden = VIEW !== "next";
+  if (VIEW === "week") renderTimetable(); else if (VIEW === "aired") renderAired(); else { renderNext(); renderDays(); }
+}
+
+function tick() {
+  tickNext();
+  document.querySelectorAll(".until[data-at]").forEach(u => {
+    const at = Number(u.dataset.at);
+    u.textContent = until(at);
+    u.classList.toggle("aired", at <= Date.now());
+  });
+}
+
+function show(data) {
+  shows = data.shows.map(s => ({ ...s, eps: together(s.episodes.map(e => ({ ...e, at: e.at * 1000 }))) }));
+  episodes = shows.flatMap(s => s.eps.map(e => ({ ...e, show: s }))).sort((a, b) => a.at - b.at);
+  season = ((shows.find(s => s.label) || {}).label || "").split(", ")[0];
+  updateHeader();
+  renderAll();
+}
+
+// the schedule from the last visit shows at once (kept on this phone), then the fresh one replaces it when it arrives
+const SAVED = "schedule";
+try { const saved = localStorage.getItem(SAVED); if (saved) show(JSON.parse(saved)); } catch (e) {}
+
+async function load() {
+  const sub = document.getElementById("sub");
+  try {
+    const r = await fetch(DATA + "?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    const text = await r.text();
+    show(JSON.parse(text));
+    try { localStorage.setItem(SAVED, text); } catch (e) {}
+  } catch (err) {
+    if (shows.length) return;   // the saved schedule is on screen: keep it, and try again at the next refresh
+    sub.textContent = "Couldn't load the schedule";
+    const box = document.getElementById("next");
+    box.replaceChildren(el("p", "meta", "The schedule didn't load. Check your connection, then try again."));
+    const b = el("button", "primary press", "Try again"); b.type = "button"; b.onclick = load; b.style.marginTop = "14px";
+    box.append(b);
+  }
+}
+
+// appearance: follow the device, Light or Dark; the round button at the top steps through them; remembered on this phone
+const LOOKS = {
+  device: '<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>',
+  light: '<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/></svg>',
+  dark: '<svg class="ico" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/></svg>'
+};
+function setTheme(choice) {
+  if (choice === "device") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = choice;
+  try { choice === "device" ? localStorage.removeItem("theme") : localStorage.setItem("theme", choice); } catch (e) {}
+  const b = document.getElementById("look");
+  b.innerHTML = LOOKS[choice]; b.dataset.choice = choice; b.setAttribute("aria-label", `Appearance: ${choice}. Tap to change.`);
+  stripColour();
+}
+// the browser's status bar strip follows theme-color. The two metas already give --bg for the device's light and dark
+// themes; only a chosen theme that differs from the device's needs them rewritten (both, so it beats the device's). Left
+// alone otherwise: iPhone Safari stops showing the site's icon once a script changes theme-color.
+const STRIP = [...document.querySelectorAll('meta[name="theme-color"]')].map(m => [m, m.content]);
+function stripColour() {
+  const chosen = document.documentElement.dataset.theme, device = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  const c = chosen && chosen !== device ? getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() : null;
+  for (const [m, original] of STRIP) { const want = c || original; if (m.content !== want) m.content = want; }
+  // Safari only looks at the strip colour again when a fixed layer changes, so swap the fade for a fresh copy
+  setTimeout(() => { const f = document.querySelector(".fade-bottom"); f.replaceWith(f.cloneNode()); }, 50);
+}
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", stripColour);
+document.getElementById("look").onclick = e => { const k = Object.keys(LOOKS); setTheme(k[(k.indexOf(e.currentTarget.dataset.choice) + 1) % k.length]); };
+setTheme(document.documentElement.dataset.theme || "device");
+
+load();
+setInterval(tick, 1000);
+setInterval(load, 5 * 60 * 1000);
+</script>
+</body>
+</html>

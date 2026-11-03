@@ -670,7 +670,7 @@ def cover(url):
         return None, None
 
 
-WEBTOON_APP = "https://isaraapae.github.io/alert-watch/w.html?t="  # redirect page on the gh-pages branch; opens linewebtoon://
+WEBTOON_APP = "https://isaraapae.github.io/alert-watch/w.html?t="  # redirect page in site/ (the website); opens linewebtoon://
 WEBTOON_SERIES_PAGE = {"6227", "9274", "6957"}  # Enrolling in the Transcendent Academy, Zodiac Girls, My Virtual God: cards open the series page, not the episode
 # manga-site series that are also on WEBTOON Thai (found by their Thai titles there). They're alerted when the manga site
 # posts a chapter, the fastest source the watcher can read. The card and the LINE list open the series in the WEBTOON app when
@@ -705,7 +705,7 @@ WEBTOON_TWINS = {"https://manga-lc.net/manga/the-regressed-son-of-a-duke-is-an-a
                  "https://manga-lc.net/manga/the-boy-of-death/": "https://www.webtoons.com/th/fantasy/ticket-hero/list?title_no=2433",
                  "https://manga-lc.net/manga/bad-guy/": "https://www.webtoons.com/th/comedy/badguy/list?title_no=2342",
                  "https://manga-lc.net/manga/reality-quest/": "https://www.webtoons.com/th/fantasy/reality-quest/list?title_no=4271"}
-BRAVE = "https://isaraapae.github.io/alert-watch/b.html?v="  # redirect page on the gh-pages branch; opens a YouTube video in Brave
+BRAVE = "https://isaraapae.github.io/alert-watch/b.html?v="  # redirect page in site/ (the website); opens a YouTube video in Brave
 
 
 def in_brave(youtube_link):
