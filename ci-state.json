@@ -4412,7 +4412,7 @@
   "11400",
   "11404"
  ],
- "anime_checked": 1793730323,
+ "anime_checked": 1793730621,
  "mal_totals": {
   "60601": [
    12,
@@ -5084,15 +5084,6 @@
   }
  },
  "f1_schedule": [
-  {
-   "session_key": 11399,
-   "session_name": "Practice 3",
-   "date_start": "2026-10-31T17:30:00+00:00",
-   "date_end": "2026-10-31T18:30:00+00:00",
-   "meeting_key": 1298,
-   "year": 2026,
-   "country_name": "Mexico"
-  },
   {
    "session_key": 11400,
    "session_name": "Qualifying",
