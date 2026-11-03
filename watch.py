@@ -1489,16 +1489,19 @@ def anime(state):
             if gojo_only(i):
                 continue  # wait for animegojo (handled above): no card at the scheduled time, no video link exists
             total = episode_total(m, state)
-            line = episode_line(ep + s["offset"], total and total + s["offset"], t, thai[i][0] if i in thai else None)
             label = f" ({season_label(m)})" if season_label(m) else ""  # e.g. "Fall 2026, TV"
             # if an official channel already has this episode up with Thai subs, the card opens that video; otherwise no link
             yt = s["yt"] and (youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t) or found_before(f"{i}:{ep}"))
             if not yt and i in thai and thai[i][0] in YT_CHANNELS.values() and now - t < 60 * 60:
                 continue  # its channel may post a little late: wait up to an hour so the alert is one card with the link
+            v = next((v for v in videos if v[1] == yt), None)
+            if v and v[2] > now:
+                continue  # a premiere that hasn't started (Ani-One, 3 Nov 2026: 22:40, not 22:30): the card comes when it plays
+            # the time it came out: the video's start when that's later than the slot (a later premiere or upload)
+            line = episode_line(ep + s["offset"], total and total + s["offset"], max(t, v[2]) if v else t, thai[i][0] if i in thai else None)
             if not yt and s["yt"]:  # the video may still come later: send a "Watch now" card then
                 pending[f"{i}:{ep}"] = t
             notify(f"New episode: {s['name']}{label}", line, line + (f"\n{yt}" if yt else ""), (m.get("coverImage") or {}).get("large"), yt and in_brave(yt))
-            v = next((v for v in videos if v[1] == yt), None)
             log[f"{i}:{ep}"] = {"title": s["name"], "episode": ep + s["offset"], "version": "ซับไทย", "first": v[3] if v else (thai[i][0] if i in thai else "Japanese TV"),
                                 "url": yt or None, "detected": now, "published": v and int(v[2]), "scheduled": int(t), "notified": True,
                                 **({} if v else {"order": "uncertain"})}  # no video: the platform's time is a schedule, not a verified release
@@ -1509,6 +1512,8 @@ def anime(state):
         i, ep = map(int, key.split(":"))
         s = shows.get(i)
         yt = s and (videos and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t) or found_before(key))
+        if yt and any(link == yt and p > now for _, link, p, _ in videos):
+            continue  # a premiere that hasn't started: "Watch now" once it plays
         if yt:
             where = next((ch for title, link, p, ch in videos if link == yt), "YouTube")
             line = f"Episode {ep + s['offset']:02d} with Thai subs is up on {where}"
