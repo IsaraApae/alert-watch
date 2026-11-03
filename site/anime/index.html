@@ -199,6 +199,11 @@ function until(at) {
 function cover(show, cls, eager) {
   const img = el("img", "cover " + cls);
   img.alt = ""; img.loading = eager ? "eager" : "lazy"; img.decoding = "async";
+  // schedule.json has AniList's "large" cover (230 px wide, in cover/medium/; some are 150 KB PNGs) for a 44 px box. AniList's
+  // "medium" one, the same picture 100 px wide in cover/small/, is about a quarter of the bytes and still sharp on screens up
+  // to 2x, so those take it; 3x screens keep the large one
+  if (show.cover && show.cover.includes("anilistcdn/media/anime/cover/medium/"))
+    img.srcset = `${show.cover.replace("/cover/medium/", "/cover/small/")} 2x, ${show.cover} 3x`;
   if (show.cover) img.src = show.cover;
   return img;
 }
