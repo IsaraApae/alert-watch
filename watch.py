@@ -466,8 +466,11 @@ def f1_sig(results):
 def f1_recheck(state, token, s, meeting):
     """A race or sprint whose card is out: if its result changes after the flag (penalties), a "Result updated" card with
     who moved, and for a race the championship cards again. A session sent before this was followed (Mexico 2026) is
-    only noted, so the first change from then on is what gets sent."""
+    only noted, so the first change from then on is what gets sent. A change is sent only once two checks in a row see it:
+    on 3 Nov 2026 OpenF1 gave Mexico's result from before the penalties for one check, which sent a card and then a
+    second one changing it back."""
     final = state.setdefault("f1_final", {})  # {session: f1_sig of the result as last sent}
+    seen = state.setdefault("f1_seen", {})  # {session: f1_sig of a changed result seen once, waiting for the next check}
     key = str(s["session_key"])
     results = json.loads(get(f"{OPENF1}/session_result?session_key={key}"))
     if not results:
@@ -475,6 +478,10 @@ def f1_recheck(state, token, s, meeting):
     sig = f1_sig(results)
     if key not in final or final[key] == sig:
         final[key] = sig
+        seen.pop(key, None)  # a one-check blip: nothing sent
+        return
+    if seen.get(key) != sig:
+        seen[key] = sig  # sent if the next check (5 minutes on) gives the same result
         return
     was = {n: (p, pts) for n, p, pts in final[key]}
     drivers = f1_drivers(s, {x["driver_number"] for x in results})
@@ -500,6 +507,7 @@ def f1_recheck(state, token, s, meeting):
         if not (line_send(token, card) or line_send(token, plain)):
             return  # tried again on the next check
     final[key] = sig
+    del seen[key]
     if session == "Race":
         f1_standings(state, token, s, meeting, again=True)
 
@@ -637,6 +645,8 @@ def f1(state):
     following = {str(s["session_key"]) for s in sessions}
     for k in [k for k in state.get("f1_final", {}) if k not in following]:  # out of the 3-day window: no longer followed
         del state["f1_final"][k]
+    for k in [k for k in state.get("f1_seen", {}) if k not in following]:
+        del state["f1_seen"][k]
 
 
 COVER_OVERRIDES = {  # series whose own cover LINE can't show (AVIF): a JPEG copy on the GitHub Pages site
