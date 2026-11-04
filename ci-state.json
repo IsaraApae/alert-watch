@@ -4464,7 +4464,7 @@
   "11400",
   "11404"
  ],
- "anime_checked": 1793829311,
+ "anime_checked": 1793829623,
  "mal_totals": {
   "60601": [
    12,
@@ -5135,15 +5135,6 @@
  },
  "f1_schedule": [
   {
-   "session_key": 11404,
-   "session_name": "Race",
-   "date_start": "2026-11-01T20:00:00+00:00",
-   "date_end": "2026-11-01T22:00:00+00:00",
-   "meeting_key": 1298,
-   "year": 2026,
-   "country_name": "Mexico"
-  },
-  {
    "session_key": 11405,
    "session_name": "Practice 1",
    "date_start": "2026-11-06T15:30:00+00:00",
@@ -5190,26 +5181,6 @@
   }
  ],
  "f1_meetings": {
-  "1298": {
-   "meeting_key": 1298,
-   "meeting_name": "Mexico City Grand Prix",
-   "meeting_official_name": "FORMULA 1 GRAN PREMIO DE LA CIUDAD DE MÉXICO 2026",
-   "location": "Mexico City",
-   "country_key": 8,
-   "country_code": "MEX",
-   "country_name": "Mexico",
-   "country_flag": "https://media.formula1.com/content/dam/fom-website/2018-redesign-assets/Flags%2016x9/mexico-flag.png",
-   "circuit_key": 65,
-   "circuit_short_name": "Mexico City",
-   "circuit_type": "Permanent",
-   "circuit_info_url": "https://api.multiviewer.app/api/v1/circuits/65/2026",
-   "circuit_image": "https://media.formula1.com/content/dam/fom-website/2018-redesign-assets/Track%20icons%204x3/Mexico%20carbon.png",
-   "gmt_offset": "-06:00:00",
-   "date_start": "2026-10-30T18:30:00+00:00",
-   "date_end": "2026-11-01T22:00:00+00:00",
-   "year": 2026,
-   "is_cancelled": false
-  },
   "1299": {
    "meeting_key": 1299,
    "meeting_name": "São Paulo Grand Prix",
@@ -5231,119 +5202,6 @@
    "is_cancelled": false
   }
  },
- "f1_final": {
-  "11404": [
-   [
-    1,
-    5,
-    10.0
-   ],
-   [
-    3,
-    1,
-    25.0
-   ],
-   [
-    5,
-    8,
-    4.0
-   ],
-   [
-    6,
-    9,
-    2.0
-   ],
-   [
-    10,
-    17,
-    0.0
-   ],
-   [
-    11,
-    16,
-    0.0
-   ],
-   [
-    12,
-    3,
-    15.0
-   ],
-   [
-    14,
-    null,
-    0.0
-   ],
-   [
-    16,
-    4,
-    12.0
-   ],
-   [
-    18,
-    null,
-    0.0
-   ],
-   [
-    23,
-    11,
-    0.0
-   ],
-   [
-    27,
-    14,
-    0.0
-   ],
-   [
-    30,
-    7,
-    6.0
-   ],
-   [
-    41,
-    null,
-    0.0
-   ],
-   [
-    43,
-    15,
-    0.0
-   ],
-   [
-    44,
-    2,
-    18.0
-   ],
-   [
-    50,
-    10,
-    1.0
-   ],
-   [
-    55,
-    12,
-    0.0
-   ],
-   [
-    63,
-    6,
-    8.0
-   ],
-   [
-    77,
-    null,
-    0.0
-   ],
-   [
-    81,
-    13,
-    0.0
-   ],
-   [
-    87,
-    null,
-    0.0
-   ]
-  ]
- },
+ "f1_final": {},
  "f1_seen": {}
 }
