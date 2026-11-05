@@ -28,8 +28,12 @@ jobs:
     runs-on: ubuntu-24.04  # what it ran on so far; ubuntu-latest is moving to 26.04
     timeout-minutes: 9  # a stuck run must end before the next one starts
     steps:
+      # the branch as it is when the job starts, not as it was when cron-job.org started the run: a run that waited for one
+      # still going (an F1 session's start, a YouTube video) must read the state that one saved, or it sends the same cards again
       - uses: actions/checkout@v5
-      # when the job began, so watch.py knows how long it can wait for an F1 session to start (the job has 9 minutes)
+        with:
+          ref: ${{ github.ref_name }}
+      # when the job began, so watch.py knows how long it can wait for an F1 session to start or a YouTube video (the job has 9 minutes)
       # (and the OpenVPN cache's name below: the runner's Ubuntu version and this month, so the packages are renewed monthly)
       - run: |
           echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
