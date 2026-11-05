@@ -78,6 +78,17 @@ def webtoon_chapters(url, state):
     return out
 
 
+def chapter_runs(nums):
+    """[340, 341, ..., 345] -> "Chapter 340-345": a run of chapters in a row as one range, gaps and parts (9.1) apart."""
+    runs = []
+    for n in sorted(nums):
+        if runs and n == runs[-1][1] + 1:
+            runs[-1][1] = n
+        else:
+            runs.append([n, n])
+    return "Chapter " + ", ".join(f"{a:g}" if a == b else f"{a:g}-{b:g}" for a, b in runs)
+
+
 def chapter_number(c):
     """'ซีซั่น-1/ตอนที่-226' -> 226.0, '9_1' -> 9.1: a manga site's chapter id as a number."""
     found = re.search(r"\d+(?:_\d+)?", re.sub(r"^ซี่?ซั่น-\d+/", "", c))
@@ -1671,7 +1682,7 @@ def main():
         if new:
             number = lambda c: real.get(c) or chapter_number(c)  # "ซีซั่น-1/ตอนที่-216" -> 216, WEBTOON's "EP.48" -> 47 (its title's)
             new = sorted(new, key=number)
-            shown = ", ".join(f"Chapter {number(c):g}" for c in new)[:200]
+            shown = chapter_runs(map(number, new))[:200]
             if "webtoons.com" in url:  # a cover card that opens the series straight in the WEBTOON app
                 eps = sorted(int(c[3:]) for c in new)  # WEBTOON's own numbers: the card opens the first new one, so you read in order
                 if no in WEBTOON_SERIES_PAGE:
@@ -1709,6 +1720,9 @@ if __name__ == "__main__":
              '<li data-num="{{number}}"><a href="#/chapter-{{number}}"></a><li data-num="7"> <div>\n<a href="https://x.net/a-7/">7</a>')
         want = {"ต-2": "https://x.net/manga/a/%e0%b8%95-2/", "7": "https://x.net/a-7/"}
         assert chapters("https://x.net/manga/a/", h) == want, chapters("https://x.net/manga/a/", h)
+        assert chapter_runs([343, 340, 341, 342, 344, 345]) == "Chapter 340-345"
+        assert chapter_runs([340, 341, 343, 9.1]) == "Chapter 9.1, 340-341, 343"
+        assert chapter_runs([216]) == "Chapter 216"
         rss = "<item><link>https://www.webtoons.com/th/x/ep7-a/viewer?title_no=1&amp;episode_no=7</link></item>"
         with mock.patch(__name__ + ".get", lambda u: rss if "/rss?title_no=1" in u and "://www." in u else ""):
             assert webtoon("https://m.webtoons.com/th/x/y/list?title_no=1") == {"EP.7": "https://www.webtoons.com/th/x/ep7-a/viewer?title_no=1&episode_no=7"}
