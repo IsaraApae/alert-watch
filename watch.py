@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Notify (macOS) when a watched manga page lists a chapter it didn't list last run."""
 import email.utils, html, json, os, re, shutil, subprocess, sys, threading, time, unicodedata, urllib.error, urllib.request
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote, unquote, urlparse
@@ -541,6 +541,7 @@ def f1_live_card(meeting, session, when, live):
 
 
 JOB_START = float(os.environ.get("JOB_START") or time.time())  # when this GitHub job began (watch.yml): it has 9 minutes in all
+CHECK_EVERY = 5 * 60  # how often cron-job.org starts a check (watch.yml)
 
 
 def f1_spare():
@@ -830,13 +831,15 @@ def youtube_videos():
     return VIDEOS[0].result()
 
 
-def read_youtube():
-    """[(title, link, published timestamp, channel)] for the official channels' newest uploads. With a YOUTUBE_KEY, from
-    YouTube's data service, current within seconds; otherwise (or if that fails) from the public feeds, which GitHub
-    can get as a copy hours old."""
+def read_youtube(channels=None):
+    """[(title, link, published timestamp, channel)] for the official channels' newest uploads (only those named in
+    `channels`, if given). With a YOUTUBE_KEY, from YouTube's data service, current within seconds; otherwise (or if
+    that fails) from the public feeds, which GitHub can get as a copy hours old."""
     out = []
     key = os.environ.get("YOUTUBE_KEY")
     for cid in YT_CHANNELS:
+        if channels is not None and YT_CHANNELS[cid] not in channels:
+            continue
         if key:
             try:
                 url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&maxResults=50&playlistId=UU{cid[2:]}&key={key}"
@@ -1329,10 +1332,12 @@ def complete_anime():
         print("completed anime:", "; ".join(done))
 
 
-def anime(state):
+def anime(state, meanwhile=lambda: None):
     """Notify when a show in anime.txt airs a new episode: the Japanese TV schedule (Syoboi Calendar, earliest channel)
     for TV shows, AniList's airing schedule for online-only ones. anime.txt: name | AniList id | TV-schedule id (0 = none)
-    | first episode number in the TV schedule | episodes before this AniList entry (added to the count)."""
+    | first episode number in the TV schedule | episodes before this AniList entry (added to the count).
+    The Muse/Ani-One cards go first; then `meanwhile` (the manga checks) runs, and only then the other sites, which wait
+    for the Thai VPN feed. Returns (youtube_check, what's still to come from the channels) for wait_for_youtube."""
     shows = anime_list()
     now = int(time.time())
     query = ("query($ids:[Int],$web:[Int],$a:Int,$b:Int){info:Page(perPage:50){media(id_in:$ids){id idMal episodes season seasonYear format coverImage{large}}}"
@@ -1366,14 +1371,84 @@ def anime(state):
     aired = {k: (release_time(t, thai[k[0]]) if k[0] in thai else t) for k, t in aired.items()}
     aired = {k: t for k, t in aired.items() if t >= now - 8 * 86400}  # the past week only (older episodes were alerted then)
     due = dict(aired)  # every episode due from a week ago to a week ahead: a number outside it is not trusted
-    aired = {k: t for k, t in aired.items() if t <= now}
     pending = state.setdefault("watch_later", {})  # episodes alerted before their Thai-sub video showed up: {key: release}
-    videos = youtube_videos() if not seed else []  # every check, for animegojo and the specials below
-    learn_thai_titles(shows, videos, due, thai)  # (new Thai names go into anime.txt and shows, before anything matches)
     log = state.setdefault("first_source", {})  # per episode: where it was first seen with Thai subs, link, times, alerted
     # YouTube's list of a channel's newest uploads doesn't always include the newest video (it depends on which server answers),
     # so a video found once, by an earlier check or the schedule, counts: {key: YouTube link or None}
     found_before = lambda key: ("https://www.youtube.com/watch?v=" + l[len(BRAVE):]) if (l := state.get("watch_links", {}).get(key, "")).startswith(BRAVE) else None
+
+    def youtube_check(videos):
+        """The cards that come from Muse and Ani-One, each sent once it's due: new episodes, "Watch now" and specials.
+        Returns (the episodes due by now that had no card yet, {what: (when, channel)} for what is still to come from
+        the channels): an episode due whose video isn't up yet (when it was due), a premiere (when it's scheduled to
+        play: its card waits until then) and an episode due later (when it's due). Run by the check, then again by
+        wait_for_youtube with newer readings of the channels."""
+        now = int(time.time())
+        learn_thai_titles(shows, videos, due, thai)  # (new Thai names go into anime.txt and shows, before anything matches)
+        later = {}
+        aired = {k: t for k, t in due.items() if t <= now}
+        new = sorted((t, i, ep) for (i, ep), t in aired.items() if f"{i}:{ep}" not in seen)
+        for t, i, ep in new:
+            if not seed:
+                s, m = shows[i], info.get(i, {})
+                if gojo_only(i):
+                    continue  # wait for animegojo (handled below): no card at the scheduled time, no video link exists
+                total = episode_total(m, state)
+                label = f" ({season_label(m)})" if season_label(m) else ""  # e.g. "Fall 2026, TV"
+                # if an official channel already has this episode up with Thai subs, the card opens that video; otherwise no link
+                yt = s["yt"] and (youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t) or found_before(f"{i}:{ep}"))
+                if not yt and i in thai and thai[i][0] in YT_CHANNELS.values() and now - t < 60 * 60:
+                    later[f"{i}:{ep}"] = (t, thai[i][0])
+                    continue  # its channel may post a little late: wait up to an hour so the alert is one card with the link
+                v = next((v for v in videos if v[1] == yt), None)
+                if v and v[2] > now:
+                    later[f"{i}:{ep}"] = (v[2], v[3])
+                    continue  # a premiere that hasn't started (Ani-One, 3 Nov 2026: 22:40, not 22:30): the card comes when it's scheduled to play
+                # the time it came out: the video's start when that's later than the slot (a later premiere or upload)
+                line = episode_line(ep + s["offset"], total and total + s["offset"], max(t, v[2]) if v else t, thai[i][0] if i in thai else None)
+                if not yt and s["yt"]:  # the video may still come later: send a "Watch now" card then
+                    pending[f"{i}:{ep}"] = t
+                notify(f"New episode: {s['name']}{label}", line, line + (f"\n{yt}" if yt else ""), (m.get("coverImage") or {}).get("large"), yt and in_brave(yt))
+                log[f"{i}:{ep}"] = {"title": s["name"], "episode": ep + s["offset"], "version": "ซับไทย", "first": v[3] if v else (thai[i][0] if i in thai else "Japanese TV"),
+                                    "url": yt or None, "detected": now, "published": v and int(v[2]), "scheduled": int(t), "notified": True,
+                                    **({} if v else {"order": "uncertain"})}  # no video: the platform's time is a schedule, not a verified release
+            seen.append(f"{i}:{ep}")
+        for (i, ep), t in due.items():  # due later: at its time, or its premiere's if the channel has one set for later
+            if t > now and not seed and not gojo_only(i) and f"{i}:{ep}" not in seen:
+                s = shows[i]
+                yt = s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
+                later[f"{i}:{ep}"] = (max([t] + [v[2] for v in videos if yt and v[1] == yt]), thai[i][0])
+        for key, t in list(pending.items()):
+            i, ep = map(int, key.split(":"))
+            s = shows.get(i)
+            yt = s and (videos and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t) or found_before(key))
+            premiere = next(((p, ch) for _, link, p, ch in videos if yt and link == yt and p > now), None)
+            if premiere:
+                later[key] = premiere
+                continue  # a premiere that hasn't started: "Watch now" once it plays
+            if yt:
+                where = next((ch for title, link, p, ch in videos if link == yt), "YouTube")
+                line = f"Episode {ep + s['offset']:02d} with Thai subs is up on {where}"
+                m = info.get(i, {})
+                notify(f"Watch now: {s['name']}", line, f"{line}\n{yt}", (m.get("coverImage") or {}).get("large"), in_brave(yt))
+            if yt or not s or now - t > 2 * 86400:  # sent, show removed, or no video within 2 days
+                del pending[key]
+        sent = state.setdefault("specials", [])  # links of specials already alerted
+        for i, n, link, published, ch in specials(videos, shows, now - 2 * 86400):
+            if link in sent:
+                continue
+            if published > now:  # a premiere: alert once it plays
+                later[link] = (published, ch)
+                continue
+            m = info.get(i, {})
+            line = f"Special episode {n}\n{ch} · {datetime.fromtimestamp(published, THAI):%d %b %Y %H:%M}"
+            notify(f"New special: {shows[i]['name']}", line, f"{line}\n{link}", (m.get("coverImage") or {}).get("large"), in_brave(link))
+            sent.append(link)
+        del sent[:-50]
+        return new, later
+
+    new, later = youtube_check(youtube_videos() if not seed else [])  # the run's one reading, shared with the schedule
+    meanwhile()  # before the other sites: they wait for the Thai VPN feed
     try:
         found = gojo_latest(get(GOJO + "/"), shows) if not seed else []
     except Exception as e:
@@ -1493,54 +1568,47 @@ def anime(state):
             log[f"{i}:{e}"] = {"title": s["name"], "episode": e + s["offset"], "version": "ซับไทย", "first": site, "url": on_site[e][0],
                                "detected": now, "published": on_site[e][1], "notified": True,
                                **({} if on_site[e][1] else {"order": "estimated"})}  # no upload time: the site's place in the race is estimated
-    new = sorted((t, i, ep) for (i, ep), t in aired.items() if f"{i}:{ep}" not in seen)
-    for t, i, ep in new:
-        if not seed:
-            s, m = shows[i], info.get(i, {})
-            if gojo_only(i):
-                continue  # wait for animegojo (handled above): no card at the scheduled time, no video link exists
-            total = episode_total(m, state)
-            label = f" ({season_label(m)})" if season_label(m) else ""  # e.g. "Fall 2026, TV"
-            # if an official channel already has this episode up with Thai subs, the card opens that video; otherwise no link
-            yt = s["yt"] and (youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t) or found_before(f"{i}:{ep}"))
-            if not yt and i in thai and thai[i][0] in YT_CHANNELS.values() and now - t < 60 * 60:
-                continue  # its channel may post a little late: wait up to an hour so the alert is one card with the link
-            v = next((v for v in videos if v[1] == yt), None)
-            if v and v[2] > now:
-                continue  # a premiere that hasn't started (Ani-One, 3 Nov 2026: 22:40, not 22:30): the card comes when it plays
-            # the time it came out: the video's start when that's later than the slot (a later premiere or upload)
-            line = episode_line(ep + s["offset"], total and total + s["offset"], max(t, v[2]) if v else t, thai[i][0] if i in thai else None)
-            if not yt and s["yt"]:  # the video may still come later: send a "Watch now" card then
-                pending[f"{i}:{ep}"] = t
-            notify(f"New episode: {s['name']}{label}", line, line + (f"\n{yt}" if yt else ""), (m.get("coverImage") or {}).get("large"), yt and in_brave(yt))
-            log[f"{i}:{ep}"] = {"title": s["name"], "episode": ep + s["offset"], "version": "ซับไทย", "first": v[3] if v else (thai[i][0] if i in thai else "Japanese TV"),
-                                "url": yt or None, "detected": now, "published": v and int(v[2]), "scheduled": int(t), "notified": True,
-                                **({} if v else {"order": "uncertain"})}  # no video: the platform's time is a schedule, not a verified release
-        seen.append(f"{i}:{ep}")
     for key in list(log)[:-300]:
         del log[key]
-    for key, t in list(pending.items()):
-        i, ep = map(int, key.split(":"))
-        s = shows.get(i)
-        yt = s and (videos and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t) or found_before(key))
-        if yt and any(link == yt and p > now for _, link, p, _ in videos):
-            continue  # a premiere that hasn't started: "Watch now" once it plays
-        if yt:
-            where = next((ch for title, link, p, ch in videos if link == yt), "YouTube")
-            line = f"Episode {ep + s['offset']:02d} with Thai subs is up on {where}"
-            m = info.get(i, {})
-            notify(f"Watch now: {s['name']}", line, f"{line}\n{yt}", (m.get("coverImage") or {}).get("large"), in_brave(yt))
-        if yt or not s or now - t > 2 * 86400:  # sent, show removed, or no video within 2 days
-            del pending[key]
-    sent = state.setdefault("specials", [])  # links of specials already alerted
-    for i, n, link, published, ch in specials(videos, shows, now - 2 * 86400):
-        if link not in sent and published <= now:  # a premiere: alert once it plays
-            m = info.get(i, {})
-            line = f"Special episode {n}\n{ch} · {datetime.fromtimestamp(published, THAI):%d %b %Y %H:%M}"
-            notify(f"New special: {shows[i]['name']}", line, f"{line}\n{link}", (m.get("coverImage") or {}).get("large"), in_brave(link))
-            sent.append(link)
-    del sent[:-50]
     print(f"anime: {len(shows)} watched, {len(new)} {'seeded' if seed else 'new'}, {len(pending)} waiting for a Thai-sub video")
+    return (youtube_check if not seed else None), later
+
+
+def wait_for_youtube(check, later):
+    """Keep the run going for what Muse and Ani-One are about to post, rather than leaving it to the next check up to 5
+    minutes later: an episode due whose video isn't up yet (on 29 Oct 2026 Ani-One's 19:30 video only showed in YouTube's
+    list at 19:50), a premiere (its card at the time it's scheduled to play) and an episode due before the next check
+    starts. The channels concerned are read again, every 5 seconds in the first minute after something was due and every
+    15 after that, and check (anime's youtube_check) sends each card as soon as it's due. Something due before the next
+    check is looked for until a minute past its time; the rest until 4.5 minutes into the job, when the next check takes
+    over. Never on the Mac, nor without YOUTUBE_KEY (the public feeds GitHub gets can be hours old)."""
+    if not check or not os.environ.get("LINE_TOKEN") or not os.environ.get("YOUTUBE_KEY"):
+        return
+    videos, read, began, waited = youtube_videos(), 0, time.time(), set()
+    until = lambda when: max(JOB_START + CHECK_EVERY - 30, when + 60)
+    while True:
+        now = time.time()
+        look = {k: (w, ch) for k, (w, ch) in later.items() if w <= JOB_START + CHECK_EVERY and now < until(w)}
+        if not look:
+            break
+        recent = any(now - 60 <= w <= now for w, _ in look.values())
+        at = max(min(w for w, _ in look.values()), read + (5 if recent else 15))
+        if at >= max(until(w) for w, _ in look.values()):
+            break
+        waited |= set(look)
+        time.sleep(max(0, at - now) + 0.2)
+        channels = {ch for w, ch in look.values() if w <= time.time()}
+        fresh = read_youtube(channels)
+        read = time.time()
+        videos = [v for v in videos if v[3] not in channels] + fresh
+        later = check(videos)[1]
+    if waited:
+        done = Future()
+        done.set_result(videos)
+        VIDEOS[:] = [done]  # the schedule (Watch links on the website) gets the newest reading too
+        left = sorted(k for k in waited if k in later)
+        print(f"youtube: waited {time.time() - began:.0f}s for {', '.join(sorted(waited))}"
+              + (f"; still to come: {', '.join(left)}" if left else ""))
 
 
 def setup_richmenu():
@@ -1599,35 +1667,8 @@ def library(state):
         path.write_text(json.dumps({"manga": out}, ensure_ascii=False, indent=1))
 
 
-def main():
-    state = json.loads(STATE.read_text()) if STATE.exists() else {}
-    # the manga and WEBTOON pages, read in the background while the anime, F1 and schedule checks run (the loop below takes them)
-    urls = (HERE / "urls.txt").read_text().split()
-    twins = [WEBTOON_TWINS[u] for u in urls if u in WEBTOON_TWINS and re.search(r"title_no=(\d+)", WEBTOON_TWINS[u])[1] not in WEBTOON_WEEKLY]
-    # first in the queue: the uploads both the alerts and the schedule need, and Bilibili's week (slow, seconds)
-    if not VIDEOS:
-        VIDEOS.append(POOL.submit(read_youtube))
-    prefetch([BILIBILI_SCHEDULE])
-    prefetch([webtoon_rss(u) if "webtoons.com" in u else u for u in urls] + [webtoon_rss(t) for t in twins])
-
-    def run_f1():
-        try:
-            f1(state)
-        except Exception as e:  # F1 results must never stop the other alerts
-            print(f"FAIL f1: {e}", file=sys.stderr)
-    # F1 alongside the anime check, which mostly waits for the Thai VPN feed; it touches only its own f1_* keys
-    f1_thread = threading.Thread(target=run_f1)
-    f1_thread.start()
-    try:
-        complete_anime()
-    except Exception as e:  # a short entry still works with AniList times, so this must never stop the alerts
-        print(f"FAIL completing anime: {e}", file=sys.stderr)
-    anime(state)
-    f1_thread.join()
-    try:
-        schedule(state)
-    except Exception as e:  # the countdown page must never stop the alerts
-        print(f"FAIL schedule: {e}", file=sys.stderr)
+def manga(state, urls):
+    """The manga and WEBTOON alerts, from the pages main started reading in the background."""
     state.pop("webtoon_switched", None)  # left from the automatic switch, which is gone
     state.pop("webtoon_free", None)  # replaced by webtoon_app
     state.pop("webtoon_reach", None)  # replaced by chapter_labels
@@ -1705,6 +1746,42 @@ def main():
                 notify(f"New chapter: {title or name}", shown, text, image and quote(image, safe=":/%?=&"), links[new[0]])
         print(f"{name}: {len(found)} chapters, {len(new)} new")
         state[url] = sorted(set(found) | set(state.get(url, [])))
+
+
+def main():
+    state = json.loads(STATE.read_text()) if STATE.exists() else {}
+    # the manga and WEBTOON pages, read in the background while the anime and F1 checks start (manga() takes them)
+    urls = (HERE / "urls.txt").read_text().split()
+    twins = [WEBTOON_TWINS[u] for u in urls if u in WEBTOON_TWINS and re.search(r"title_no=(\d+)", WEBTOON_TWINS[u])[1] not in WEBTOON_WEEKLY]
+    # first in the queue: the uploads both the alerts and the schedule need, and Bilibili's week (slow, seconds)
+    if not VIDEOS:
+        VIDEOS.append(POOL.submit(read_youtube))
+    prefetch([BILIBILI_SCHEDULE])
+    prefetch([webtoon_rss(u) if "webtoons.com" in u else u for u in urls] + [webtoon_rss(t) for t in twins])
+
+    def run_f1():
+        try:
+            f1(state)
+        except Exception as e:  # F1 results must never stop the other alerts
+            print(f"FAIL f1: {e}", file=sys.stderr)
+    # F1 alongside the anime and manga checks and the wait for YouTube (it can wait minutes for a session to start, which
+    # must hold up no other alert); it touches only its own f1_* keys
+    f1_thread = threading.Thread(target=run_f1)
+    f1_thread.start()
+    try:
+        complete_anime()
+    except Exception as e:  # a short entry still works with AniList times, so this must never stop the alerts
+        print(f"FAIL completing anime: {e}", file=sys.stderr)
+    youtube, later = anime(state, lambda: manga(state, urls))  # manga between the YouTube cards and the VPN feed's wait
+    try:
+        wait_for_youtube(youtube, later)
+    except Exception as e:  # waiting must never cost the run its alerts' saved state
+        print(f"FAIL waiting for YouTube: {e}", file=sys.stderr)
+    f1_thread.join()
+    try:
+        schedule(state)
+    except Exception as e:  # the countdown page must never stop the alerts
+        print(f"FAIL schedule: {e}", file=sys.stderr)
     STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1))
     try:
         library(state)
@@ -1829,6 +1906,40 @@ if __name__ == "__main__":
         assert same_show("千歳くんはラムネ瓶のなか 2クール", "千歳くんはラムネ瓶のなか(第2クール)") and same_show("アオのハコ Season２", "アオのハコ Season2")
         assert same_show("佐々木とピーちゃん シーズン２", "佐々木とピーちゃん Season2")
         assert not same_show("ジョジョの奇妙な冒険 スティール・ボール・ラン", "ジョジョの奇妙な冒険")  # a franchise name alone isn't the show
+        # wait_for_youtube, on a fake clock with a fake channel: an Ani-One show's episode 5 due at T
+        T, clock, cards = 1793900000, [0.0], []
+        media = {"info": {"media": [{"id": 1, "episodes": 12, "coverImage": {"large": "https://x/c.jpg"}}]},
+                 "web": {"airingSchedules": [{"episode": 5, "airingAt": T, "media": {"id": 1}}]}}
+        vid = lambda start: ("Kurumi-chan ตอนที่ 5 [ซับไทย]", "https://www.youtube.com/watch?v=k5k5k5k5k5k", float(start), "Ani-One Thailand")
+
+        def sleep(s):
+            clock[0] += s
+
+        def check_at(start, listed, state):  # one check starting at `start`; listed(t): the channel's uploads at time t
+            clock[0] = start
+            first = Future()
+            first.set_result(listed(start))
+            with tempfile.TemporaryDirectory() as tmp, mock.patch(__name__ + ".HERE", Path(tmp)), mock.patch(__name__ + ".VIDEOS", [first]), \
+                    mock.patch(__name__ + ".JOB_START", start - 3), mock.patch(__name__ + ".anilist", lambda q, v: media), \
+                    mock.patch(__name__ + ".get", mock.Mock(side_effect=OSError)), mock.patch(__name__ + ".read_feed", mock.Mock(side_effect=OSError)), \
+                    mock.patch(__name__ + ".read_youtube", lambda channels=None: listed(clock[0])), \
+                    mock.patch(__name__ + ".notify", lambda title, msg, links, *a: cards.append((clock[0] - T, links))), \
+                    mock.patch.dict(os.environ, {"LINE_TOKEN": "x", "YOUTUBE_KEY": "y"}), mock.patch("builtins.print"), \
+                    mock.patch("time.time", lambda: clock[0]), mock.patch("time.sleep", sleep):
+                Path(tmp, "anime.txt").write_text("Kurumi | 1 | 0 | 1 | 0 | kurumi-chan\n")
+                Path(tmp, "thai_times.txt").write_text("1 | Ani-One Thailand | - | -\n")
+                wait_for_youtube(*anime(state, lambda: None))
+        st = {"anime": []}
+        check_at(T - 250, lambda t: [vid(T + 8)] if t >= T + 12 else [], st)  # the check before T; the video listed 12 s after T
+        assert len(cards) == 1 and 12 <= cards[0][0] <= 18 and cards[0][1].endswith("k5k5k5k5k5k"), cards
+        check_at(T + 50, lambda t: [vid(T + 8)], st)  # the next check: not sent again
+        assert len(cards) == 1, cards
+        cards.clear()
+        check_at(T - 200, lambda t: [vid(T + 60)], {"anime": []})  # a premiere at T+60: its card at that time, not before
+        assert len(cards) == 1 and 60 <= cards[0][0] < 61, cards
+        cards.clear()
+        check_at(T - 250, lambda t: [vid(T + 100)], {"anime": []})  # a premiere after the next check starts: that check's
+        assert cards == [], cards
         print("ok")
     elif sys.argv[1:] == ["ping"]:
         # test: one Webtoon card of each kind, built the same way as real alerts
