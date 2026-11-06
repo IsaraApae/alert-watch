@@ -3130,7 +3130,8 @@
   "213805:6",
   "212503:5",
   "210482:7",
-  "195516:6"
+  "195516:6",
+  "178083:6"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4342,6 +4343,16 @@
    "detected": 1793978417,
    "published": 1793978121,
    "notified": true
+  },
+  "178083:6": {
+   "title": "Tokyo Revengers Season 4",
+   "episode": 6,
+   "version": "ซับไทย",
+   "first": "animeruka",
+   "url": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-6/",
+   "detected": 1793985612,
+   "published": 1793985569,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4446,7 +4457,8 @@
   "213805:6": "https://animeruka.com/ep/koori-no-jouheki-season-2-ep-6/",
   "212503:5": "https://isaraapae.github.io/alert-watch/b.html?v=tCyyGcYUdQE",
   "210482:7": "https://animeruka.com/ep/steel-ball-run-jojos-bizarre-adventure-ep-8/",
-  "195516:6": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-6/"
+  "195516:6": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-6/",
+  "178083:6": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-6/"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4532,7 +4544,7 @@
   "11404",
   "11405"
  ],
- "anime_checked": 1793985313,
+ "anime_checked": 1793985612,
  "mal_totals": {
   "60601": [
    12,
