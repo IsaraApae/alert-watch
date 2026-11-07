@@ -3134,7 +3134,9 @@
   "212503:5",
   "210482:7",
   "195516:6",
-  "178083:6"
+  "178083:6",
+  "209872:6",
+  "191656:6"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4356,6 +4358,27 @@
    "detected": 1793985612,
    "published": 1793985569,
    "notified": true
+  },
+  "209872:6": {
+   "title": "Ranma 1/2 Season 3",
+   "episode": 6,
+   "version": "ซับไทย",
+   "first": "animeruka",
+   "url": "https://animeruka.com/ep/ranma-%c2%bd-season-3-ep-6/",
+   "detected": 1794072013,
+   "published": 1794071774,
+   "notified": true
+  },
+  "191656:6": {
+   "title": "Even the Student Council Has Its Holes!",
+   "episode": 6,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/3211/#ep-6",
+   "detected": 1794072013,
+   "published": null,
+   "notified": true,
+   "order": "estimated"
   }
  },
  "watch_links": {
@@ -4461,7 +4484,9 @@
   "212503:5": "https://isaraapae.github.io/alert-watch/b.html?v=tCyyGcYUdQE",
   "210482:7": "https://animeruka.com/ep/steel-ball-run-jojos-bizarre-adventure-ep-8/",
   "195516:6": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-6/",
-  "178083:6": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-6/"
+  "178083:6": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-6/",
+  "191656:6": "https://animegojos.com/list/3211/#ep-6",
+  "209872:6": "https://animeruka.com/ep/ranma-%c2%bd-season-3-ep-6/"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4551,7 +4576,7 @@
   "11406",
   "11407"
  ],
- "anime_checked": 1794071712,
+ "anime_checked": 1794072013,
  "mal_totals": {
   "60601": [
    12,
