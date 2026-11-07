@@ -3136,7 +3136,8 @@
   "195516:6",
   "178083:6",
   "209872:6",
-  "191656:6"
+  "191656:6",
+  "202250:6"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4379,6 +4380,17 @@
    "published": null,
    "notified": true,
    "order": "estimated"
+  },
+  "202250:6": {
+   "title": "Magic Repo Man",
+   "episode": 6,
+   "version": "ซับไทย",
+   "first": "Muse Thailand",
+   "url": "https://www.youtube.com/watch?v=ApTAib-ab0o",
+   "detected": 1794077700,
+   "published": 1794077700,
+   "scheduled": 1794074400,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4578,7 +4590,7 @@
   "11407",
   "11408"
  ],
- "anime_checked": 1794077112,
+ "anime_checked": 1794077413,
  "mal_totals": {
   "60601": [
    12,
