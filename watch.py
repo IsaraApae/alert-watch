@@ -294,10 +294,13 @@ def f1_drivers(s, wanted=()):
     return drivers
 
 
-# the F1 Live site's light look: white panels on light grey, team-colour driver tags (car number on the team colour, the
-# name tinted with it)
-F1C = {"bg": "#EEF0F4", "panel": "#FFFFFF", "row": "#F5F6F9", "line": "#E4E6EC", "text": "#111118", "dim": "#6B6F7C",
-       "red": "#E10600", "green": "#16A34A", "purple": "#9333EA"}
+# the F1 Live site's light look (IsaraApae/f1-live, css/app.css and css/calendar.css): its page grey, white cards, rows on
+# its "row" grey with the team's colour as a 4px stripe, a colour per kind of session, red for its main buttons and for
+# whoever dropped back
+F1C = {"bg": "#EEF0F4", "panel": "#FFFFFF", "panel2": "#F5F6F9", "row": "#FAFBFC", "line": "#E4E6EC", "chip": "#ECEEF3",
+       "text": "#111118", "dim": "#6B6F7C", "red": "#E10600", "red_ink": "#D10500", "green": "#16A34A", "purple": "#9333EA",
+       "amber": "#D97706", "blue": "#2563EB"}
+F1_MAX = 29000  # LINE takes at most 30 KB a card: a card bigger than this is built again with less in each row
 
 
 def f1_mix(a, b, share):
@@ -306,34 +309,58 @@ def f1_mix(a, b, share):
     return "#" + "".join(f"{round(int(a[i:i + 2], 16) * share + int(b[i:i + 2], 16) * (1 - share)):02X}" for i in (0, 2, 4))
 
 
-def f1_ink(hexc):
-    """Black or white text on a team colour, as the page picks it."""
-    h = hexc.lstrip("#"); r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
-    return "#000000" if (r * 299 + g * 587 + b * 114) / 1000 > 165 else "#FFFFFF"
+def f1_size(card):
+    return len(json.dumps(card, separators=(",", ":")))
 
 
-def f1_head(meeting, title, sub):
-    """The header: F1 logo, the Grand Prix and its flag, a big title, a grey line under it."""
-    t = lambda text, **k: {"type": "text", "text": text, **k}
-    return {"type": "box", "layout": "vertical", "backgroundColor": F1C["bg"], "spacing": "xs", "paddingAll": "16px", "contents": [
-        {"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "center", "contents": [
-            F1_LOGO_IMAGE,
-            t(meeting.get("meeting_name") or "Formula 1", size="xs", color=F1C["dim"], flex=1, wrap=True),
-            *([{"type": "image", "url": meeting["country_flag"], "size": "xxs", "aspectRatio": "16:9", "flex": 0}]
-              if (meeting.get("country_flag") or "").endswith(".png") else [])]},
-        t(title, size="xl", weight="bold", color=F1C["text"], wrap=True), t(sub, size="xxs", color=F1C["dim"], wrap=True)]}
+def f1_kind(session):
+    """The site's chip for a session (its weekend page): Race red, Sprint amber, Quali and SQ purple, FP1 to FP3 blue."""
+    s = session.split(" · ")[0]
+    practice = re.fullmatch(r"Practice (\d)", s)
+    return (f"FP{practice[1]}", F1C["blue"]) if practice else {
+        "Race": ("Race", F1C["red"]), "Sprint": ("Sprint", F1C["amber"]), "Sprint Qualifying": ("SQ", F1C["purple"]),
+        "Qualifying": ("Quali", F1C["purple"]), "Starting grid": ("Grid", F1C["purple"])}.get(s, (s, F1C["dim"]))
 
 
-def f1_button(label, uri):
-    return {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": [
-        {"type": "button", "style": "primary", "color": F1C["red"], "height": "sm", "action": {"type": "uri", "label": label, "uri": uri}}]}
+def f1_chip(label, colour):
+    """A small uppercase label in a colour on a light tint of it, as the site marks a session's kind."""
+    return {"type": "box", "layout": "vertical", "flex": 0, "cornerRadius": "7px", "backgroundColor": f1_mix(colour, F1C["panel"], .15),
+            "paddingTop": "3px", "paddingBottom": "3px", "paddingStart": "7px", "paddingEnd": "7px",
+            "contents": [{"type": "text", "text": label.upper(), "size": "xxs", "weight": "bold", "color": colour}]}
+
+
+def f1_head(title, sub, meeting=None, session=None):
+    """The header, like the site's weekend page: a grey-to-white panel with a faint red glow at the top right, the session's
+    chip and the F1 logo, the Grand Prix's flag in a rounded frame and its name, then the session and its time."""
+    flag = (meeting or {}).get("country_flag") or ""
+    kind = f1_kind(session) if session else None
+    line = ([{"type": "span", "text": session, "weight": "bold", "color": F1C["text"]}] if session else []) + \
+           ([{"type": "span", "text": (" · " if session else "") + sub}] if sub else [])
+    return {"type": "box", "layout": "vertical", "paddingAll": "16px",
+            "background": {"type": "linearGradient", "angle": "160deg", "startColor": F1C["panel2"], "endColor": F1C["panel"]}, "contents": [
+        {"type": "box", "layout": "vertical", "position": "absolute", "offsetTop": "0px", "offsetEnd": "0px", "width": "170px", "height": "120px",
+         "background": {"type": "linearGradient", "angle": "225deg", "startColor": "#E106002E", "centerColor": "#E1060000", "centerPosition": "50%",
+                        "endColor": "#E1060000"}, "contents": []},  # clear by the middle, so the glow has no edges
+        {"type": "box", "layout": "horizontal", "alignItems": "center", "contents": [*([f1_chip(*kind)] if kind else []), {"type": "filler"}, F1_LOGO_IMAGE]},
+        {"type": "box", "layout": "horizontal", "alignItems": "center", "spacing": "md", "margin": "md", "contents": [
+            *([{"type": "box", "layout": "vertical", "width": "42px", "height": "28px", "flex": 0, "cornerRadius": "5px", "borderWidth": "1px",
+                "borderColor": F1C["line"], "contents": [{"type": "image", "url": flag, "size": "full", "aspectRatio": "3:2", "aspectMode": "cover"}]}]
+              if flag.endswith(".png") else []),
+            {"type": "text", "text": title, "size": "xl", "weight": "bold", "color": F1C["text"], "wrap": True, "flex": 1}]},
+        *([{"type": "text", "wrap": True, "size": "xs", "color": F1C["dim"], "margin": "sm", "contents": line}] if line else [])]}
+
+
+def f1_button(label, uri, primary=True):
+    """A button as the site draws one: rounded, bold, red with white text (the main one) or grey with dark text."""
+    return {"type": "box", "layout": "vertical", "flex": 1, "cornerRadius": "11px", "paddingTop": "10px", "paddingBottom": "10px",
+            "backgroundColor": F1C["red"] if primary else F1C["chip"], "action": {"type": "uri", "label": label[:20], "uri": uri},
+            "contents": [{"type": "text", "text": label, "size": "sm", "weight": "bold", "align": "center", "color": "#FFFFFF" if primary else F1C["text"]}]}
 
 
 def f1_buttons(*buttons):
-    """Buttons side by side, the first red and the others plain: [(label, uri)]."""
-    return {"type": "box", "layout": "horizontal", "spacing": "sm", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": [
-        {"type": "button", "style": "primary" if not i else "secondary", "height": "sm", **({"color": F1C["red"]} if not i else {}),
-         "action": {"type": "uri", "label": label, "uri": uri}} for i, (label, uri) in enumerate(buttons)]}
+    """The card's footer: buttons side by side, the first red and the others grey: [(label, uri)]."""
+    return {"type": "box", "layout": "horizontal", "spacing": "sm", "backgroundColor": F1C["panel"], "paddingAll": "12px",
+            "paddingTop": "4px", "contents": [f1_button(label, uri, not i) for i, (label, uri) in enumerate(buttons)]}
 
 
 def f1_full(d):
@@ -341,114 +368,186 @@ def f1_full(d):
     return " ".join(w.title() if w.isupper() and len(w) > 1 else w for w in (d.get("full_name") or d.get("name_acronym") or "?").split())
 
 
-def f1_pos(pos):
-    """A position two digits wide ("1" padded with a figure space, as wide as a digit), so what follows it lines up."""
-    return str(pos).rjust(2, "\u2007")
+def f1_last(d):
+    """"Andrea Kimi ANTONELLI" -> "Antonelli"."""
+    words = (d.get("full_name") or d.get("name_acronym") or "?").split()
+    return " ".join([w for w in words if w.isupper() and len(w) > 1] or words[-1:]).title()
+
+
+def f1_tag(d, team=None, **k):
+    """The site's driver tag as one text: the code, then the car number in the team's colour mixed into the text's
+    (RUS 63), then the team in grey if given."""
+    c, n = "#" + (d.get("team_colour") or "777777"), d.get("driver_number")
+    return {"type": "text", "size": "xs", "weight": "bold", "color": F1C["text"], **k, "contents": [
+        {"type": "span", "text": d.get("name_acronym") or str(n or "?")},
+        *([{"type": "span", "text": f" {n}", "size": "xxs", "color": f1_mix(c, F1C["text"], .75)}] if n else []),
+        *([{"type": "span", "text": f"  {team}", "size": "xxs", "weight": "regular", "color": F1C["dim"]}] if team else [])]}
+
+
+def f1_face(url, px, round_=True):
+    """A cut-out face (no disc behind it, as on the site), round-framed; an empty frame when there's no photo."""
+    return {"type": "box", "layout": "vertical", "width": px, "height": px, "flex": 0, **({"cornerRadius": f"{int(px[:-2]) // 2}px"} if round_ else {}),
+            "contents": [{"type": "image", "url": url, "size": "full", "aspectRatio": "1:1", "aspectMode": "cover"}] if url else []}
 
 
 def f1_badge(n):
-    """▲3 on green (places gained), ▼5 on red (places lost)."""
-    c = F1C["green"] if n > 0 else F1C["red"]
-    return {"type": "box", "layout": "vertical", "flex": 0, "cornerRadius": "4px", "paddingStart": "4px", "paddingEnd": "4px",
+    """▲3 in green (places gained), ▼5 in red (places lost), on a light tint."""
+    c = F1C["green"] if n > 0 else F1C["red_ink"]
+    return {"type": "box", "layout": "vertical", "flex": 0, "cornerRadius": "5px", "paddingStart": "5px", "paddingEnd": "5px",
             "backgroundColor": f1_mix(c, F1C["panel"], .14), "contents": [
         {"type": "text", "text": f"{'▲' if n > 0 else '▼'}{abs(n)}", "size": "xxs", "weight": "bold", "color": c}]}
 
 
-def f1_row(moved, contents, **box):
-    """A row in the cards' style: rounded, on the row grey, green outlined if it moved up, red if down. Every row has the
-    1px border, unmoved ones in their own colour, so an outline never shifts what's inside."""
+def f1_row(moved, contents, base=None, **box):
+    """One of the site's slots: rounded, on the row grey (or base), outlined green if it moved up and red if down (only
+    those carry the 1px border: a card has up to 22 rows, and LINE takes at most 30 KB a card)."""
     edge = F1C["green"] if moved > 0 else F1C["red"]
-    fill = f1_mix(edge, F1C["panel"], .08) if moved else F1C["row"]
-    return {"type": "box", "layout": "horizontal", "cornerRadius": "6px", "backgroundColor": fill, "borderWidth": "1px",
-            "borderColor": f1_mix(edge, F1C["panel"], .5) if moved else fill, **box, "contents": contents}
+    line = ({"backgroundColor": f1_mix(edge, F1C["row"], .08), "borderWidth": "1px", "borderColor": f1_mix(edge, F1C["row"], .5)} if moved
+            else {"backgroundColor": base or F1C["row"]})
+    return {"type": "box", "layout": "horizontal", "cornerRadius": "8px", **line, **box, "contents": contents}
 
 
 def f1_stripe(colour, height=None):
     return {"type": "box", "layout": "vertical", "width": "4px", "flex": 0, **({"height": height} if height else {}), "backgroundColor": colour, "contents": []}
 
 
+def f1_slot(pos, d, end, moved=0, tint=False, team=True, mark=None, out=False, compact=False):
+    """A driver as the site lists a session: on the team's stripe, the position, the tag and team, the full name, and on the
+    right the time (DNF, DNS and DSQ in red). tint: the winner's row, tinted with the team colour; mark: a red line under.
+    compact: one line (position, tag, name, time), for a card that would be too big for LINE otherwise."""
+    c = "#" + (d.get("team_colour") or "777777")
+    t = lambda text, **k: {"type": "text", "text": text, **k}
+    if compact:
+        return f1_row(moved, [f1_stripe(c), {"type": "box", "layout": "baseline", "spacing": "sm", "paddingAll": "6px", "paddingEnd": "10px", "contents": [
+            t(str(pos).rjust(2, "\u2007"), size="xs", weight="bold", color=F1C["text"], flex=0), f1_tag(d, flex=0),
+            t(f1_full(d), size="xxs", color=F1C["dim"], flex=1),
+            *([t(end, size="xs", weight="bold", color=F1C["red_ink"] if out else F1C["text"], flex=0)] if end else [])]}],
+                      base=f1_mix(c, F1C["row"], .12) if tint else None)
+    main = [f1_tag(d, team and d.get("team_name")), t(f1_full(d), size="xs", weight="bold", color=F1C["text"]),
+            *([t(mark, size="xxs", weight="bold", color=F1C["red_ink"])] if mark else [])]
+    return f1_row(moved, [f1_stripe(c), {"type": "box", "layout": "horizontal", "alignItems": "center", "spacing": "md",
+                                         "paddingAll": "7px", "paddingStart": "6px", "paddingEnd": "10px", "contents": [
+        {"type": "box", "layout": "vertical", "width": "22px", "flex": 0, "contents": [t(pos, size="sm", weight="bold", color=F1C["text"], align="end")]},
+        {"type": "box", "layout": "vertical", "contents": main},
+        *([t(end, size="xs", weight="bold", color=F1C["red_ink"] if out else F1C["text"], flex=0, align="end")] if end else [])]}],
+                  base=f1_mix(c, F1C["row"], .12) if tint else None)
+
+
 def f1_changes(title, changes):
-    """Who moved, under a red heading, in the classification's rows: each on their team's stripe with code, car number and
-    full name, then P13 struck through -> P10 and the points it changed, outlined green if they gained and red if they lost.
+    """Who moved, under a red heading, each in the site's row: their stripe, tag and full name, then P13 struck through ->
+    P10 and the points it changed, outlined green if they gained and red if they lost.
     changes: [(driver, old position, new position, points gained)]."""
     t = lambda text, **k: {"type": "text", "text": text, **k}
     place = lambda p: f"P{p}" if isinstance(p, int) else "NC"
 
     def line(d, old, new, pts):
-        c = "#" + (d.get("team_colour") or "777777")
         gained = old - new if isinstance(old, int) and isinstance(new, int) else -1 if isinstance(old, int) else 1
-        return f1_row(gained, [f1_stripe(c), {"type": "box", "layout": "baseline", "spacing": "sm", "paddingAll": "6px", "contents": [
-            t(d.get("name_acronym") or str(d.get("driver_number") or "?"), size="sm", weight="bold", color=F1C["text"], flex=0),
-            t(str(d.get("driver_number") or ""), size="xxs", color=f1_mix(c, "#000000", .8), flex=0),
-            t(f1_full(d), size="xxs", color=F1C["dim"], flex=1),
-            t(place(old), size="xxs", color=F1C["dim"], decoration="line-through", flex=0),
-            t("→", size="xxs", color=F1C["dim"], flex=0),
-            t(place(new), size="xs", weight="bold", color=F1C["text"], flex=0),
-            *([t(f"{'+' if pts > 0 else ''}{pts:g} pt{'s' if abs(pts) != 1 else ''}", size="xxs", weight="bold",
-                 color=F1C["green"] if pts > 0 else F1C["red"], flex=0)] if pts else [])]}], margin="xs")
-    return {"type": "box", "layout": "vertical", "contents": [t(title, size="xxs", weight="bold", color=F1C["red"])] + [line(*c) for c in changes[:8]]}
+        return f1_row(gained, [f1_stripe("#" + (d.get("team_colour") or "777777")), {
+            "type": "box", "layout": "baseline", "spacing": "sm", "paddingAll": "7px", "paddingStart": "8px", "paddingEnd": "10px",
+            "contents": [f1_tag(d, flex=0), t(f1_full(d), size="xs", weight="bold", color=F1C["text"], flex=1),
+                         {"type": "text", "size": "xs", "weight": "bold", "color": F1C["text"], "flex": 0, "contents": [
+                             {"type": "span", "text": place(old), "size": "xxs", "weight": "regular", "color": F1C["dim"], "decoration": "line-through"},
+                             {"type": "span", "text": " → ", "size": "xxs", "weight": "regular", "color": F1C["dim"]}, {"type": "span", "text": place(new)},
+                             *([{"type": "span", "text": f"  {'+' if pts > 0 else ''}{pts:g} pt{'s' if abs(pts) != 1 else ''}", "size": "xxs",
+                                 "color": F1C["green"] if pts > 0 else F1C["red_ink"]}] if pts else [])]}]}])
+    return {"type": "box", "layout": "vertical", "spacing": "xs", "contents": [t(title.upper(), size="xxs", weight="bold", color=F1C["red_ink"])] + [line(*c) for c in changes[:8]]}
 
 
 def f1_card(meeting, session, when, rows, replay_key=None, note=None, changes=None):
-    """A session's result card: the top 3's faces (transparent, a team-colour bar under each), then everyone on their team's
-    stripe: position, code, car number, full name, time. After a change after the flag (changes), a "Result changed" panel
-    titled note on top and the drivers who moved outlined, green up and red down; buttons open the session's replay and its
-    full result on the site (which follows the official result, penalties after the flag included)."""
+    """A session's result card, like the session on the site's weekend page: the podium (P2, P1, P3 on tiles tinted with
+    their team's colour, each face cut out), then everyone in the site's rows, the winner's tinted. After a change after the
+    flag (changes), a "Result changed" panel titled note on top and the drivers who moved outlined, green up and red down;
+    buttons open the session's replay and its full result on the site (which follows the official result)."""
     t = lambda text, **k: {"type": "text", "text": text, **k}
     moved = {d.get("driver_number"): (old - new if isinstance(old, int) and isinstance(new, int) else 0) for d, old, new, _ in changes or []}
 
-    def podium(pos, d, val):
-        photo, c = f1_photo(d, 300), "#" + (d.get("team_colour") or "777777")
-        return {"type": "box", "layout": "vertical", "flex": 1, "spacing": "xs", "contents": [
-            {"type": "image", "url": photo, "aspectMode": "fit", "aspectRatio": "1:1", "size": "full"} if photo else
-            {"type": "box", "layout": "vertical", "height": "80px", "contents": []},
-            {"type": "box", "layout": "vertical", "height": "3px", "cornerRadius": "2px", "backgroundColor": c, "contents": []},
-            {"type": "box", "layout": "baseline", "spacing": "xs", "margin": "sm", "contents": [
-                t(pos, size="sm", weight="bold", color=F1C["red"] if pos == "1" else F1C["dim"], flex=0),
-                t(d.get("name_acronym") or "?", size="sm", weight="bold", color=F1C["text"], flex=0),
-                t(str(d.get("driver_number") or ""), size="xxs", color=f1_mix(c, "#000000", .8), flex=0)]},
-            t(f1_full(d), size="xxs", color=F1C["text"], wrap=True), t(val, size="xxs", color=F1C["dim"], wrap=True)]}
+    def podium(pos, d):
+        c, first = "#" + (d.get("team_colour") or "777777"), pos == "1"
+        return {"type": "box", "layout": "vertical", "flex": 1, "cornerRadius": "12px", "backgroundColor": f1_mix(c, F1C["panel"], .13),
+                "borderWidth": "1px", "borderColor": f1_mix(c, F1C["line"], .4), "paddingStart": "10px", "paddingEnd": "8px",
+                "paddingTop": "16px" if first else "10px", "paddingBottom": "12px" if first else "10px", "contents": [
+            t(pos, size="xl", weight="bold", color=F1C["text"]),
+            {"type": "box", "layout": "vertical", "margin": "sm", "contents": [f1_face(f1_photo(d, 200), "64px" if first else "52px")]},
+            f1_tag(d, margin="sm"),
+            t(f1_last(d), size="xs", weight="bold", color=F1C["text"]),
+            *([t(d["team_name"], size="xxs", color=F1C["dim"])] if d.get("team_name") else [])]}
 
-    def row(pos, d, val):
-        c = "#" + (d.get("team_colour") or "777777")
-        return f1_row(moved.get(d.get("driver_number"), 0), [f1_stripe(c), {"type": "box", "layout": "baseline", "spacing": "sm", "paddingAll": "6px", "contents": [
-            t(f1_pos(pos), size="xs", weight="bold", color=F1C["dim"], flex=0),
-            t(d.get("name_acronym") or "?", size="sm", weight="bold", color=F1C["text"], flex=0),
-            t(str(d.get("driver_number") or ""), size="xxs", color=f1_mix(c, "#000000", .8), flex=0),
-            t(f1_full(d), size="xxs", color=F1C["dim"], flex=1),
-            t(val, size="xs", weight="bold", color=F1C["text"], flex=0)]}], margin="xs")
-
-    top = [rows[i] for i in (1, 0, 2) if i < len(rows)] if len(rows) >= 3 else rows[:3]   # a podium: P2, P1 in the middle, P3
-    head = [f1_changes(note or "RESULT CHANGED", changes)] if changes else [t(note, size="xs", weight="bold", color=F1C["red"], wrap=True)] if note else []
-    body = head + [
-        {"type": "box", "layout": "horizontal", "spacing": "md", "margin": "lg" if head else "none", "contents": [podium(*r) for r in top]},
-        t("CLASSIFICATION", size="xxs", weight="bold", color=F1C["dim"], margin="lg"),
-        {"type": "box", "layout": "vertical", "margin": "xs", "contents": [row(*r) for r in rows[3:]]}]
-    return {"type": "bubble", "size": "mega", "header": f1_head(meeting, session, when),
-            "body": {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": body},
-            **({"footer": f1_buttons(("Watch replay", f"{F1_SITE}?replay={replay_key}"), ("Full result", f"{F1_SITE}?result={replay_key}"))}
-               if replay_key else {})}
+    def build(team, compact, listed):
+        top = [rows[i] for i in (1, 0, 2) if i < len(rows)] if len(rows) >= 3 else rows[:3]   # a podium: P2, P1 in the middle, P3
+        head = [f1_changes(note or "Result changed", changes)] if changes else [t(note, size="xs", weight="bold", color=F1C["red_ink"], wrap=True)] if note else []
+        body = head + [
+            t("PODIUM", size="xxs", weight="bold", color=F1C["dim"], margin="lg" if head else "none"),
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "flex-end", "margin": "sm", "contents": [podium(p, d) for p, d, _ in top]},
+            {"type": "box", "layout": "vertical", "margin": "lg", "spacing": "xs", "contents": [
+                f1_slot(p, d, v, moved.get(d.get("driver_number"), 0), tint=p == "1", team=team, out=v in ("DNF", "DNS", "DSQ"), compact=compact)
+                for p, d, v in rows[listed:]]}]
+        return {"type": "bubble", "size": "mega", "header": f1_head(meeting.get("meeting_name") or "Formula 1", when, meeting, session),
+                "body": {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": body},
+                **({"footer": f1_buttons(("Watch replay", f"{F1_SITE}?replay={replay_key}"), ("Full result", f"{F1_SITE}?result={replay_key}"))}
+                   if replay_key else {})}
+    # the site's look while it fits in LINE's 30 KB; a bigger card (a long "Result changed" list) gets plainer rows: without
+    # the team, then on one line, then from P4 only (the podium shows the top 3)
+    for team, compact, listed in ((True, False, 0), (False, False, 0), (False, True, 0), (False, True, 3)):
+        card = build(team, compact, listed)
+        if f1_size(card) <= F1_MAX:
+            break
+    return card
 
 
 def f1_standings_card(title, sub_title, rows, colour_of):
-    """A championship table: each one on their team's stripe, position, face (transparent) or team logo, full name and team,
-    ▲/▼ places since before the race (outlined green or red), points and points gained."""
+    """A championship table like the site's standings: the top 3 on tiles (P2, P1, P3) glowing with their team's colour,
+    each face cut out over a team-colour bar (or the team's logo on a tinted square), their points large; then everyone
+    else in the site's rows. Each shows the points gained in the race (green) and the gap to the leader, and ▲/▼ the
+    places they moved since before it (outlined green or red)."""
     t = lambda text, **k: {"type": "text", "text": text, **k}
+    lead = rows[0][6] if rows else 0
+    gap = lambda i, points: "Leader" if not i else f"−{lead - points:g}" if lead - points else "Level"
 
-    def row(pos, move, colour, photo, name, team, points, gained):
-        return f1_row(move, [
-            f1_stripe(colour, "38px"),
-            t(f1_pos(pos), size="xs", weight="bold", color=F1C["dim"], flex=0),
-            *([{"type": "image", "url": photo, "size": "26px", "flex": 0, **({} if "logo" in photo else {"aspectMode": "cover"})}] if photo else []),
+    def standing(i, points, gained):
+        return {"type": "text", "size": "xxs", "color": F1C["dim"], "contents": [
+            *([{"type": "span", "text": f"+{gained:g} · ", "weight": "bold", "color": F1C["green"]}] if gained else []),
+            {"type": "span", "text": gap(i, points)}]}
+
+    def picture(photo, colour, px):
+        if photo and "logo" in photo:  # a team: its logo on a square tinted with its colour, as on the site
+            return {"type": "box", "layout": "vertical", "width": px, "height": px, "flex": 0, "cornerRadius": "10px", "paddingAll": "4px",
+                    "backgroundColor": f1_mix(colour, F1C["panel2"], .14), "contents": [{"type": "image", "url": photo, "size": "full", "aspectMode": "fit"}]}
+        return f1_face(photo, px)
+
+    def tile(i, r):
+        pos, move, colour, photo, name, team, points, gained = r
+        first, px = i == 0, "64px" if i == 0 else "52px"
+        names = name.rsplit(" ", 1) if team and " " in name else ["", name]
+        return {"type": "box", "layout": "vertical", "flex": 1, "cornerRadius": "16px", "borderWidth": "1px", "borderColor": f1_mix(colour, F1C["line"], .3),
+                "background": {"type": "linearGradient", "angle": "180deg", "startColor": f1_mix(colour, F1C["panel"], .3),
+                               "centerColor": F1C["panel"], "centerPosition": "70%", "endColor": F1C["panel"]},
+                "paddingStart": "10px", "paddingEnd": "8px", "paddingTop": "16px" if first else "12px", "paddingBottom": "12px", "contents": [
+            {"type": "box", "layout": "horizontal", "alignItems": "center", "contents": [
+                t(str(pos), size="xl", weight="bold", color=f1_mix(colour, F1C["text"], .55)), *([f1_badge(move)] if move else [])]},
+            {"type": "box", "layout": "vertical", "margin": "sm", "contents": [picture(photo, colour, px)] + (
+                [{"type": "box", "layout": "vertical", "width": px, "height": "4px", "backgroundColor": colour, "contents": []}] if photo and "logo" not in photo else [])},
+            {"type": "text", "size": "xs", "color": F1C["text"], "wrap": True, "margin": "sm", "contents": [
+                *([{"type": "span", "text": names[0] + " "}] if names[0] else []), {"type": "span", "text": names[1], "weight": "bold"}]},
+            *([t(team, size="xxs", color=F1C["dim"])] if team else []),
+            {"type": "text", "size": "lg", "weight": "bold", "color": F1C["text"], "margin": "sm", "contents": [
+                {"type": "span", "text": f"{points:g}"}, {"type": "span", "text": " pts", "size": "xxs"}]},
+            standing(i, points, gained)]}
+
+    def row(i, r):
+        pos, move, colour, photo, name, team, points, gained = r
+        return f1_row(move, [f1_stripe(colour), {"type": "box", "layout": "horizontal", "alignItems": "center", "spacing": "md",
+                                                  "paddingTop": "6px", "paddingBottom": "6px", "paddingStart": "6px", "paddingEnd": "10px", "contents": [
+            {"type": "box", "layout": "vertical", "width": "22px", "flex": 0, "contents": [t(str(pos), size="sm", weight="bold", color=F1C["text"], align="center")]},
+            *([picture(photo, colour, "30px")] if photo else []),
             {"type": "box", "layout": "vertical", "contents": [t(name, size="xs", weight="bold", color=F1C["text"]), *([t(team, size="xxs", color=F1C["dim"])] if team else [])]},
             *([f1_badge(move)] if move else []),
             {"type": "box", "layout": "vertical", "flex": 0, "contents": [
-                t(f"{points:g}", size="xs", weight="bold", color=F1C["text"], align="end"),
-                *([t(f"+{gained:g}", size="xxs", color=F1C["green"], align="end")] if gained else [])]}],
-            spacing="sm", alignItems="center", margin="xs", paddingEnd="6px")
+                t(f"{points:g}", size="sm", weight="bold", color=F1C["text"], align="end"), {**standing(i, points, gained), "align": "end"}]}]}])
 
-    return {"type": "bubble", "size": "mega", "header": f1_head({"meeting_name": sub_title}, title, "Points after the race · ▲▼ places since before it"),
-            "body": {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": [row(*r) for r in rows]}}
+    body = [{"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "flex-end", "contents": [tile(i, rows[i]) for i in (1, 0, 2) if i < len(rows)]},
+            {"type": "box", "layout": "vertical", "margin": "lg", "spacing": "xs", "contents": [row(i, r) for i, r in enumerate(rows) if i >= 3]}]
+    return {"type": "bubble", "size": "mega", "header": f1_head(title, f"{sub_title} · ▲▼ places since before the race"),
+            "body": {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": body}}
 
 
 def f1_standings(state, token, s, meeting, again=False):
@@ -507,9 +606,11 @@ def f1_standings(state, token, s, meeting, again=False):
         if key not in sent:
             sent.append(key)
         return
-    dcard = f1_standings_card("Drivers' Championship", after, drows, colour)
-    if len(json.dumps(dcard, separators=(",", ":"))) > 29000:  # LINE takes at most 30 KB a card: without faces it always fits
-        dcard = f1_standings_card("Drivers' Championship", after, [r[:3] + (None,) + r[4:] for r in drows], colour)
+    # every driver, the faces as long as LINE's 30 KB allows: all of them, then the podium's only, then none (which always fits)
+    for keep in (len(drows), 3, 0):
+        dcard = f1_standings_card("Drivers' Championship", after, [r if i < keep else r[:3] + (None,) + r[4:] for i, r in enumerate(drows)], colour)
+        if f1_size(dcard) <= F1_MAX:
+            break
     card = {"type": "flex", "altText": f"F1 standings {after[:1].lower()}{after[1:]}: {top(drows)}"[:400], "contents": {"type": "carousel", "contents": [
         dcard, f1_standings_card("Teams' Championship", after, trows, colour)]}}
     plain = {"type": "text", "text": f"F1 standings {after[:1].lower()}{after[1:]}\n\nDrivers\n" + "\n".join(
@@ -577,30 +678,29 @@ def f1_recheck(state, token, s, meeting):
 
 
 def f1_grid_card(meeting, race, grid, drivers, qual, key):
-    """The Starting grid card: a red Grid penalties panel (who dropped back, P2 -> P7 and by how many places), then the grid
-    as it stands on the track, two staggered columns, each slot on its team's colour stripe and a dropped one outlined red."""
+    """The Starting grid card, like the site's grid view of a qualifying: a red Grid penalties panel (who dropped back, P2
+    -> P7), then the grid in order in the site's rows, each dropped driver outlined red with "▼5 · Qualified P2" under."""
     t = lambda text, **k: {"type": "text", "text": text, **k}
     drop = lambda x: max(x["position"] - (qual.get(x["driver_number"]) or x["position"]), 0)
-
-    def slot(x):
-        n, d = x["driver_number"], drivers.get(x["driver_number"], {})
-        c = "#" + (d.get("team_colour") or "777777")
-        return f1_row(-drop(x), [f1_stripe(c), {"type": "box", "layout": "baseline", "spacing": "sm", "paddingAll": "7px", "contents": [
-            t(f1_pos(x["position"]), size="sm", weight="bold", color=F1C["dim"], flex=0),
-            t(d.get("name_acronym") or str(n), size="sm", weight="bold", color=F1C["text"], flex=0),
-            t(str(n), size="xxs", color=f1_mix(c, "#000000", .8), flex=1),
-            *([t(f"▼{drop(x)}", size="xxs", weight="bold", color=F1C["red"], flex=0)] if drop(x) else [])]}], margin="sm")
-
     back = sorted((x for x in grid if drop(x)), key=lambda x: x["position"])
     start = datetime.fromisoformat(race["date_start"]).astimezone(THAI).strftime("%a %d %b · %H:%M")
-    body = ([f1_changes("GRID PENALTIES", [(drivers.get(x["driver_number"], {}), qual[x["driver_number"]], x["position"], 0) for x in back])] if back else []) + [
-        t("STARTING GRID", size="xxs", weight="bold", color=F1C["dim"], margin="lg" if back else "none"),
-        {"type": "box", "layout": "horizontal", "spacing": "md", "contents": [
-            {"type": "box", "layout": "vertical", "contents": [slot(x) for x in grid if x["position"] % 2]},
-            {"type": "box", "layout": "vertical", "paddingTop": "18px", "contents": [slot(x) for x in grid if not x["position"] % 2]}]}]
-    return {"type": "bubble", "size": "mega", "header": f1_head(meeting, "Starting grid", f"{race['session_name']} · {start} · changed after qualifying"),
-            "body": {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": body},
-            "footer": f1_buttons(("See the grid", f"{F1_SITE}?result={key}"), ("Watch qualifying", f"{F1_SITE}?replay={key}"))}
+
+    def build(team, compact):
+        rows = [f1_slot(str(x["position"]), drivers.get(x["driver_number"], {"driver_number": x["driver_number"]}),
+                        f1_time(x["lap_duration"]) if x.get("lap_duration") else None, -drop(x), team=team, compact=compact,
+                        mark=f"▼{drop(x)} · Qualified P{qual[x['driver_number']]}" if drop(x) else None) for x in grid]
+        body = ([f1_changes("Grid penalties", [(drivers.get(x["driver_number"], {}), qual[x["driver_number"]], x["position"], 0) for x in back])] if back else []) + [
+            t("STARTING GRID", size="xxs", weight="bold", color=F1C["dim"], margin="lg" if back else "none"),
+            {"type": "box", "layout": "vertical", "margin": "sm", "spacing": "xs", "contents": rows}]
+        return {"type": "bubble", "size": "mega",
+                "header": f1_head(meeting.get("meeting_name") or "Formula 1", f"{race['session_name']} · {start} · changed after qualifying", meeting, "Starting grid"),
+                "body": {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": body},
+                "footer": f1_buttons(("See the grid", f"{F1_SITE}?result={key}"), ("Watch qualifying", f"{F1_SITE}?replay={key}"))}
+    for team, compact in ((True, False), (False, False), (False, True)):  # plainer rows only if LINE's 30 KB needs it
+        card = build(team, compact)
+        if f1_size(card) <= F1_MAX:
+            break
+    return card
 
 
 def f1_grid(state, token, s, meeting, race):
@@ -657,15 +757,17 @@ F1_PAGE = F1_SITE + "?live"
 
 
 def f1_live_card(meeting, session, when, live):
-    """A LINE card when a session starts, in the F1 Live page's style: tap to open the page."""
-    t = lambda text, **k: {"type": "text", "text": text, **k}
-    badge = {"type": "box", "layout": "horizontal", "flex": 0, "cornerRadius": "999px", "backgroundColor": F1C["red"] if live else F1C["row"],
-             "paddingStart": "10px", "paddingEnd": "10px", "paddingTop": "3px", "paddingBottom": "3px", "contents": [
-        t("● LIVE NOW" if live else "STARTING SOON", size="xxs", weight="bold", color="#FFFFFF")]}
-    return {"type": "bubble", "size": "kilo", "action": {"type": "uri", "label": "Open F1 Live", "uri": F1_PAGE},
-            "header": f1_head(meeting, session, when),
-            "body": {"type": "box", "layout": "horizontal", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": [badge, {"type": "filler"}]},
-            "footer": f1_button("Open F1 Live", F1_PAGE)}
+    """A LINE card when a session starts, with the site's header and its LIVE badge (red, a dot in front); tap to open the
+    site's Live tab."""
+    badge = {"type": "box", "layout": "horizontal", "flex": 0, "cornerRadius": "6px", "backgroundColor": F1C["red"] if live else F1C["chip"],
+             "paddingStart": "7px", "paddingEnd": "7px", "paddingTop": "3px", "paddingBottom": "3px", "contents": [
+        {"type": "text", "text": "● LIVE" if live else "STARTING SOON", "size": "xxs", "weight": "bold", "color": "#FFFFFF" if live else F1C["dim"]}]}
+    return {"type": "bubble", "size": "mega", "action": {"type": "uri", "label": "Open F1 Live", "uri": F1_PAGE},
+            "header": f1_head(meeting.get("meeting_name") or "Formula 1", when, meeting, session),
+            "body": {"type": "box", "layout": "horizontal", "alignItems": "center", "spacing": "md", "backgroundColor": F1C["panel"], "paddingAll": "12px",
+                     "paddingStart": "16px", "contents": [badge, {"type": "text", "text": "Live timing, the track map and race control", "size": "xxs",
+                                                                  "color": F1C["dim"], "wrap": True, "flex": 1}]},
+            "footer": f1_buttons(("Open F1 Live", F1_PAGE))}
 
 
 JOB_START = float(os.environ.get("JOB_START") or time.time())  # when this GitHub job began (watch.yml): it has 9 minutes in all
