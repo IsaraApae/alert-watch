@@ -524,6 +524,49 @@ def f1_recheck(state, token, s, meeting):
         f1_standings(state, token, s, meeting, again=True)
 
 
+def f1_grid_card(meeting, race, grid, drivers, qual, key):
+    """The Starting grid card: a red Grid penalties panel (who dropped back, P2 -> P7 and by how many places), then the grid
+    as it stands on the track, two staggered columns, each slot on its team's colour stripe and a dropped one outlined red."""
+    t = lambda text, **k: {"type": "text", "text": text, **k}
+    drop = lambda x: max(x["position"] - (qual.get(x["driver_number"]) or x["position"]), 0)
+    red = lambda share: f1_mix(F1C["red"], F1C["panel"], share)
+
+    def penalty(x):
+        d = drivers.get(x["driver_number"], {})
+        return {"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "center", "margin": "sm", "contents": [
+            f1_tag(d), t(f1_name(d), size="xxs", color=F1C["dim"], flex=1, gravity="center"),
+            t(f"P{qual[x['driver_number']]}", size="xs", color=F1C["dim"], decoration="line-through", flex=0, gravity="center"),
+            t("→", size="xs", color=F1C["dim"], flex=0, gravity="center"),
+            t(f"P{x['position']}", size="sm", weight="bold", color=F1C["text"], flex=0, gravity="center"),
+            {"type": "box", "layout": "vertical", "flex": 0, "cornerRadius": "4px", "paddingStart": "4px", "paddingEnd": "4px",
+             "backgroundColor": red(.14), "contents": [t(f"▼{drop(x)}", size="xxs", weight="bold", color=F1C["red"])]}]}
+
+    def slot(x):
+        n, d = x["driver_number"], drivers.get(x["driver_number"], {})
+        c = "#" + (d.get("team_colour") or "777777")
+        return {"type": "box", "layout": "horizontal", "cornerRadius": "6px", "margin": "sm", "backgroundColor": red(.08) if drop(x) else F1C["row"],
+                **({"borderWidth": "1px", "borderColor": red(.5)} if drop(x) else {}), "contents": [
+            {"type": "box", "layout": "vertical", "width": "4px", "flex": 0, "backgroundColor": c, "contents": []},
+            {"type": "box", "layout": "baseline", "spacing": "sm", "paddingAll": "7px", "contents": [
+                t(str(x["position"]), size="sm", weight="bold", color=F1C["dim"], flex=0),
+                t(d.get("name_acronym") or str(n), size="sm", weight="bold", color=F1C["text"], flex=0),
+                t(str(n), size="xxs", color=f1_mix(c, "#000000", .8), flex=1),
+                *([t(f"▼{drop(x)}", size="xxs", weight="bold", color=F1C["red"], flex=0)] if drop(x) else [])]}]}
+
+    back = sorted((x for x in grid if drop(x)), key=lambda x: x["position"])
+    start = datetime.fromisoformat(race["date_start"]).astimezone(THAI).strftime("%a %d %b · %H:%M")
+    body = ([{"type": "box", "layout": "vertical", "cornerRadius": "10px", "paddingAll": "10px", "backgroundColor": red(.06), "margin": "none",
+              "contents": [t("GRID PENALTIES", size="xxs", weight="bold", color=F1C["red"])] + [penalty(x) for x in back]}] if back else []) + [
+        {"type": "box", "layout": "horizontal", "margin": "lg" if back else "none", "contents": [
+            t("STARTING GRID", size="xxs", weight="bold", color=F1C["dim"]), t("Turn 1 ↑", size="xxs", color=F1C["dim"], align="end")]},
+        {"type": "box", "layout": "horizontal", "spacing": "md", "contents": [
+            {"type": "box", "layout": "vertical", "contents": [slot(x) for x in grid if x["position"] % 2]},
+            {"type": "box", "layout": "vertical", "paddingTop": "18px", "contents": [slot(x) for x in grid if not x["position"] % 2]}]}]
+    return {"type": "bubble", "size": "mega", "header": f1_head(meeting, "Starting grid", f"{race['session_name']} · {start} · changed after qualifying"),
+            "body": {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": body},
+            "footer": f1_buttons(("See the grid", f"{F1_SITE}?result={key}"), ("Watch qualifying", f"{F1_SITE}?replay={key}"))}
+
+
 def f1_grid(state, token, s, meeting, race):
     """A qualifying whose card is out: when the starting grid differs from its order (grid penalties: São Paulo 2026,
     Russell P2 -> P7, Leclerc P4 -> P14), a "Starting grid" card in grid order with who moved; again if the grid changes
@@ -552,19 +595,18 @@ def f1_grid(state, token, s, meeting, race):
         return
     grid = sorted(grid, key=lambda x: x["position"])
     drivers = f1_drivers(s, {x["driver_number"] for x in grid})
-    old = dict(map(tuple, was))
-    moved = [f"{(drivers.get(x['driver_number']) or {}).get('name_acronym') or x['driver_number']} P{old.get(x['driver_number'], '?')} → P{x['position']}"
-             for x in grid if old.get(x["driver_number"]) != x["position"]
-             and (old.get(x["driver_number"]) or 0) < x["position"]]  # who dropped back (the penalties): the rest only moved up into their places
+    qual = {n: p for n, p, _ in order}  # each car's qualifying place: the panel and the arrows are against it
+    back = [x for x in grid if (qual.get(x["driver_number"]) or x["position"]) < x["position"]]  # who dropped back: the rest moved up into the gaps
+    acr = lambda n: (drivers.get(n) or {}).get("name_acronym") or str(n)
+    moved = [f"{acr(x['driver_number'])} P{qual[x['driver_number']]} → P{x['position']}" for x in back]
     rows = [(str(x["position"]), drivers.get(x["driver_number"], {}), f1_time(x["lap_duration"]) if x.get("lap_duration") else "No time") for x in grid]
     name, session = meeting.get("meeting_name") or s.get("country_name") or "Formula 1", s["session_name"]
-    when = datetime.fromisoformat(s["date_start"]).astimezone(THAI).strftime("%a %d %b %Y · %H:%M")
     note = f"{race['session_name']} starting grid, changed after qualifying: " + ", ".join(moved[:8]) + (f" and {len(moved) - 8} more" if len(moved) > 8 else "")
     if not token:  # on the Mac: show what would be sent
         print(f"F1 {session} · {name} · starting grid | {note}")
     else:
         card = {"type": "flex", "altText": f"F1 {name}: starting grid. {note}"[:400],
-                "contents": f1_card(meeting, f"{session} · Starting grid", when, rows, key, note)}
+                "contents": f1_grid_card(meeting, race, grid, drivers, qual, key)}
         plain = {"type": "text", "text": f"F1 {name}: {race['session_name'].lower()} starting grid\n{note}\n\n" + "\n".join(
             f"{p} {f1_name(d)} ({d.get('team_name') or ''}) {v}" for p, d, v in rows)}
         if not (line_send(token, card) or line_send(token, plain)):
