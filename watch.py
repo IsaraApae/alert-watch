@@ -731,12 +731,16 @@ def f1(state):
     if "f1_sessions" not in state:  # the first run sends only the newest session, as a sample, not the whole weekend
         state["f1_sessions"] = [str(s["session_key"]) for s in ended[:-1]]
     sent = state["f1_sessions"]
-    meetings = {}
+
+    def meeting_of(s):  # its Grand Prix: as f1_schedule saved it, else asked of OpenF1 (and kept for the rest of the run)
+        mk = str(s["meeting_key"])
+        if not meetings.get(mk):
+            meetings[mk] = (json.loads(get(f"{OPENF1}/meetings?meeting_key={mk}")) or [{}])[0]
+        return meetings[mk]
     for s in ended:
         if s["session_name"] == "Race" and str(s["session_key"]) in sent:  # race card out: then the championship tables
             try:
-                m = meetings.setdefault(s["meeting_key"], (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0])
-                f1_standings(state, token, s, m)
+                f1_standings(state, token, s, meeting_of(s))
             except Exception as e:  # never stops the other sessions' cards
                 print(f"FAIL f1 standings: {e}", file=sys.stderr)
                 continue
@@ -744,16 +748,14 @@ def f1(state):
         if key in sent:
             # its card is out: follow its result for changes after the flag (every session: practice too, for deleted laps)
             try:
-                f1_recheck(state, token, s, meetings.get(s["meeting_key"]) or
-                           meetings.setdefault(s["meeting_key"], (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0]))
+                f1_recheck(state, token, s, meeting_of(s))
             except Exception as e:
                 print(f"FAIL f1 recheck {s['session_name']}: {e}", file=sys.stderr)
             if s["session_name"] in ("Qualifying", "Sprint Qualifying"):  # and the grid it sets, for penalties
                 race = next((r for r in sessions if r["meeting_key"] == s["meeting_key"]
                              and r["session_name"] == ("Race" if s["session_name"] == "Qualifying" else "Sprint")), None)
                 try:
-                    f1_grid(state, token, s, meetings.get(s["meeting_key"]) or
-                            meetings.setdefault(s["meeting_key"], (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0]), race)
+                    f1_grid(state, token, s, meeting_of(s), race)
                 except Exception as e:
                     print(f"FAIL f1 grid {s['session_name']}: {e}", file=sys.stderr)
             continue
@@ -762,7 +764,7 @@ def f1(state):
             if not results:
                 continue  # not published yet: tried again on the next check
             drivers = f1_drivers(s, {x["driver_number"] for x in results})
-            meeting = meetings.get(str(s["meeting_key"])) or (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0]
+            meeting = meeting_of(s)
             rows = f1_rows(results, drivers)
             name, session = meeting.get("meeting_name") or s.get("country_name") or "Formula 1", s["session_name"]
             when = datetime.fromisoformat(s["date_start"]).astimezone(THAI).strftime("%a %d %b %Y · %H:%M")
@@ -945,6 +947,18 @@ def tv_aired(xml, first_ep, now):
             out[key] = t
     return out
 
+
+SYOBOI = {}  # the run's one reading of the TV schedule, by TV-schedule ids: the alerts and the schedule share it
+
+
+def syoboi(tids, now):
+    """Syoboi Calendar's broadcasts of these shows (ProgLookup XML), from a month back (a rerun must not pass for an
+    episode's first broadcast) to two months ahead. Read once a run; a failed read isn't kept, so the next caller tries again."""
+    key = ",".join(map(str, tids))
+    if key not in SYOBOI:
+        span = f"{datetime.fromtimestamp(now - 30 * 86400, JST):%Y%m%d_%H%M%S}-{datetime.fromtimestamp(now + 60 * 86400, JST):%Y%m%d_%H%M%S}"
+        SYOBOI[key] = get(f"https://cal.syoboi.jp/db.php?Command=ProgLookup&TID={key}&Range={span}")
+    return SYOBOI[key]
 
 YT_CHANNELS = {"UCn8hjQOnGYR1AZtYYMYP5jQ": "Muse Thailand", "UCw2bdNSXh4x6e0NCduVoxMQ": "Ani-One Thailand"}  # official uploads
 BILIBILI_SCHEDULE = "https://api.bilibili.tv/intl/gateway/web/v2/ogv/timeline?s_locale=th_TH&platform=web"  # Bilibili Thailand's week; it only fills in for connections from Thailand, so the cloud learns nothing from it and keeps what was learned before
@@ -1310,8 +1324,7 @@ def schedule(state=None):
         info = saved_media(state, shows)
     try:
         by_tid = {s["tid"]: i for i, s in shows.items() if s["tid"]}
-        span = f"{datetime.fromtimestamp(now - 30 * 86400, JST):%Y%m%d_%H%M%S}-{datetime.fromtimestamp(now + 60 * 86400, JST):%Y%m%d_%H%M%S}"  # from a month back: a rerun must not pass for an episode's first broadcast
-        xml = get(f"https://cal.syoboi.jp/db.php?Command=ProgLookup&TID={','.join(map(str, by_tid))}&Range={span}")
+        xml = syoboi(by_tid, now)
         tv = {(by_tid[tid], ep): t for (tid, ep), t in tv_aired(xml, {tid: shows[i]["first"] for tid, i in by_tid.items()}, now + 60 * 86400).items()}
         state["tv_times"] = {f"{i}:{ep}": t for (i, ep), t in tv.items()}  # saved for when Syoboi is down
         tv_ok = True
@@ -1488,9 +1501,8 @@ def anime(state, meanwhile=lambda: None):
     aired = {(a["media"]["id"], a["episode"]): a["airingAt"] for a in data["web"]["airingSchedules"] if a["airingAt"] <= ahead}
     by_tid = {s["tid"]: i for i, s in shows.items() if s["tid"]}
     if by_tid:
-        span = f"{datetime.fromtimestamp(now - 30 * 86400, JST):%Y%m%d_%H%M%S}-{datetime.fromtimestamp(ahead, JST):%Y%m%d_%H%M%S}"  # from a month back: a rerun must not pass for an episode's first broadcast
         try:
-            xml = get(f"https://cal.syoboi.jp/db.php?Command=ProgLookup&TID={','.join(map(str, by_tid))}&Range={span}")
+            xml = syoboi(by_tid, now)  # tv_aired keeps what aired up to `ahead`
             first = {tid: shows[i]["first"] for tid, i in by_tid.items()}
             aired.update({(by_tid[tid], ep): t for (tid, ep), t in tv_aired(xml, first, ahead).items()})
         except Exception as e:  # Syoboi down: the times the last good check saved
