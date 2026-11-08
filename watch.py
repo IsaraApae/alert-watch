@@ -475,7 +475,7 @@ def f1_sig(results):
 
 
 def f1_recheck(state, token, s, meeting):
-    """A race or sprint whose card is out: if its result changes after the flag (penalties), a "Result updated" card with
+    """A session whose card is out: if its result changes after the flag (penalties, deleted laps), a "Result updated" card with
     who moved, and for a race the championship cards again. A session sent before this was followed (Mexico 2026) is
     only noted, so the first change from then on is what gets sent. A change is sent only once two checks in a row see it:
     on 3 Nov 2026 OpenF1 gave Mexico's result from before the penalties for one check, which sent a card and then a
@@ -507,7 +507,7 @@ def f1_recheck(state, token, s, meeting):
     rows = f1_rows(results, drivers)
     name, session = meeting.get("meeting_name") or s.get("country_name") or "Formula 1", s["session_name"]
     when = datetime.fromisoformat(s["date_start"]).astimezone(THAI).strftime("%a %d %b %Y · %H:%M")
-    after = "qualifying" if "Qualifying" in session else "the race"
+    after = "the race" if session == "Race" else session  # "after Practice 2", "after Sprint Qualifying"
     note = f"Result changed after {after}: " + ", ".join(moved[:8]) + (f" and {len(moved) - 8} more" if len(moved) > 8 else "")
     if not token:  # on the Mac: show what would be sent
         print(f"F1 {session} · {name} · result updated | {note}")
@@ -672,12 +672,12 @@ def f1(state):
                 continue
         key = str(s["session_key"])
         if key in sent:
-            if s["session_name"] in ("Race", "Sprint", "Qualifying", "Sprint Qualifying"):  # its card is out: follow its result for changes after the flag
-                try:
-                    f1_recheck(state, token, s, meetings.get(s["meeting_key"]) or
-                               meetings.setdefault(s["meeting_key"], (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0]))
-                except Exception as e:
-                    print(f"FAIL f1 recheck {s['session_name']}: {e}", file=sys.stderr)
+            # its card is out: follow its result for changes after the flag (every session: practice too, for deleted laps)
+            try:
+                f1_recheck(state, token, s, meetings.get(s["meeting_key"]) or
+                           meetings.setdefault(s["meeting_key"], (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0]))
+            except Exception as e:
+                print(f"FAIL f1 recheck {s['session_name']}: {e}", file=sys.stderr)
             if s["session_name"] in ("Qualifying", "Sprint Qualifying"):  # and the grid it sets, for penalties
                 race = next((r for r in sessions if r["meeting_key"] == s["meeting_key"]
                              and r["session_name"] == ("Race" if s["session_name"] == "Qualifying" else "Sprint")), None)
