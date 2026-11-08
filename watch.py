@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Notify (macOS) when a watched manga page lists a chapter it didn't list last run."""
+"""Alert Watch: LINE alerts for new manga chapters, WEBTOON episodes, Thai-sub anime episodes and every F1 session.
+Runs every 5 minutes on GitHub Actions (.github/workflows/watch.yml); `python3 watch.py test` runs the self-checks. See README.md."""
 import email.utils, html, json, os, re, shutil, subprocess, sys, threading, time, traceback, unicodedata, urllib.error, urllib.request
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -302,17 +303,6 @@ def f1_ink(hexc):
     """Black or white text on a team colour, as the page picks it."""
     h = hexc.lstrip("#"); r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
     return "#000000" if (r * 299 + g * 587 + b * 114) / 1000 > 165 else "#FFFFFF"
-
-
-def f1_tag(d, size="xs"):
-    """The page's driver tag: [ 81 | PIA ], the number on the team colour, the name tinted with it."""
-    c = "#" + (d.get("team_colour") or "777777")
-    num = str(d.get("driver_number") or "")
-    t = lambda text, **k: {"type": "text", "text": text or "?", "size": size, "weight": "bold", "align": "center", "gravity": "center", **k}
-    return {"type": "box", "layout": "horizontal", "flex": 0, "cornerRadius": "4px", "height": "20px", "contents": [
-        {"type": "box", "layout": "vertical", "backgroundColor": c, "width": "26px", "contents": [t(num, color=f1_ink(c))]},
-        {"type": "box", "layout": "vertical", "backgroundColor": f1_mix(c, F1C["panel"], .14), "width": "38px",
-         "contents": [t(d.get("name_acronym"), color=f1_mix(c, "#000000", .78))]}]}
 
 
 def f1_head(meeting, title, sub):
@@ -733,7 +723,6 @@ def f1_started(state, token, sessions, meetings):
 def f1(state):
     """Send every Formula 1 session's order once it is published: Practice 1-3, Sprint Qualifying, Sprint, Qualifying, Race."""
     token, now = os.environ.get("LINE_TOKEN"), time.time()
-    state.pop("f1", None)  # the earlier race-only records
     sessions, meetings = f1_schedule(state, now)
     f1_started(state, token, sessions, meetings)
     now = time.time()
@@ -1162,9 +1151,6 @@ def series_page(link):
 FEEDS = {"animeruka": "https://animeruka.com/feed/?post_type=episodes"}
 
 
-FEED_PROXY = os.environ.get("FEED_PROXY", "")  # a Cloudflare Worker that fetches the feeds: the sites refuse GitHub's own addresses
-
-
 FEED_DIR = os.environ.get("FEED_DIR", "")  # feeds saved this run by vpn_feeds.py through a Thai VPN server
 FEED_WAIT = 160  # the longest to wait for vpn_feeds.py, which runs alongside this and gives up after 150 seconds
 RUN_START = time.time()
@@ -1183,8 +1169,6 @@ def read_feed(url):
     try:
         if saved and saved.exists():
             page, status = saved.read_text(encoding="utf-8"), "vpn"
-        elif FEED_PROXY:
-            page, status = get(f"{FEED_PROXY}&site={site}"), "proxy"
         else:
             page, status = get(url), "urllib"
     except urllib.error.HTTPError as e:
@@ -1374,8 +1358,7 @@ def schedule(state=None):
             if now - 8 * 86400 <= t <= now + 60 * 86400:
                 yt = t <= now and s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
                 rec = state.get("first_source", {}).get(f"{i}:{ep}", {})  # the animegojo episode page, if that's where it was found first
-                # (episodes found on anime-waku, before it was dropped, keep their link)
-                watch = (in_brave(yt) if yt else None) or links.get(f"{i}:{ep}") or (rec["url"] if rec.get("first") in ("animegojo", "suba-anime", "anime-waku", *FEEDS) else None)
+                watch = (in_brave(yt) if yt else None) or links.get(f"{i}:{ep}") or (rec["url"] if rec.get("first") in ("animegojo", "suba-anime", *FEEDS) else None)
                 if not watch and t <= now and (str(i) in pages or i in OTHER_PAGES) and not (i in thai and thai[i][0] in YT_CHANNELS.values()):
                     shift, have = on_gojo(i)  # aired, no button yet: the episode on its animegojo (or suba-anime) page, if it's up there
                     watch = have.get(ep + s["offset"] + shift)
@@ -1662,8 +1645,6 @@ def anime(state, meanwhile=lambda: None):
             print(f"FAIL {site}: {e}", file=sys.stderr)
     to_ep = lambda i, n: next((e for e in (n - shows[i]["offset"], n - shows[i]["offset"] - GOJO_SHIFT.get(i, 0)) if (i, e) in due), None)
     # suba-anime is for Yozakura only, and races the other sites for every episode
-    for key in ("suba_pages", "suba_titles", "suba_search", "suba_dropped"):  # left from earlier ways of using suba-anime
-        state.pop(key, None)
     for i, url in (OTHER_PAGES.items() if not seed else []):
         if i not in shows or not gojo_only(i):
             continue
@@ -1818,9 +1799,6 @@ def library(state):
 
 def manga(state, urls):
     """The manga and WEBTOON alerts, from the pages main started reading in the background."""
-    state.pop("webtoon_switched", None)  # left from the automatic switch, which is gone
-    state.pop("webtoon_free", None)  # replaced by webtoon_app
-    state.pop("webtoon_reach", None)  # replaced by chapter_labels
     labels = state.setdefault("chapter_labels", {})  # {WEBTOON series: "Chapter 140", its newest (in the app), for the LINE list}
     newest = state.setdefault("webtoon_newest", {})  # {WEBTOON series: its newest free chapter}, for the series in WEBTOON_TWINS
     for url in urls:
