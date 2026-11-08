@@ -1932,6 +1932,10 @@ def main():
     except Exception as e:  # waiting must never cost the run its alerts' saved state
         print(f"FAIL waiting for YouTube: {e}", file=sys.stderr)
     f1_thread.join()
+    # a series no longer in urls.txt: its chapter list goes (added back, its first check records its chapters silently
+    # again, as for any new series). Not when urls.txt is empty, which is more likely a mistake than the wish to drop all.
+    for key in [k for k in state if k.startswith(("http://", "https://")) and k not in urls] if urls else []:
+        del state[key]
     try:
         schedule(state)
     except Exception as e:  # the countdown page must never stop the alerts
