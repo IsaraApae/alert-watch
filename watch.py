@@ -455,13 +455,14 @@ def f1_changes(title, changes):
 
 def f1_card(meeting, session, when, rows, replay_key=None, note=None, changes=None):
     """A session's result card, like the session on the site's weekend page: the podium (P2, P1, P3 on tiles tinted with
-    their team's colour, each face cut out), then everyone in the site's rows, the winner's tinted. After a change after the
+    their team's colour, each face cut out, with their time, so every driver's time is on the card even when the rows start
+    at P4), then everyone in the site's rows, the winner's tinted. After a change after the
     flag (changes), a "Result changed" panel titled note on top and the drivers who moved outlined, green up and red down;
     buttons open the session's replay and its full result on the site (which follows the official result)."""
     t = lambda text, **k: {"type": "text", "text": text, **k}
     moved = {d.get("driver_number"): (old - new if isinstance(old, int) and isinstance(new, int) else 0) for d, old, new, _ in changes or []}
 
-    def podium(pos, d):
+    def podium(pos, d, val):
         c, first = "#" + (d.get("team_colour") or "777777"), pos == "1"
         return {"type": "box", "layout": "vertical", "flex": 1, "cornerRadius": "12px", "backgroundColor": f1_mix(c, F1C["panel"], .13),
                 "borderWidth": "1px", "borderColor": f1_mix(c, F1C["line"], .4), "paddingStart": "10px", "paddingEnd": "8px",
@@ -470,14 +471,15 @@ def f1_card(meeting, session, when, rows, replay_key=None, note=None, changes=No
             {"type": "box", "layout": "vertical", "margin": "sm", "contents": [f1_face(f1_photo(d, 200), "64px" if first else "52px")]},
             f1_tag(d, margin="sm"),
             t(f1_last(d), size="xs", weight="bold", color=F1C["text"]),
-            *([t(d["team_name"], size="xxs", color=F1C["dim"])] if d.get("team_name") else [])]}
+            *([t(d["team_name"], size="xxs", color=F1C["dim"])] if d.get("team_name") else []),
+            t(val, size="xxs", weight="bold", color=F1C["red_ink"] if val in ("DNF", "DNS", "DSQ") else F1C["text"], margin="sm")]}
 
     def build(team, compact, listed):
         top = [rows[i] for i in (1, 0, 2) if i < len(rows)] if len(rows) >= 3 else rows[:3]   # a podium: P2, P1 in the middle, P3
         head = [f1_changes(note or "Result changed", changes)] if changes else [t(note, size="xs", weight="bold", color=F1C["red_ink"], wrap=True)] if note else []
         body = head + [
             t("PODIUM", size="xxs", weight="bold", color=F1C["dim"], margin="lg" if head else "none"),
-            {"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "flex-end", "margin": "sm", "contents": [podium(p, d) for p, d, _ in top]},
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "flex-end", "margin": "sm", "contents": [podium(*r) for r in top]},
             {"type": "box", "layout": "vertical", "margin": "lg", "spacing": "xs", "contents": [
                 f1_slot(p, d, v, moved.get(d.get("driver_number"), 0), tint=p == "1", team=team, out=v in ("DNF", "DNS", "DSQ"), compact=compact)
                 for p, d, v in rows[listed:]]}]
