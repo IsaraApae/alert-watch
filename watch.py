@@ -455,8 +455,7 @@ def f1_changes(title, changes):
 
 def f1_card(meeting, session, when, rows, replay_key=None, note=None, changes=None):
     """A session's result card, like the session on the site's weekend page: the podium (P2, P1, P3 on tiles tinted with
-    their team's colour, each face cut out, with their time, so every driver's time is on the card even when the rows start
-    at P4), then everyone in the site's rows, the winner's tinted. After a change after the
+    their team's colour, each face cut out, with their time), then everyone else, from P4, in the site's rows. After a change after the
     flag (changes), a "Result changed" panel titled note on top and the drivers who moved outlined, green up and red down;
     buttons open the session's replay and its full result on the site (which follows the official result)."""
     t = lambda text, **k: {"type": "text", "text": text, **k}
@@ -474,23 +473,23 @@ def f1_card(meeting, session, when, rows, replay_key=None, note=None, changes=No
             *([t(d["team_name"], size="xxs", color=F1C["dim"])] if d.get("team_name") else []),
             t(val, size="xxs", weight="bold", color=F1C["red_ink"] if val in ("DNF", "DNS", "DSQ") else F1C["text"], margin="sm")]}
 
-    def build(team, compact, listed):
+    def build(team, compact):
         top = [rows[i] for i in (1, 0, 2) if i < len(rows)] if len(rows) >= 3 else rows[:3]   # a podium: P2, P1 in the middle, P3
         head = [f1_changes(note or "Result changed", changes)] if changes else [t(note, size="xs", weight="bold", color=F1C["red_ink"], wrap=True)] if note else []
         body = head + [
             t("PODIUM", size="xxs", weight="bold", color=F1C["dim"], margin="lg" if head else "none"),
             {"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "flex-end", "margin": "sm", "contents": [podium(*r) for r in top]},
             {"type": "box", "layout": "vertical", "margin": "lg", "spacing": "xs", "contents": [
-                f1_slot(p, d, v, moved.get(d.get("driver_number"), 0), tint=p == "1", team=team, out=v in ("DNF", "DNS", "DSQ"), compact=compact)
-                for p, d, v in rows[listed:]]}]
+                f1_slot(p, d, v, moved.get(d.get("driver_number"), 0), team=team, out=v in ("DNF", "DNS", "DSQ"), compact=compact)
+                for p, d, v in rows[3:]]}]  # the top 3 are on the podium, not listed again
         return {"type": "bubble", "size": "mega", "header": f1_head(meeting.get("meeting_name") or "Formula 1", when, meeting, session),
                 "body": {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": body},
                 **({"footer": f1_buttons(("Watch replay", f"{F1_SITE}?replay={replay_key}"), ("Full result", f"{F1_SITE}?result={replay_key}"))}
                    if replay_key else {})}
     # the site's look while it fits in LINE's 30 KB; a bigger card (a long "Result changed" list) gets plainer rows: without
-    # the team, then on one line, then from P4 only (the podium shows the top 3)
-    for team, compact, listed in ((True, False, 0), (False, False, 0), (False, True, 0), (False, True, 3)):
-        card = build(team, compact, listed)
+    # the team, then on one line
+    for team, compact in ((True, False), (False, False), (False, True)):
+        card = build(team, compact)
         if f1_size(card) <= F1_MAX:
             break
     return card
