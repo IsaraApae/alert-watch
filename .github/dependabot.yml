@@ -1,0 +1,12 @@
+# Pull requests when the GitHub Actions the workflows use have new versions (the code itself has no dependencies:
+# watch.py and vpn_feeds.py use Python's standard library only). The ci workflow checks each one; watch.yml runs the
+# live alerts, so merge its updates when you can watch the next few runs.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
