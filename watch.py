@@ -138,29 +138,36 @@ def fetch(url):
         raise
 
 
-CARD_KIND = {"New episode": ("NEW EPISODE", "Watch"), "Watch now": ("WATCH NOW", "Watch"), "New special": ("NEW SPECIAL", "Watch"),
-             "New chapter": ("NEW CHAPTER", "Read")}
+CARD_KIND = {"New episode": ("New episode", "Watch"), "Watch now": ("Watch now", "Watch"), "New special": ("New special", "Watch"),
+             "New chapter": ("New chapter", "Read")}
+# the anime website's light colours (site/anime/index.html): page, card, text, grey text, accent, the Watch pill's tint
+# (its #FF696126 on white) and the empty cover's fill (its #7676801A on white)
+SITE = {"bg": "#F5F5F7", "card": "#FFFFFF", "text": "#17171A", "text2": "#6B6B73", "accent": "#B8443E", "tint": "#FFE9E7", "fill": "#F1F1F2"}
 
 
 def card(title, msg, image, uri=None):
-    """A LINE card in the anime website's style: one white rounded card, the cover tall with rounded corners, a small
-    red label (NEW EPISODE, NEW CHAPTER), the title, the details in grey, and a Watch or Read pill. Tapping anywhere
-    opens uri, if given."""
+    """A LINE card that looks like a piece of the anime website: on the site's light grey, a bold label like its day
+    labels (New episode, New chapter), then one white rounded card holding a row as the site lists an episode: the cover
+    with rounded corners, the title, the details in grey, and the site's Watch (or Read) pill. Tapping anywhere opens uri."""
     kind, _, name = title.partition(": ")
-    label, verb = CARD_KIND.get(kind, (kind.upper(), "Open")) if name else ("", "Open")
+    label, verb = CARD_KIND.get(kind, (kind, "Open")) if name else ("", "Open")
     t = lambda x, **k: {"type": "text", "text": x, "wrap": True, **k}
-    info = ([t(label, size="xxs", weight="bold", color="#DF1B2B")] if label else []) + [
-        t(name or title, size="sm", weight="bold", color="#1C1C1E"), t(msg, size="xs", color="#636366")]
+    info = [t(name or title, size="md", weight="bold", color=SITE["text"]), t(msg, size="xs", color=SITE["text2"])]
     if uri:
-        info.append({"type": "box", "layout": "horizontal", "margin": "md", "contents": [
-            {"type": "box", "layout": "horizontal", "flex": 0, "cornerRadius": "999px", "backgroundColor": "#FDE8EA", "paddingTop": "6px",
-             "paddingBottom": "6px", "paddingStart": "14px", "paddingEnd": "14px", "action": {"type": "uri", "label": verb, "uri": uri},
-             "contents": [t(f"▶ {verb}", size="xs", weight="bold", color="#DF1B2B", flex=0, wrap=False)]}]})
-    return {"type": "bubble", "size": "kilo", **({"action": {"type": "uri", "label": "open", "uri": uri}} if uri else {}),
-            "body": {"type": "box", "layout": "horizontal", "backgroundColor": "#FFFFFF", "paddingAll": "14px", "spacing": "md", "alignItems": "flex-start", "contents": [
-                {"type": "box", "layout": "vertical", "width": "64px", "flex": 0, "cornerRadius": "12px", "backgroundColor": "#E9E6EE", "contents": [
-                    {"type": "image", "url": image, "aspectMode": "cover", "aspectRatio": "2:3", "size": "full"}]},
-                {"type": "box", "layout": "vertical", "spacing": "xs", "contents": info}]}}
+        info.append({"type": "box", "layout": "horizontal", "margin": "md", "contents": [  # the pill keeps its own width
+            {"type": "box", "layout": "horizontal", "flex": 0, "cornerRadius": "999px", "backgroundColor": SITE["tint"],
+             "paddingTop": "7px", "paddingBottom": "7px", "paddingStart": "12px", "paddingEnd": "14px",
+             "action": {"type": "uri", "label": verb, "uri": uri},
+             "contents": [t(f"▷ {verb}", size="sm", weight="bold", color=SITE["accent"], flex=0, wrap=False)]}]})
+    row = {"type": "box", "layout": "horizontal", "backgroundColor": SITE["card"], "cornerRadius": "22px", "paddingAll": "14px",
+           "spacing": "lg", "alignItems": "center", "contents": [
+               {"type": "box", "layout": "vertical", "width": "56px", "flex": 0, "cornerRadius": "12px", "backgroundColor": SITE["fill"], "contents": [
+                   {"type": "image", "url": image, "aspectMode": "cover", "aspectRatio": "11:15", "size": "full"}]},
+               {"type": "box", "layout": "vertical", "spacing": "xs", "contents": info}]}
+    head = [{"type": "box", "layout": "vertical", "paddingStart": "6px", "contents": [t(label, size="md", weight="bold", color=SITE["text"])]}]
+    return {"type": "bubble", "size": "mega", **({"action": {"type": "uri", "label": "open", "uri": uri}} if uri else {}),
+            "body": {"type": "box", "layout": "vertical", "backgroundColor": SITE["bg"], "paddingAll": "12px", "paddingTop": "16px",
+                     "spacing": "md", "contents": (head if label else []) + [row]}}
 
 
 def notify(title, msg, links, image=None, uri=None):
