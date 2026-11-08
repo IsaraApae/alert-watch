@@ -2,7 +2,7 @@
 
 Sends a LINE message (official account **Alert Watch**) when a tracked manga chapter, Webtoon episode or anime episode comes out, and after every Formula 1 session. It runs on GitHub Actions, so it works with your Mac off.
 
-- **Website:** https://isaraapae.github.io/alert-watch/anime/ (the old address, https://isaraapae.github.io/alert-watch/, forwards there; the move gave iPhone Safari a fresh address after it had remembered "no icon" for the old one). In the same style as [ป้าคีน](https://github.com/IsaraApae/paakeen): a floating menu (Next, Timetable, Aired) and a round Appearance button at the top. It has a countdown to the next episode and the next 7 days (**Next**), a Monday–Sunday **Timetable** (`?v=week`), and the episodes that aired in the past week with their Watch buttons (**Aired**, `?v=aired`). Times are Thai time.
+- **Website:** https://isaraapae.github.io/alert-watch/anime/ (the old address, https://isaraapae.github.io/alert-watch/, forwards there; the move gave iPhone Safari a fresh address after it had remembered "no icon" for the old one). In the same style as [ป้าคีน](https://github.com/IsaraApae/paakeen): a floating menu (Next, Timetable, Aired) and a round Appearance button at the top. It has a countdown to the next episode and the next 7 days (**Next**), a Monday–Sunday **Timetable** (`?v=week`), and the episodes that aired in the past week with their Watch buttons (**Aired**, `?v=aired`). An episode's Watch button appears once its LINE card is out, never before (a YouTube premiere waits until it plays). A finished show leaves the site once its last episode is over a week old. Times are Thai time.
 - **F1 Live:** https://isaraapae.github.io/f1-live/, its own site and repo ([IsaraApae/f1-live](https://github.com/IsaraApae/f1-live)): live timing, the track on a real map, calendar, standings, replays and lap battles.
 - **LINE menu:** four buttons, in the same style as the website: **Next**, **Timetable**, **Aired** and **F1 Live**. The menu image is [richmenu.png](richmenu.png), drawn from [richmenu.html](richmenu.html).
 
@@ -41,24 +41,26 @@ When an F1 session starts, LINE gets one card, "LIVE NOW", with a button that op
 
 A card with the official F1 logo after every session of each Grand Prix weekend: **Practice 1, 2 and 3, Sprint Qualifying, Sprint, Qualifying and Race**, sent once each as soon as the session finishes (`f1_sessions` in `ci-state.json`). OpenF1 refuses free requests from a session's start until 30 minutes after its scheduled end (HTTP 401), so a results card comes about half an hour after a session's scheduled end, at the first check after OpenF1 opens again (a race, scheduled for 2 hours, often finishes earlier). The weekend's schedule and Grand Prix details are saved whenever OpenF1 answers (`f1_schedule`, `f1_meetings`), so the start cards work during that time. Formula 1's own live timing feed would have the order at the flag, but it refuses GitHub's servers (HTTP 403), so it isn't used.
 
-The cards use the F1 Live site's light look: white panels on light grey and the site's driver tags (the car number on the team colour, the three-letter name tinted with it).
+All the F1 cards share one style, which the F1 Live site follows too: white panels on light grey, every driver on their team's colour stripe as code, car number and full name (RUS 63 George Russell), positions in one column, faces cut out with no coloured disc, and whoever moved outlined (green up, red down).
 
 - Header: the F1 logo, the Grand Prix with its flag, the session, and the Thai start time.
-- The top 3 as a podium (P2, P1 in the middle, P3) with their photos on their team colour, P1 in red, each with their driver tag and time.
-- Everyone else as the page's timing table: position, driver tag, name and time, in striped rows.
+- The top 3 as a podium (P2, P1 in the middle, P3): their faces with a team-colour bar under each, position, code, number, full name and time, P1 in red.
+- Everyone else under **Classification**, each on their team stripe: position, code, number, full name and time.
 - A red **Watch replay** button that opens the session's replay on the F1 Live page, and **Full result**, which opens the weekend's page on the F1 Live site scrolled to that session with every driver (it always shows the result as it stands, penalties after the race included).
 - The time column shows:
   - practice: best lap, then the gap to the fastest;
   - qualifying and sprint qualifying: the lap from the last part reached (Q3 for the top 10);
   - sprint and race: total time, then the gap, laps down, or DNF/DNS/DSQ. An unclassified driver is shown as NC in the position column.
 
-After each race, the **Drivers' and Teams' Championships** follow as two swipeable cards in the same style, with driver photos and team logos in their own colours (as on the site in light mode). Each line shows the position, the change since before the race (+1 in green, -1 in red), and the points with how many were gained (`f1_standings` in `ci-state.json`).
+After each race, the **Drivers' and Teams' Championships** follow as two swipeable cards in the same style, with driver photos and team logos in their own colours (as on the site in light mode). Each line shows the position, the face or logo, full name and team, ▲/▼ places since before the race (outlined green or red), and the points with how many were gained (`f1_standings` in `ci-state.json`).
 
-**Results that change after the flag.** A race or sprint is followed for 3 days after its card (`f1_final` in `ci-state.json`). If its result changes (the stewards' post-race penalties: in Mexico 2026 Hirakawa went from 13th to 10th and Piastri out of the points), a **Result updated** card follows with who moved ("HIR P13 → P10 (+1 pt)"), once two checks in a row (5 minutes apart) give the new result, so a result OpenF1 gives for one check only sends nothing (`f1_seen`). After a race the championship cards come again, marked updated. The championship points are always each driver's and team's points before the race plus their points in its result, because OpenF1's own championship can stay on the result from before the penalties.
+**Results that change after the flag.** Every session, practice included, is followed for 3 days after its card (`f1_final` in `ci-state.json`). If its result changes (the stewards' post-race penalties: in Mexico 2026 Hirakawa went from 13th to 10th and Piastri out of the points), a **Result updated** card follows with a "Result changed" list of who moved, in the classification's rows (HIR 50 Ryo Hirakawa, P13 → P10, +1 pt, outlined green), once two checks in a row (5 minutes apart) give the new result, so a result OpenF1 gives for one check only sends nothing (`f1_seen`). After a race the championship cards come again, marked updated. The championship points are always each driver's and team's points before the race plus their points in its result, because OpenF1's own championship can stay on the result from before the penalties.
+
+**Starting grid.** After qualifying (and sprint qualifying), the grid it sets is followed until the race (or sprint) starts (`f1_grid`). When it differs from the qualifying order (grid penalties: São Paulo 2026, Russell P2 → P7, Leclerc P4 → P14), a **Starting grid** card follows: a red **Grid penalties** list of who dropped back, in the same rows, then the grid in two staggered columns, the penalised drivers outlined red. It comes again if the grid changes after that, and like the results only once two checks in a row see it (`f1_grid_seen`). The F1 Live site shows the same: the qualifying in grid order with a Grid penalties panel and a switch back to the qualifying order.
 
 `python3 watch.py f1check` (the **f1check** option when running the workflow by hand) has LINE check the cards, built from the latest race, without sending anything; LINE takes at most 30 KB a card, and a drivers' standings card that would be bigger is sent without faces.
 
-Times on the cards are Thai time, and race lengths are written as "1h 42m 00.785s". When OpenF1 leaves a driver out of a session or blanks his name and team (a stand-in, like Hirakawa in Mexico 2026), he is filled in from the weekend's other sessions, and one session's trouble never holds up the next one's card. Results, standings and team colours come from the free [OpenF1](https://openf1.org) API. Driver photos are formula1.com's portraits for the current season, cropped to the face. OpenF1's own photo links are last season's, in old team suits, and rookies have none.
+Times on the cards are Thai time, and the winner's race time is written as "2:20:28:772" and gaps in seconds ("+10.707s"). When OpenF1 leaves a driver out of a session or blanks his name and team (a stand-in, like Hirakawa in Mexico 2026), he is filled in from the weekend's other sessions, and one session's trouble never holds up the next one's card. Results, standings and team colours come from the free [OpenF1](https://openf1.org) API. Driver photos are formula1.com's portraits for the current season, cropped to the face. OpenF1's own photo links are last season's, in old team suits, and rookies have none.
 
 ## Editing the lists
 
@@ -73,7 +75,7 @@ You can manage the lists by messaging Alert Watch on LINE:
 | `list` | Show everything tracked |
 | `help` | Show the commands |
 
-Every manga card and the LINE list say "Chapter 216": the manga site's chapter, or for WEBTOON the chapter in the episode's title (WEBTOON's own episode numbers also count notices).
+Every manga card and the LINE list say "Chapter 216" (several new chapters in a row come as one range: "Chapter 340-345"): the manga site's chapter, or for WEBTOON the chapter in the episode's title (WEBTOON's own episode numbers also count notices).
 
 You can also edit the files directly:
 
