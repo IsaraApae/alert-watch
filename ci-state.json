@@ -2913,7 +2913,8 @@
   "191656:6",
   "202250:6",
   "189123:5",
-  "185756:7"
+  "185756:7",
+  "199426:6"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4183,6 +4184,17 @@
    "published": 1794150000,
    "scheduled": 1794150000,
    "notified": true
+  },
+  "199426:6": {
+   "title": "HOTEL INHUMANS Season 2",
+   "episode": 6,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=GJvl-JDmW9c",
+   "detected": 1794152700,
+   "published": 1794152700,
+   "scheduled": 1794152700,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4293,7 +4305,8 @@
   "209872:6": "https://animeruka.com/ep/ranma-%c2%bd-season-3-ep-6/",
   "202250:6": "https://isaraapae.github.io/alert-watch/b.html?v=ApTAib-ab0o",
   "189123:5": "https://animeruka.com/ep/ao-no-hako-blue-box-season-2-ep-5/",
-  "185756:7": "https://isaraapae.github.io/alert-watch/b.html?v=Nl1Onan5ziY"
+  "185756:7": "https://isaraapae.github.io/alert-watch/b.html?v=Nl1Onan5ziY",
+  "199426:6": "https://isaraapae.github.io/alert-watch/b.html?v=GJvl-JDmW9c"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4385,7 +4398,7 @@
   "11407",
   "11408"
  ],
- "anime_checked": 1794152110,
+ "anime_checked": 1794152411,
  "mal_totals": {
   "60601": [
    12,
