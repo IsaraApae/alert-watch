@@ -557,8 +557,7 @@ def f1_grid_card(meeting, race, grid, drivers, qual, key):
     start = datetime.fromisoformat(race["date_start"]).astimezone(THAI).strftime("%a %d %b · %H:%M")
     body = ([{"type": "box", "layout": "vertical", "cornerRadius": "10px", "paddingAll": "10px", "backgroundColor": red(.06), "margin": "none",
               "contents": [t("GRID PENALTIES", size="xxs", weight="bold", color=F1C["red"])] + [penalty(x) for x in back]}] if back else []) + [
-        {"type": "box", "layout": "horizontal", "margin": "lg" if back else "none", "contents": [
-            t("STARTING GRID", size="xxs", weight="bold", color=F1C["dim"]), t("Turn 1 ↑", size="xxs", color=F1C["dim"], align="end")]},
+        t("STARTING GRID", size="xxs", weight="bold", color=F1C["dim"], margin="lg" if back else "none"),
         {"type": "box", "layout": "horizontal", "spacing": "md", "contents": [
             {"type": "box", "layout": "vertical", "contents": [slot(x) for x in grid if x["position"] % 2]},
             {"type": "box", "layout": "vertical", "paddingTop": "18px", "contents": [slot(x) for x in grid if not x["position"] % 2]}]}]
