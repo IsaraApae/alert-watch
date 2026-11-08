@@ -16,6 +16,16 @@ Sends a LINE message (official account **Alert Watch**) when a tracked manga cha
 
 <img src="richmenu.png" width="600" alt="LINE menu: Next, Timetable, Aired and F1 Live">
 
+## Tech stack
+
+- **Watcher:** Python 3, standard library only (nothing to `pip install`): [watch.py](watch.py), plus [vpn_feeds.py](vpn_feeds.py) for the one feed that only answers from Thailand (through a free [VPN Gate](https://www.vpngate.net) server with OpenVPN).
+- **Runs on:** GitHub Actions ([watch.yml](.github/workflows/watch.yml)), started every 5 minutes by [cron-job.org](https://cron-job.org); its state is committed back to the repository.
+- **Alerts:** the [LINE Messaging API](https://developers.line.biz/en/docs/messaging-api/) (broadcast Flex cards and a rich menu).
+- **LINE commands:** Google Apps Script ([line/Code.gs](line/Code.gs)), which edits the lists through the GitHub API.
+- **Website:** one static HTML page with no framework and no build step ([site/anime/index.html](site/anime/index.html)), published to GitHub Pages by [pages.yml](.github/workflows/pages.yml).
+- **Data:** AniList, MyAnimeList, Syoboi Calendar, the YouTube Data API, OpenF1, WEBTOON's RSS feeds and the manga and anime sites listed below.
+- **Checks:** [ci.yml](.github/workflows/ci.yml) compiles the code and runs the offline self-checks on every push and pull request; Dependabot keeps the workflows' actions up to date.
+
 ## What gets an alert
 
 | Kind | Card opens |
@@ -109,8 +119,8 @@ You can also edit the files directly:
   - **richmenu** installs the LINE menu.
   - **f1check** has LINE check every kind of card (anime, manga, and the F1 results, standings and live cards, built from the latest race) without sending anything.
   - **sites** checks which anime sources GitHub can read right now (animegojo, suba-anime, animeruka and its episode feed).
-- `python3 watch.py test` runs the self-checks.
-- [line/Code.gs](line/Code.gs) is the LINE command webhook. It runs on Google Apps Script with these script properties: `LINE_TOKEN`, `GITHUB_TOKEN`, `OWNER_ID`. After you change it, redeploy it with **Manage deployments → New version**.
+- `python3 watch.py test` runs the self-checks (offline: every request is mocked). The **ci** workflow runs them on every push and pull request.
+- [line/Code.gs](line/Code.gs) is the LINE command webhook. It runs on Google Apps Script with these script properties: `LINE_TOKEN`, `GITHUB_TOKEN`, `OWNER_ID`, and `WEBHOOK_KEY`, a long random string that the webhook URL in the LINE Developers console must then end with (`.../exec?key=<it>`). Apps Script can't read LINE's signature header, so the key is what shows a request comes from LINE; until it's set, requests are accepted as before. After you change the script, redeploy it with **Manage deployments → New version**.
 - The `site/` folder holds the website. `.github/workflows/pages.yml` publishes it to GitHub Pages whenever it changes (in **Settings → Pages** the source is **GitHub Actions**):
   - `anime/`, the anime site, one page that reads `schedule.json` from this repo;
   - `index.html`, which forwards to `anime/`;
@@ -120,3 +130,29 @@ You can also edit the files directly:
   - `f1.html`, which forwards to the F1 Live site (old links);
   - `f1-logo.png`, the official F1 logo used in the F1 LINE cards;
   - the icons (`favicon.svg`, `favicon-32.png`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`) and `manifest.webmanifest`.
+
+## Run your own copy
+
+1. Fork the repository. In **Settings → Pages**, set the source to **GitHub Actions**.
+2. Point the code at your fork: `REPO` in [line/Code.gs](line/Code.gs), `DATA` in [site/anime/index.html](site/anime/index.html), and the `isaraapae.github.io/alert-watch` addresses in [watch.py](watch.py) and the site's `og:` tags.
+3. Make a LINE Messaging API channel in the [LINE Developers console](https://developers.line.biz/console/) and a YouTube Data API key in Google Cloud, then add them as repository secrets:
+   ```bash
+   gh secret set LINE_TOKEN -R <you>/alert-watch
+   gh secret set YOUTUBE_KEY -R <you>/alert-watch
+   ```
+4. Put your own series in [urls.txt](urls.txt), [anime.txt](anime.txt) and [thai_times.txt](thai_times.txt). To start from nothing, delete `ci-state.json`: the first check then records the anime episodes and manga chapters already out without sending them (F1 sends its latest session as a sample).
+5. Have [cron-job.org](https://cron-job.org) start the watcher every 5 minutes: a `POST` to `https://api.github.com/repos/<you>/alert-watch/actions/workflows/watch.yml/dispatches` with the body `{"ref":"main"}` and the headers `Accept: application/vnd.github+json` and `Authorization: Bearer <token>`. Use a fine-grained token for this repository only, with **Actions: Read and write** and nothing else.
+6. For the LINE commands (optional): make a Google Apps Script project, paste in [line/Code.gs](line/Code.gs), and set its script properties: `LINE_TOKEN`, `GITHUB_TOKEN` (a fine-grained token for this repository only, **Contents: Read and write**), `WEBHOOK_KEY`, and `OWNER_ID` (message the account once and it replies with yours). Deploy it as a web app (execute as you, anyone can access), then set the LINE webhook URL to its `/exec` address plus `?key=<WEBHOOK_KEY>`.
+7. Run the workflow by hand with **ping** to get a test card, and with **richmenu** to install the menu.
+
+To try it on a computer, `python3 watch.py test` runs the self-checks, and `python3 watch.py` runs a check. Without `LINE_TOKEN` nothing is sent; it keeps its state in `state.json`, or the file named by `MANGA_STATE`. The environment variables it reads:
+
+| Variable | Needed for |
+|---|---|
+| `LINE_TOKEN` | sending to LINE (without it, a run only reports) |
+| `YOUTUBE_KEY` | the Muse and Ani-One Thailand uploads (without it, YouTube's public feeds, which can be hours behind) |
+| `MANGA_STATE` | the state file (default `state.json`; the workflow uses `ci-state.json`) |
+
+## License
+
+The code is under the [MIT License](LICENSE). The F1 logo, driver photos, series covers and other artwork belong to their owners and aren't covered by it.
