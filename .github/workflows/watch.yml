@@ -30,7 +30,7 @@ jobs:
     steps:
       # the branch as it is when the job starts, not as it was when cron-job.org started the run: a run that waited for one
       # still going (an F1 session's start, a YouTube video) must read the state that one saved, or it sends the same cards again
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.ref_name }}
       # when the job began, so watch.py knows how long it can wait for an F1 session to start or a YouTube video (the job has 9 minutes)
@@ -39,7 +39,7 @@ jobs:
           echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
           echo "DEBS_KEY=openvpn-$(. /etc/os-release && echo "$VERSION_ID")-$(date +%Y-%m)" >> "$GITHUB_ENV"
       # the OpenVPN packages vpn_feeds.py installs (debs/), kept between runs so it needn't download them each time
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         if: ${{ !inputs.ping && !inputs.richmenu && !inputs.f1check }}
         with:
           path: debs
