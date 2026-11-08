@@ -94,7 +94,7 @@ svg.ico { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: rou
 }
 .round svg { width: 22px; height: 22px; }
 
-.label { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 14px 4px -4px; font-size: 13px; color: var(--text-2); }
+.label { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 14px 4px -4px; font-size: 13px; font-weight: 400; color: var(--text-2); }  /* an h2: day headings for screen readers, looking as before */
 .label b { font-size: 17px; font-weight: 600; color: var(--text); }
 
 .card { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 18px 20px; min-width: 0; }
@@ -276,7 +276,7 @@ function episodeRow(e) {
   return row;
 }
 function group(box, title, today, rows, emptyText) {
-  const label = el("p", "label"); label.append(el("b", null, title));
+  const label = el("h2", "label"); label.append(el("b", null, title));
   if (rows.length) label.append(el("span", null, rows.length === 1 ? "1 episode" : `${rows.length} episodes`));
   const card = el("div", "card list");
   if (rows.length) rows.forEach(r => card.append(r)); else card.append(el("p", "empty", emptyText));
