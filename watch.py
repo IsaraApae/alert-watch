@@ -865,9 +865,9 @@ WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 def thai_times():
     """{AniList id: (where, weekday, "HH:MM", days earlier than Japan)} for shows whose Thai-sub release differs from Japanese TV."""
     auto = HERE / "thai_times_auto.json"  # learned by the watcher; thai_times.txt (yours) overrides it
-    out = {int(k): tuple(v) + (0,) for k, v in (json.loads(auto.read_text()) if auto.exists() else {}).items()}
+    out = {int(k): tuple(v) + (0,) for k, v in (json.loads(auto.read_text(encoding="utf-8")) if auto.exists() else {}).items()}
     path = HERE / "thai_times.txt"
-    for line in path.read_text().splitlines() if path.exists() else []:
+    for line in path.read_text(encoding="utf-8").splitlines() if path.exists() else []:
         r = [x.strip() for x in line.split("|")]
         if line.startswith("#") or len(r) not in (4, 5) or not r[0].isdigit():
             continue
@@ -1067,7 +1067,7 @@ def learn_thai_titles(shows, videos, due, thai):
         learned.append((i, name))
     if learned:
         path = HERE / "anime.txt"
-        lines = path.read_text().splitlines()
+        lines = path.read_text(encoding="utf-8").splitlines()
         for n, line in enumerate(lines):
             r = [x.strip() for x in line.split("|", 5)]
             if len(r) >= 2 and r[1].isdigit() and int(r[1]) in {i for i, _ in learned}:
@@ -1075,7 +1075,7 @@ def learn_thai_titles(shows, videos, due, thai):
                 # a short line ("name | id") keeps the Thai name in its last field, which completing it later keeps
                 lines[n] = f"{line.rstrip()}|{literal(dict(learned)[i])}" if len(r) == 6 and r[5] else \
                     " | ".join((r + [""] * 6)[:5] + [shows[i]["yt"]])
-        path.write_text("\n".join(lines) + "\n")
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         for i, name in learned:
             print(f"learned Thai title for {shows[i]['name']}: {name}")
     return learned
@@ -1215,7 +1215,7 @@ def anime_list():
     """anime.txt: name | AniList id | TV-schedule id (0 = none) | first episode number(s) in the TV schedule, comma-separated when channels count differently
     | episodes before this AniList entry (added to the count) | YouTube title keywords."""
     shows = {}
-    for line in (HERE / "anime.txt").read_text().splitlines():
+    for line in (HERE / "anime.txt").read_text(encoding="utf-8").splitlines():
         if not line.strip() or line.startswith("#"):
             continue
         r = [x.strip() for x in line.split("|", 5)]  # tolerant of missing spaces around |
@@ -1270,7 +1270,7 @@ def saved_media(state, shows):
     times come from Syoboi, so only online-only shows need AniList's airing times."""
     saved = state.get("anilist_media", {})
     path = HERE / "schedule.json"
-    site = {w["name"]: w for w in (json.loads(path.read_text())["shows"] if path.exists() else [])}
+    site = {w["name"]: w for w in (json.loads(path.read_text(encoding="utf-8"))["shows"] if path.exists() else [])}
     thai = thai_times()
     out = {}
     for i, s in shows.items():
@@ -1299,7 +1299,7 @@ def saved_tv(state, shows):
     thai = thai_times()
     by_name = {s["name"]: i for i, s in shows.items() if s["tid"]}
     out = {}
-    for w in (json.loads(path.read_text())["shows"] if path.exists() else []):
+    for w in (json.loads(path.read_text(encoding="utf-8"))["shows"] if path.exists() else []):
         i = by_name.get(w["name"])
         for r in w["episodes"] if i else []:
             if r["ep"] == int(r["ep"]) and r["ep"] > shows[i]["offset"]:  # specials (0, .5) left out
@@ -1398,17 +1398,17 @@ def schedule(state=None):
         print(f"FAIL bilibili schedule: {e}", file=sys.stderr)
         cards = []
     auto = HERE / "thai_times_auto.json"
-    known = json.loads(auto.read_text()) if auto.exists() else {}
+    known = json.loads(auto.read_text(encoding="utf-8")) if auto.exists() else {}
     # only from real Syoboi times: ones worked back from schedule.json would "learn" the slots already in it
     learned = {str(k): v for k, v in learn_release_times(shows, jp, videos, cards).items()} if tv_ok else {}
     merged = {k: v for k, v in {**known, **learned}.items() if int(k) in shows}  # a slot stays known after its week scrolls off
     if merged != known:
-        auto.write_text(json.dumps(merged, ensure_ascii=False, indent=1))
+        auto.write_text(json.dumps(merged, ensure_ascii=False, indent=1), encoding="utf-8")
         print("learned Thai release times:", "; ".join(f"{shows[int(k)]['name']}: {' '.join(x for x in v if x)}" for k, v in merged.items() if known.get(k) != v))
     path = HERE / "schedule.json"
-    old = json.loads(path.read_text()) if path.exists() else {}
+    old = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     if old.get("shows") != out:
-        path.write_text(json.dumps({"updated": now, "shows": out}, ensure_ascii=False, indent=1))
+        path.write_text(json.dumps({"updated": now, "shows": out}, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"schedule: {sum(len(x['episodes']) for x in out)} episodes, {'updated' if old.get('shows') != out else 'unchanged'}")
 
 
@@ -1450,7 +1450,7 @@ def complete_anime():
     the LINE "thai" command in the last field) with the Japanese TV schedule details and YouTube title keywords,
     so they get TV times and Thai-sub links like the hand-made entries. A Thai name already there is kept."""
     path = HERE / "anime.txt"
-    lines = path.read_text().splitlines()
+    lines = path.read_text(encoding="utf-8").splitlines()
     done = []
     for n, line in enumerate(lines):
         r = [x.strip() for x in line.split("|", 5)]
@@ -1473,7 +1473,7 @@ def complete_anime():
         lines[n] = f"{name} | {aid} | {tid} | {first} | 0 | {keywords}"
         done.append(f"{name}: TV schedule {tid or 'none, AniList times'}, first episode {first or '-'}")
     if done:
-        path.write_text("\n".join(lines) + "\n")
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         print("completed anime:", "; ".join(done))
 
 
@@ -1787,9 +1787,9 @@ def library(state):
     """library.json for the LINE "list" cards: every manga with its cover, latest chapter and where its card opens.
     Covers are fetched once per series and reused; the file is rewritten only when something changed."""
     path = HERE / "library.json"
-    old = {m["url"]: m for m in (json.loads(path.read_text())["manga"] if path.exists() else [])}
+    old = {m["url"]: m for m in (json.loads(path.read_text(encoding="utf-8"))["manga"] if path.exists() else [])}
     out = []
-    for url in (HERE / "urls.txt").read_text().split():
+    for url in (HERE / "urls.txt").read_text(encoding="utf-8").split():
         prev = old.get(url, {})
         if "cover" in prev and url not in COVER_OVERRIDES and (url not in WEBTOON_TWINS or prev.get("title")):  # a WEBTOON one: its title once
             title, image = prev.get("title"), prev["cover"]
@@ -1806,7 +1806,7 @@ def library(state):
         out.append({"url": url, "name": title or series_slug(url), "title": title, "cover": image,
                     "latest": state.get("chapter_labels", {}).get(url) or (f"Chapter {chapter_number(latest):g}" if latest else ""), "open": tap})
     if old != {m["url"]: m for m in out} or len(old) != len(out):
-        path.write_text(json.dumps({"manga": out}, ensure_ascii=False, indent=1))
+        path.write_text(json.dumps({"manga": out}, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
 def manga(state, urls):
@@ -1888,9 +1888,9 @@ def manga(state, urls):
 
 
 def main():
-    state = json.loads(STATE.read_text()) if STATE.exists() else {}
+    state = json.loads(STATE.read_text(encoding="utf-8")) if STATE.exists() else {}
     # the manga and WEBTOON pages, read in the background while the anime and F1 checks start (manga() takes them)
-    urls = (HERE / "urls.txt").read_text().split()
+    urls = (HERE / "urls.txt").read_text(encoding="utf-8").split()
     twins = [WEBTOON_TWINS[u] for u in urls if u in WEBTOON_TWINS and re.search(r"title_no=(\d+)", WEBTOON_TWINS[u])[1] not in WEBTOON_WEEKLY]
     # first in the queue: the uploads both the alerts and the schedule need, and Bilibili's week (slow, seconds)
     if not VIDEOS:
@@ -1936,7 +1936,7 @@ def main():
         schedule(state)
     except Exception as e:  # the countdown page must never stop the alerts
         print(f"FAIL schedule: {e}", file=sys.stderr)
-    STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1))
+    STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
     try:
         library(state)
     except Exception as e:  # the LINE list cards must never stop the alerts
@@ -1946,6 +1946,8 @@ def main():
 
 
 if __name__ == "__main__":
+    for stream in (sys.stdout, sys.stderr):  # Thai titles in the log, whatever the console's own encoding (Windows: cp1252)
+        stream.reconfigure(encoding="utf-8")
     if sys.argv[1:] == ["test"]:
         from unittest import mock
         h = ('<a href="https://x.net/manga/a/%e0%b8%95-2/">2</a><a href="https://x.net/other/">o</a>'
@@ -1995,7 +1997,7 @@ if __name__ == "__main__":
         assert thai_title("เกิดใหม่เป็นขุนนาง ภาค 3 / Tensei Kizoku 3 ตอนที่ 4 [ซับไทย]") == "เกิดใหม่เป็นขุนนาง ภาค 3"
         import tempfile
         with tempfile.TemporaryDirectory() as tmp, mock.patch(__name__ + ".HERE", Path(tmp)):
-            Path(tmp, "anime.txt").write_text("Kurumi | 1 | 0 | 1 | 0 | kurumi-chan\nSword | 2 | 0 | 1 | 0 | tensei shitara ken\nNew | 3\n")
+            Path(tmp, "anime.txt").write_text("Kurumi | 1 | 0 | 1 | 0 | kurumi-chan\nSword | 2 | 0 | 1 | 0 | tensei shitara ken\nNew | 3\n", encoding="utf-8")
             sh = {1: {"name": "Kurumi", "yt": "kurumi-chan", "offset": 0, "first": [1]}, 2: {"name": "Sword", "yt": "tensei shitara ken", "offset": 0, "first": [1]},
                   3: {"name": "New", "yt": "", "offset": 0, "first": [1]}}
             th = {1: ("Ani-One Thailand",), 2: ("Ani-One Thailand",), 3: ("Muse Thailand",)}
@@ -2005,7 +2007,7 @@ if __name__ == "__main__":
                     ("อีกเรื่อง ตอนที่ 5 [ซับไทย]", "d", 1000, "Muse Thailand")]                        # due on Ani-One, posted on Muse: no
             got = learn_thai_titles(sh, vids, {(1, 5): 1100, (3, 1): 100}, th)
             assert got == [(1, "คุรุมิจัง นักสู้ fx"), (2, "กลายเป็นดาบ")], got
-            assert Path(tmp, "anime.txt").read_text() == ("Kurumi | 1 | 0 | 1 | 0 | kurumi-chan|คุรุมิจัง นักสู้ fx\n"
+            assert Path(tmp, "anime.txt").read_text(encoding="utf-8") == ("Kurumi | 1 | 0 | 1 | 0 | kurumi-chan|คุรุมิจัง นักสู้ fx\n"
                                                           "Sword | 2 | 0 | 1 | 0 | tensei shitara ken|กลายเป็นดาบ\nNew | 3\n")
             assert re.search(sh[1]["yt"], "คุรุมิจัง นักสู้ fx ตอนที่ 6 [ซับไทย]") and learn_thai_titles(sh, vids, {(1, 5): 1100}, th) == []
         assert f1_time(92.274) == "1:32.274" and f1_time(6120.785) == "1:42:00.785" and f1_time(61.05) == "1:01.050"
@@ -2096,8 +2098,8 @@ if __name__ == "__main__":
                     mock.patch(__name__ + ".notify", lambda title, msg, links, *a: cards.append((clock[0] - T, links))), \
                     mock.patch.dict(os.environ, {"LINE_TOKEN": "x", "YOUTUBE_KEY": "y"}), mock.patch("builtins.print"), \
                     mock.patch("time.time", lambda: clock[0]), mock.patch("time.sleep", sleep):
-                Path(tmp, "anime.txt").write_text("Kurumi | 1 | 0 | 1 | 0 | kurumi-chan\n")
-                Path(tmp, "thai_times.txt").write_text("1 | Ani-One Thailand | - | -\n")
+                Path(tmp, "anime.txt").write_text("Kurumi | 1 | 0 | 1 | 0 | kurumi-chan\n", encoding="utf-8")
+                Path(tmp, "thai_times.txt").write_text("1 | Ani-One Thailand | - | -\n", encoding="utf-8")
                 wait_for_youtube(*anime(state, lambda: None))
         st = {"anime": []}
         check_at(T - 250, lambda t: [vid(T + 8)] if t >= T + 12 else [], st)  # the check before T; the video listed 12 s after T

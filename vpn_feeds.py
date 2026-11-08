@@ -123,9 +123,9 @@ class Tunnel:
     def __init__(self, n, ip, config, tmp):
         self.ip, self.dev, self.config = ip, f"tun{n}", config
         cfg, auth, self.log, self.pid = (tmp / f"vpn{n}.{x}" for x in ("ovpn", "auth", "log", "pid"))
-        cfg.write_text(config)
-        auth.write_text("vpn\nvpn\n")  # VPN Gate's public login
-        self.log.write_text("")
+        cfg.write_text(config, encoding="utf-8")
+        auth.write_text("vpn\nvpn\n", encoding="utf-8")  # VPN Gate's public login
+        self.log.write_text("", encoding="utf-8")
         self.until = min(time.time() + CONNECT_WAIT, START + DEADLINE)
         self.proc = subprocess.Popen(["sudo", "openvpn", "--config", str(cfg), "--auth-user-pass", str(auth), *OPENVPN_OPTS,
                                       "--dev", self.dev, "--writepid", str(self.pid), "--log", str(self.log)],
@@ -133,7 +133,7 @@ class Tunnel:
 
     def state(self):
         """'up', 'waiting', or why it failed."""
-        text = self.log.read_text(errors="replace")
+        text = self.log.read_text(encoding="utf-8", errors="replace")
         if CONNECTED in text:
             return "up"
         gave_up = next((l for l in text.splitlines() if any(s in l for s in GAVE_UP)), None)
@@ -145,7 +145,7 @@ class Tunnel:
 
     def stop(self):
         try:
-            subprocess.run(["sudo", "kill", self.pid.read_text().strip()], capture_output=True)
+            subprocess.run(["sudo", "kill", self.pid.read_text(encoding="utf-8").strip()], capture_output=True)
         except OSError:  # no pid file yet
             subprocess.run(["sudo", "pkill", "-f", "--", f"--dev {self.dev} "], capture_output=True)
 
@@ -181,7 +181,7 @@ def last_server():
     """The server that read the feed last time, as (ip, None, config text), or None. vpn_last.ovpn is its OpenVPN
     config under two comment lines, the first just its IP."""
     try:
-        ip, _, config = LAST.read_text().split("\n", 2)
+        ip, _, config = LAST.read_text(encoding="utf-8").split("\n", 2)
     except (OSError, ValueError):
         return None
     return (ip[2:].strip(), None, config) if ip.startswith("# ") and config.strip() else None
@@ -231,7 +231,7 @@ def connect_and_read(first, listed):
                         print(f"VPN: Thai server {t.ip} ok after {time.time() - START:.0f}s, saved {SITE}")
                         if not first or t.ip != first[0]:
                             LAST.write_text(f"# {t.ip}\n# the VPN Gate server that last read the {SITE} feed: "
-                                            f"vpn_feeds.py tries it first\n{t.config}")
+                                            f"vpn_feeds.py tries it first\n{t.config}", encoding="utf-8")
                         return True
                     t.stop()
                 time.sleep(0.2)
