@@ -170,7 +170,7 @@ def notify(title, msg, links, image=None, uri=None):
         return
     plain = {"type": "text", "text": f"{title}\n{links}"[:4500]}
     tries = ([{"type": "flex", "altText": f"{title} {msg}"[:400], "contents": card(title, msg, image, uri)}]
-             if image and re.search(r"\.(jpe?g|png)$", urlparse(image).path, re.I) else [])  # LINE cards show JPEG/PNG only + [plain]
+             if image and re.search(r"\.(jpe?g|png)$", urlparse(image).path, re.I) else []) + [plain]  # LINE cards show JPEG/PNG only
     for message in tries:  # the card first when there is a cover; plain text if LINE refuses it, so the alert is never lost
         if line_send(token, message):
             return
