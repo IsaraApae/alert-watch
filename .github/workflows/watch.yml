@@ -72,6 +72,11 @@ jobs:
           git commit -qm "update state"
           # pull first: LINE commands or another push may have changed the repo. If the same file changed on both sides,
           # keep this run's freshly made version (-X theirs replays our commit on top). A push that loses a race is retried.
+          # Except anime.txt, which LINE commands edit too (anime, thai, remove): where a LINE edit made during this run and
+          # this run's own change (a filled-in line, a learned Thai name) touch the same lines, the LINE edit wins, and the
+          # next run makes its change again. (In a rebase, %A is the pulled version.)
+          git config merge.upstream.driver "git merge-file --ours %A %O %B"
+          echo "anime.txt merge=upstream" >> .git/info/attributes
           for try in 1 2 3; do
             git pull -q --rebase -X theirs && git push -q && exit 0
             git rebase --abort 2>/dev/null || true
