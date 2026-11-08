@@ -1,0 +1,23 @@
+name: ci
+# Checks the code on every push and pull request, before the watcher (every 5 minutes) runs it. The watcher's own
+# "update state" pushes start no workflows (pushes made with the workflow's token never do), and a push of state files
+# only is skipped anyway.
+on:
+  push:
+    paths-ignore: [ci-state.json, schedule.json, library.json, thai_times_auto.json, vpn_last.ovpn]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04  # the watcher's runner, so the same python3
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Python compiles
+        run: python3 -m py_compile watch.py vpn_feeds.py
+      - name: Self-checks (offline, every request mocked)
+        run: python3 watch.py test
+      - name: LINE command script parses
+        run: cp line/Code.gs "$RUNNER_TEMP/Code.js" && node --check "$RUNNER_TEMP/Code.js"

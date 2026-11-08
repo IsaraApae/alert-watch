@@ -12,7 +12,7 @@ are unaffected throughout. Ordinary requests only (watch.py's usual user agent):
 from, not what it looks like. It never fails the job: when no Thai server works, watch.py reads the feed directly and
 reports the failure as before.
 """
-import base64, csv, io, shlex, shutil, signal, socket, subprocess, sys, tempfile, threading, time, urllib.request
+import base64, binascii, csv, io, re, shlex, shutil, signal, socket, subprocess, sys, tempfile, threading, time, urllib.request
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 
@@ -20,7 +20,7 @@ from watch import FEEDS, UA
 
 SITE = "animeruka"
 URL = FEEDS[SITE]
-SERVER_LIST = "http://www.vpngate.net/api/iphone/"  # VPN Gate's live server list (CSV)
+SERVER_LIST = "https://www.vpngate.net/api/iphone/"  # VPN Gate's live server list (CSV)
 TRACE = "https://www.cloudflare.com/cdn-cgi/trace"  # says which country this connection comes from (loc=TH)
 OUT = Path(__file__).parent / "feeds"
 DONE = OUT / "done"  # written when this has finished, whatever happened: watch.py waits for it (watch.FEED_WAIT)
@@ -32,7 +32,15 @@ START = time.time()
 # --route-nopull: the server's routes (its "send everything through me") are ignored, so only curl uses the tunnel.
 OPENVPN_OPTS = ["--data-ciphers", "AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305:AES-128-CBC",
                 "--data-ciphers-fallback", "AES-128-CBC", "--tls-cipher", "DEFAULT:@SECLEVEL=0", "--route-nopull",
-                "--connect-retry-max", "1", "--connect-timeout", "10", "--verb", "3"]
+                "--connect-retry-max", "1", "--connect-timeout", "10", "--verb", "3", "--script-security", "1"]
+# The only OpenVPN settings taken from a server's config: every VPN Gate config uses the first twelve and the ca, cert
+# and key blocks (checked on all 99 of its servers, Nov 2026), the rest are harmless ones a server might add. Anything
+# else is dropped: scripts (up, plugin, script-security), routes, includes. The configs come from volunteers' servers,
+# and OpenVPN runs as root on a runner that can push to this repository.
+SAFE_DIRECTIVES = {"dev", "proto", "remote", "cipher", "data-ciphers", "auth", "resolv-retry", "nobind", "persist-key",
+                   "persist-tun", "client", "verb", "data-ciphers-fallback", "tls-client", "remote-cert-tls", "key-direction",
+                   "comp-lzo", "float", "auth-nocache", "keepalive", "reneg-sec", "tun-mtu", "mssfix", "explicit-exit-notify"}
+SAFE_BLOCKS = {"ca", "cert", "key", "tls-auth", "tls-crypt"}
 CONNECTED = "Initialization Sequence Completed"
 GAVE_UP = ("SIGUSR1[soft", "SIGTERM", "AUTH_FAILED", "Exiting due to fatal error")  # OpenVPN failed or is starting over
 DEBS = Path(__file__).parent / "debs"  # the OpenVPN packages, kept between runs by the workflow's cache step
@@ -54,16 +62,43 @@ INSTALL = ("sudo sysctl -qw net.ipv4.conf.all.rp_filter=0 net.ipv4.conf.default.
            "a \"$o\" openvpn || { sudo apt-get update -qq && a \"$o\" openvpn; }; sudo rm -rf \"$d/partial\" \"$d/lock\"")
 
 
+def safe_config(text):
+    """A server's OpenVPN config with only SAFE_DIRECTIVES and the SAFE_BLOCKS kept (comments dropped too)."""
+    out, block, keep = [], None, False
+    for line in text.splitlines():
+        s = line.strip()
+        if block:  # inside an inline block: kept whole if it's a certificate, else skipped, up to its end tag
+            if keep:
+                out.append(s)
+            if s == f"</{block}>":
+                block = None
+            continue
+        tag = re.fullmatch(r"<([\w-]+)>", s)
+        if tag:
+            block, keep = tag[1], tag[1] in SAFE_BLOCKS
+            if keep:
+                out.append(s)
+        elif s and s[0] not in "#;" and s.split()[0] in SAFE_DIRECTIVES:
+            out.append(s)
+    return "\n".join(out) + "\n"
+
+
 def thai_servers():
-    """VPN Gate's Thai servers, best score first: [(ip, score, config text)]."""
+    """VPN Gate's Thai servers, best score first: [(ip, score, config text)]. A row it can't read is skipped."""
     req = urllib.request.Request(SERVER_LIST, headers={"User-Agent": UA})
     text = urllib.request.urlopen(req, timeout=20).read().decode("utf-8", "replace")
     lines = [l for l in text.splitlines() if l and not l.startswith("*")]  # "*vpn_servers" and "*" frame the CSV
     lines[0] = lines[0].lstrip("#")  # the header row starts "#HostName,IP,Score,..."
     rows = [r for r in csv.DictReader(io.StringIO("\n".join(lines)))
             if r.get("CountryShort") == "TH" and r.get("OpenVPN_ConfigData_Base64")]
-    rows.sort(key=lambda r: int(r.get("Score") or 0), reverse=True)
-    return [(r["IP"], r["Score"], base64.b64decode(r["OpenVPN_ConfigData_Base64"]).decode("utf-8", "replace")) for r in rows]
+    servers = []
+    for r in rows:
+        try:
+            servers.append((int(r.get("Score") or 0), r["IP"], r["Score"],
+                            base64.b64decode(r["OpenVPN_ConfigData_Base64"]).decode("utf-8", "replace")))
+        except (ValueError, binascii.Error):
+            print(f"VPN: skipped a server VPN Gate listed oddly ({r.get('IP')})")
+    return [(ip, score, config) for _, ip, score, config in sorted(servers, key=lambda s: s[0], reverse=True)]
 
 
 def answers(config):
@@ -75,6 +110,8 @@ def answers(config):
         if len(words) >= 2 and words[0] == "proto":
             proto = words[1]
         elif len(words) >= 3 and words[0] == "remote" and remote is None:
+            if not words[2].isdigit():
+                return False  # no port it can be reached on
             remote = (words[1], int(words[2]))
             if len(words) >= 4:
                 proto = words[3]
@@ -121,11 +158,11 @@ class Tunnel:
     """One OpenVPN connection to one server, on its own tun device."""
 
     def __init__(self, n, ip, config, tmp):
-        self.ip, self.dev, self.config = ip, f"tun{n}", config
+        self.ip, self.dev, self.config = ip, f"tun{n}", safe_config(config)  # also what vpn_last.ovpn keeps
         cfg, auth, self.log, self.pid = (tmp / f"vpn{n}.{x}" for x in ("ovpn", "auth", "log", "pid"))
-        cfg.write_text(config)
-        auth.write_text("vpn\nvpn\n")  # VPN Gate's public login
-        self.log.write_text("")
+        cfg.write_text(self.config, encoding="utf-8")
+        auth.write_text("vpn\nvpn\n", encoding="utf-8")  # VPN Gate's public login
+        self.log.write_text("", encoding="utf-8")
         self.until = min(time.time() + CONNECT_WAIT, START + DEADLINE)
         self.proc = subprocess.Popen(["sudo", "openvpn", "--config", str(cfg), "--auth-user-pass", str(auth), *OPENVPN_OPTS,
                                       "--dev", self.dev, "--writepid", str(self.pid), "--log", str(self.log)],
@@ -133,7 +170,7 @@ class Tunnel:
 
     def state(self):
         """'up', 'waiting', or why it failed."""
-        text = self.log.read_text(errors="replace")
+        text = self.log.read_text(encoding="utf-8", errors="replace")
         if CONNECTED in text:
             return "up"
         gave_up = next((l for l in text.splitlines() if any(s in l for s in GAVE_UP)), None)
@@ -145,7 +182,7 @@ class Tunnel:
 
     def stop(self):
         try:
-            subprocess.run(["sudo", "kill", self.pid.read_text().strip()], capture_output=True)
+            subprocess.run(["sudo", "kill", self.pid.read_text(encoding="utf-8").strip()], capture_output=True)
         except OSError:  # no pid file yet
             subprocess.run(["sudo", "pkill", "-f", "--", f"--dev {self.dev} "], capture_output=True)
 
@@ -181,7 +218,7 @@ def last_server():
     """The server that read the feed last time, as (ip, None, config text), or None. vpn_last.ovpn is its OpenVPN
     config under two comment lines, the first just its IP."""
     try:
-        ip, _, config = LAST.read_text().split("\n", 2)
+        ip, _, config = LAST.read_text(encoding="utf-8").split("\n", 2)
     except (OSError, ValueError):
         return None
     return (ip[2:].strip(), None, config) if ip.startswith("# ") and config.strip() else None
@@ -231,7 +268,7 @@ def connect_and_read(first, listed):
                         print(f"VPN: Thai server {t.ip} ok after {time.time() - START:.0f}s, saved {SITE}")
                         if not first or t.ip != first[0]:
                             LAST.write_text(f"# {t.ip}\n# the VPN Gate server that last read the {SITE} feed: "
-                                            f"vpn_feeds.py tries it first\n{t.config}")
+                                            f"vpn_feeds.py tries it first\n{t.config}", encoding="utf-8")
                         return True
                     t.stop()
                 time.sleep(0.2)

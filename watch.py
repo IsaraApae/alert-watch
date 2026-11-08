@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Notify (macOS) when a watched manga page lists a chapter it didn't list last run."""
-import email.utils, html, json, os, re, shutil, subprocess, sys, threading, time, unicodedata, urllib.error, urllib.request
+"""Alert Watch: LINE alerts for new manga chapters, WEBTOON episodes, Thai-sub anime episodes and every F1 session.
+Runs every 5 minutes on GitHub Actions (.github/workflows/watch.yml); `python3 watch.py test` runs the self-checks. See README.md."""
+import email.utils, html, json, os, re, shutil, subprocess, sys, threading, time, traceback, unicodedata, urllib.error, urllib.request
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -170,7 +171,7 @@ def notify(title, msg, links, image=None, uri=None):
         return
     plain = {"type": "text", "text": f"{title}\n{links}"[:4500]}
     tries = ([{"type": "flex", "altText": f"{title} {msg}"[:400], "contents": card(title, msg, image, uri)}]
-             if image and re.search(r"\.(jpe?g|png)$", urlparse(image).path, re.I) else [])  # LINE cards show JPEG/PNG only + [plain]
+             if image and re.search(r"\.(jpe?g|png)$", urlparse(image).path, re.I) else []) + [plain]  # LINE cards show JPEG/PNG only
     for message in tries:  # the card first when there is a cover; plain text if LINE refuses it, so the alert is never lost
         if line_send(token, message):
             return
@@ -302,17 +303,6 @@ def f1_ink(hexc):
     """Black or white text on a team colour, as the page picks it."""
     h = hexc.lstrip("#"); r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
     return "#000000" if (r * 299 + g * 587 + b * 114) / 1000 > 165 else "#FFFFFF"
-
-
-def f1_tag(d, size="xs"):
-    """The page's driver tag: [ 81 | PIA ], the number on the team colour, the name tinted with it."""
-    c = "#" + (d.get("team_colour") or "777777")
-    num = str(d.get("driver_number") or "")
-    t = lambda text, **k: {"type": "text", "text": text or "?", "size": size, "weight": "bold", "align": "center", "gravity": "center", **k}
-    return {"type": "box", "layout": "horizontal", "flex": 0, "cornerRadius": "4px", "height": "20px", "contents": [
-        {"type": "box", "layout": "vertical", "backgroundColor": c, "width": "26px", "contents": [t(num, color=f1_ink(c))]},
-        {"type": "box", "layout": "vertical", "backgroundColor": f1_mix(c, F1C["panel"], .14), "width": "38px",
-         "contents": [t(d.get("name_acronym"), color=f1_mix(c, "#000000", .78))]}]}
 
 
 def f1_head(meeting, title, sub):
@@ -733,7 +723,6 @@ def f1_started(state, token, sessions, meetings):
 def f1(state):
     """Send every Formula 1 session's order once it is published: Practice 1-3, Sprint Qualifying, Sprint, Qualifying, Race."""
     token, now = os.environ.get("LINE_TOKEN"), time.time()
-    state.pop("f1", None)  # the earlier race-only records
     sessions, meetings = f1_schedule(state, now)
     f1_started(state, token, sessions, meetings)
     now = time.time()
@@ -742,12 +731,16 @@ def f1(state):
     if "f1_sessions" not in state:  # the first run sends only the newest session, as a sample, not the whole weekend
         state["f1_sessions"] = [str(s["session_key"]) for s in ended[:-1]]
     sent = state["f1_sessions"]
-    meetings = {}
+
+    def meeting_of(s):  # its Grand Prix: as f1_schedule saved it, else asked of OpenF1 (and kept for the rest of the run)
+        mk = str(s["meeting_key"])
+        if not meetings.get(mk):
+            meetings[mk] = (json.loads(get(f"{OPENF1}/meetings?meeting_key={mk}")) or [{}])[0]
+        return meetings[mk]
     for s in ended:
         if s["session_name"] == "Race" and str(s["session_key"]) in sent:  # race card out: then the championship tables
             try:
-                m = meetings.setdefault(s["meeting_key"], (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0])
-                f1_standings(state, token, s, m)
+                f1_standings(state, token, s, meeting_of(s))
             except Exception as e:  # never stops the other sessions' cards
                 print(f"FAIL f1 standings: {e}", file=sys.stderr)
                 continue
@@ -755,16 +748,14 @@ def f1(state):
         if key in sent:
             # its card is out: follow its result for changes after the flag (every session: practice too, for deleted laps)
             try:
-                f1_recheck(state, token, s, meetings.get(s["meeting_key"]) or
-                           meetings.setdefault(s["meeting_key"], (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0]))
+                f1_recheck(state, token, s, meeting_of(s))
             except Exception as e:
                 print(f"FAIL f1 recheck {s['session_name']}: {e}", file=sys.stderr)
             if s["session_name"] in ("Qualifying", "Sprint Qualifying"):  # and the grid it sets, for penalties
                 race = next((r for r in sessions if r["meeting_key"] == s["meeting_key"]
                              and r["session_name"] == ("Race" if s["session_name"] == "Qualifying" else "Sprint")), None)
                 try:
-                    f1_grid(state, token, s, meetings.get(s["meeting_key"]) or
-                            meetings.setdefault(s["meeting_key"], (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0]), race)
+                    f1_grid(state, token, s, meeting_of(s), race)
                 except Exception as e:
                     print(f"FAIL f1 grid {s['session_name']}: {e}", file=sys.stderr)
             continue
@@ -773,7 +764,7 @@ def f1(state):
             if not results:
                 continue  # not published yet: tried again on the next check
             drivers = f1_drivers(s, {x["driver_number"] for x in results})
-            meeting = meetings.get(str(s["meeting_key"])) or (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0]
+            meeting = meeting_of(s)
             rows = f1_rows(results, drivers)
             name, session = meeting.get("meeting_name") or s.get("country_name") or "Formula 1", s["session_name"]
             when = datetime.fromisoformat(s["date_start"]).astimezone(THAI).strftime("%a %d %b %Y · %H:%M")
@@ -874,9 +865,9 @@ WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 def thai_times():
     """{AniList id: (where, weekday, "HH:MM", days earlier than Japan)} for shows whose Thai-sub release differs from Japanese TV."""
     auto = HERE / "thai_times_auto.json"  # learned by the watcher; thai_times.txt (yours) overrides it
-    out = {int(k): tuple(v) + (0,) for k, v in (json.loads(auto.read_text()) if auto.exists() else {}).items()}
+    out = {int(k): tuple(v) + (0,) for k, v in (json.loads(auto.read_text(encoding="utf-8")) if auto.exists() else {}).items()}
     path = HERE / "thai_times.txt"
-    for line in path.read_text().splitlines() if path.exists() else []:
+    for line in path.read_text(encoding="utf-8").splitlines() if path.exists() else []:
         r = [x.strip() for x in line.split("|")]
         if line.startswith("#") or len(r) not in (4, 5) or not r[0].isdigit():
             continue
@@ -956,6 +947,18 @@ def tv_aired(xml, first_ep, now):
             out[key] = t
     return out
 
+
+SYOBOI = {}  # the run's one reading of the TV schedule, by TV-schedule ids: the alerts and the schedule share it
+
+
+def syoboi(tids, now):
+    """Syoboi Calendar's broadcasts of these shows (ProgLookup XML), from a month back (a rerun must not pass for an
+    episode's first broadcast) to two months ahead. Read once a run; a failed read isn't kept, so the next caller tries again."""
+    key = ",".join(map(str, tids))
+    if key not in SYOBOI:
+        span = f"{datetime.fromtimestamp(now - 30 * 86400, JST):%Y%m%d_%H%M%S}-{datetime.fromtimestamp(now + 60 * 86400, JST):%Y%m%d_%H%M%S}"
+        SYOBOI[key] = get(f"https://cal.syoboi.jp/db.php?Command=ProgLookup&TID={key}&Range={span}")
+    return SYOBOI[key]
 
 YT_CHANNELS = {"UCn8hjQOnGYR1AZtYYMYP5jQ": "Muse Thailand", "UCw2bdNSXh4x6e0NCduVoxMQ": "Ani-One Thailand"}  # official uploads
 BILIBILI_SCHEDULE = "https://api.bilibili.tv/intl/gateway/web/v2/ogv/timeline?s_locale=th_TH&platform=web"  # Bilibili Thailand's week; it only fills in for connections from Thailand, so the cloud learns nothing from it and keeps what was learned before
@@ -1064,7 +1067,7 @@ def learn_thai_titles(shows, videos, due, thai):
         learned.append((i, name))
     if learned:
         path = HERE / "anime.txt"
-        lines = path.read_text().splitlines()
+        lines = path.read_text(encoding="utf-8").splitlines()
         for n, line in enumerate(lines):
             r = [x.strip() for x in line.split("|", 5)]
             if len(r) >= 2 and r[1].isdigit() and int(r[1]) in {i for i, _ in learned}:
@@ -1072,7 +1075,7 @@ def learn_thai_titles(shows, videos, due, thai):
                 # a short line ("name | id") keeps the Thai name in its last field, which completing it later keeps
                 lines[n] = f"{line.rstrip()}|{literal(dict(learned)[i])}" if len(r) == 6 and r[5] else \
                     " | ".join((r + [""] * 6)[:5] + [shows[i]["yt"]])
-        path.write_text("\n".join(lines) + "\n")
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         for i, name in learned:
             print(f"learned Thai title for {shows[i]['name']}: {name}")
     return learned
@@ -1162,9 +1165,6 @@ def series_page(link):
 FEEDS = {"animeruka": "https://animeruka.com/feed/?post_type=episodes"}
 
 
-FEED_PROXY = os.environ.get("FEED_PROXY", "")  # a Cloudflare Worker that fetches the feeds: the sites refuse GitHub's own addresses
-
-
 FEED_DIR = os.environ.get("FEED_DIR", "")  # feeds saved this run by vpn_feeds.py through a Thai VPN server
 FEED_WAIT = 160  # the longest to wait for vpn_feeds.py, which runs alongside this and gives up after 150 seconds
 RUN_START = time.time()
@@ -1183,8 +1183,6 @@ def read_feed(url):
     try:
         if saved and saved.exists():
             page, status = saved.read_text(encoding="utf-8"), "vpn"
-        elif FEED_PROXY:
-            page, status = get(f"{FEED_PROXY}&site={site}"), "proxy"
         else:
             page, status = get(url), "urllib"
     except urllib.error.HTTPError as e:
@@ -1217,7 +1215,7 @@ def anime_list():
     """anime.txt: name | AniList id | TV-schedule id (0 = none) | first episode number(s) in the TV schedule, comma-separated when channels count differently
     | episodes before this AniList entry (added to the count) | YouTube title keywords."""
     shows = {}
-    for line in (HERE / "anime.txt").read_text().splitlines():
+    for line in (HERE / "anime.txt").read_text(encoding="utf-8").splitlines():
         if not line.strip() or line.startswith("#"):
             continue
         r = [x.strip() for x in line.split("|", 5)]  # tolerant of missing spaces around |
@@ -1227,6 +1225,12 @@ def anime_list():
                                 "offset": int(r[4] or 0), "yt": r[5] if len(r) > 5 else ""}
         except (IndexError, ValueError):
             print(f"SKIP anime.txt line (needs at least: name | AniList id): {line[:80]}", file=sys.stderr)
+            continue
+        try:
+            re.compile(r[5])
+        except re.error as e:  # a hand-typed keyword with a stray ( or +: matched as plain text, so it can't stop every check
+            print(f"anime.txt keywords for {r[0]} aren't a valid pattern ({e}); matching them as plain text", file=sys.stderr)
+            shows[int(r[1])]["yt"] = "|".join(literal(k) for k in r[5].split("|"))
     return shows
 
 
@@ -1266,7 +1270,7 @@ def saved_media(state, shows):
     times come from Syoboi, so only online-only shows need AniList's airing times."""
     saved = state.get("anilist_media", {})
     path = HERE / "schedule.json"
-    site = {w["name"]: w for w in (json.loads(path.read_text())["shows"] if path.exists() else [])}
+    site = {w["name"]: w for w in (json.loads(path.read_text(encoding="utf-8"))["shows"] if path.exists() else [])}
     thai = thai_times()
     out = {}
     for i, s in shows.items():
@@ -1295,7 +1299,7 @@ def saved_tv(state, shows):
     thai = thai_times()
     by_name = {s["name"]: i for i, s in shows.items() if s["tid"]}
     out = {}
-    for w in (json.loads(path.read_text())["shows"] if path.exists() else []):
+    for w in (json.loads(path.read_text(encoding="utf-8"))["shows"] if path.exists() else []):
         i = by_name.get(w["name"])
         for r in w["episodes"] if i else []:
             if r["ep"] == int(r["ep"]) and r["ep"] > shows[i]["offset"]:  # specials (0, .5) left out
@@ -1320,8 +1324,7 @@ def schedule(state=None):
         info = saved_media(state, shows)
     try:
         by_tid = {s["tid"]: i for i, s in shows.items() if s["tid"]}
-        span = f"{datetime.fromtimestamp(now - 30 * 86400, JST):%Y%m%d_%H%M%S}-{datetime.fromtimestamp(now + 60 * 86400, JST):%Y%m%d_%H%M%S}"  # from a month back: a rerun must not pass for an episode's first broadcast
-        xml = get(f"https://cal.syoboi.jp/db.php?Command=ProgLookup&TID={','.join(map(str, by_tid))}&Range={span}")
+        xml = syoboi(by_tid, now)
         tv = {(by_tid[tid], ep): t for (tid, ep), t in tv_aired(xml, {tid: shows[i]["first"] for tid, i in by_tid.items()}, now + 60 * 86400).items()}
         state["tv_times"] = {f"{i}:{ep}": t for (i, ep), t in tv.items()}  # saved for when Syoboi is down
         tv_ok = True
@@ -1368,8 +1371,7 @@ def schedule(state=None):
             if now - 8 * 86400 <= t <= now + 60 * 86400:
                 yt = t <= now and s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
                 rec = state.get("first_source", {}).get(f"{i}:{ep}", {})  # the animegojo episode page, if that's where it was found first
-                # (episodes found on anime-waku, before it was dropped, keep their link)
-                watch = (in_brave(yt) if yt else None) or links.get(f"{i}:{ep}") or (rec["url"] if rec.get("first") in ("animegojo", "suba-anime", "anime-waku", *FEEDS) else None)
+                watch = (in_brave(yt) if yt else None) or links.get(f"{i}:{ep}") or (rec["url"] if rec.get("first") in ("animegojo", "suba-anime", *FEEDS) else None)
                 if not watch and t <= now and (str(i) in pages or i in OTHER_PAGES) and not (i in thai and thai[i][0] in YT_CHANNELS.values()):
                     shift, have = on_gojo(i)  # aired, no button yet: the episode on its animegojo (or suba-anime) page, if it's up there
                     watch = have.get(ep + s["offset"] + shift)
@@ -1396,17 +1398,17 @@ def schedule(state=None):
         print(f"FAIL bilibili schedule: {e}", file=sys.stderr)
         cards = []
     auto = HERE / "thai_times_auto.json"
-    known = json.loads(auto.read_text()) if auto.exists() else {}
+    known = json.loads(auto.read_text(encoding="utf-8")) if auto.exists() else {}
     # only from real Syoboi times: ones worked back from schedule.json would "learn" the slots already in it
     learned = {str(k): v for k, v in learn_release_times(shows, jp, videos, cards).items()} if tv_ok else {}
     merged = {k: v for k, v in {**known, **learned}.items() if int(k) in shows}  # a slot stays known after its week scrolls off
     if merged != known:
-        auto.write_text(json.dumps(merged, ensure_ascii=False, indent=1))
+        auto.write_text(json.dumps(merged, ensure_ascii=False, indent=1), encoding="utf-8")
         print("learned Thai release times:", "; ".join(f"{shows[int(k)]['name']}: {' '.join(x for x in v if x)}" for k, v in merged.items() if known.get(k) != v))
     path = HERE / "schedule.json"
-    old = json.loads(path.read_text()) if path.exists() else {}
+    old = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     if old.get("shows") != out:
-        path.write_text(json.dumps({"updated": now, "shows": out}, ensure_ascii=False, indent=1))
+        path.write_text(json.dumps({"updated": now, "shows": out}, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"schedule: {sum(len(x['episodes']) for x in out)} episodes, {'updated' if old.get('shows') != out else 'unchanged'}")
 
 
@@ -1448,7 +1450,7 @@ def complete_anime():
     the LINE "thai" command in the last field) with the Japanese TV schedule details and YouTube title keywords,
     so they get TV times and Thai-sub links like the hand-made entries. A Thai name already there is kept."""
     path = HERE / "anime.txt"
-    lines = path.read_text().splitlines()
+    lines = path.read_text(encoding="utf-8").splitlines()
     done = []
     for n, line in enumerate(lines):
         r = [x.strip() for x in line.split("|", 5)]
@@ -1471,7 +1473,7 @@ def complete_anime():
         lines[n] = f"{name} | {aid} | {tid} | {first} | 0 | {keywords}"
         done.append(f"{name}: TV schedule {tid or 'none, AniList times'}, first episode {first or '-'}")
     if done:
-        path.write_text("\n".join(lines) + "\n")
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         print("completed anime:", "; ".join(done))
 
 
@@ -1499,9 +1501,8 @@ def anime(state, meanwhile=lambda: None):
     aired = {(a["media"]["id"], a["episode"]): a["airingAt"] for a in data["web"]["airingSchedules"] if a["airingAt"] <= ahead}
     by_tid = {s["tid"]: i for i, s in shows.items() if s["tid"]}
     if by_tid:
-        span = f"{datetime.fromtimestamp(now - 30 * 86400, JST):%Y%m%d_%H%M%S}-{datetime.fromtimestamp(ahead, JST):%Y%m%d_%H%M%S}"  # from a month back: a rerun must not pass for an episode's first broadcast
         try:
-            xml = get(f"https://cal.syoboi.jp/db.php?Command=ProgLookup&TID={','.join(map(str, by_tid))}&Range={span}")
+            xml = syoboi(by_tid, now)  # tv_aired keeps what aired up to `ahead`
             first = {tid: shows[i]["first"] for tid, i in by_tid.items()}
             aired.update({(by_tid[tid], ep): t for (tid, ep), t in tv_aired(xml, first, ahead).items()})
         except Exception as e:  # Syoboi down: the times the last good check saved
@@ -1656,8 +1657,6 @@ def anime(state, meanwhile=lambda: None):
             print(f"FAIL {site}: {e}", file=sys.stderr)
     to_ep = lambda i, n: next((e for e in (n - shows[i]["offset"], n - shows[i]["offset"] - GOJO_SHIFT.get(i, 0)) if (i, e) in due), None)
     # suba-anime is for Yozakura only, and races the other sites for every episode
-    for key in ("suba_pages", "suba_titles", "suba_search", "suba_dropped"):  # left from earlier ways of using suba-anime
-        state.pop(key, None)
     for i, url in (OTHER_PAGES.items() if not seed else []):
         if i not in shows or not gojo_only(i):
             continue
@@ -1788,9 +1787,9 @@ def library(state):
     """library.json for the LINE "list" cards: every manga with its cover, latest chapter and where its card opens.
     Covers are fetched once per series and reused; the file is rewritten only when something changed."""
     path = HERE / "library.json"
-    old = {m["url"]: m for m in (json.loads(path.read_text())["manga"] if path.exists() else [])}
+    old = {m["url"]: m for m in (json.loads(path.read_text(encoding="utf-8"))["manga"] if path.exists() else [])}
     out = []
-    for url in (HERE / "urls.txt").read_text().split():
+    for url in (HERE / "urls.txt").read_text(encoding="utf-8").split():
         prev = old.get(url, {})
         if "cover" in prev and url not in COVER_OVERRIDES and (url not in WEBTOON_TWINS or prev.get("title")):  # a WEBTOON one: its title once
             title, image = prev.get("title"), prev["cover"]
@@ -1807,14 +1806,11 @@ def library(state):
         out.append({"url": url, "name": title or series_slug(url), "title": title, "cover": image,
                     "latest": state.get("chapter_labels", {}).get(url) or (f"Chapter {chapter_number(latest):g}" if latest else ""), "open": tap})
     if old != {m["url"]: m for m in out} or len(old) != len(out):
-        path.write_text(json.dumps({"manga": out}, ensure_ascii=False, indent=1))
+        path.write_text(json.dumps({"manga": out}, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
 def manga(state, urls):
     """The manga and WEBTOON alerts, from the pages main started reading in the background."""
-    state.pop("webtoon_switched", None)  # left from the automatic switch, which is gone
-    state.pop("webtoon_free", None)  # replaced by webtoon_app
-    state.pop("webtoon_reach", None)  # replaced by chapter_labels
     labels = state.setdefault("chapter_labels", {})  # {WEBTOON series: "Chapter 140", its newest (in the app), for the LINE list}
     newest = state.setdefault("webtoon_newest", {})  # {WEBTOON series: its newest free chapter}, for the series in WEBTOON_TWINS
     for url in urls:
@@ -1892,9 +1888,9 @@ def manga(state, urls):
 
 
 def main():
-    state = json.loads(STATE.read_text()) if STATE.exists() else {}
+    state = json.loads(STATE.read_text(encoding="utf-8")) if STATE.exists() else {}
     # the manga and WEBTOON pages, read in the background while the anime and F1 checks start (manga() takes them)
-    urls = (HERE / "urls.txt").read_text().split()
+    urls = (HERE / "urls.txt").read_text(encoding="utf-8").split()
     twins = [WEBTOON_TWINS[u] for u in urls if u in WEBTOON_TWINS and re.search(r"title_no=(\d+)", WEBTOON_TWINS[u])[1] not in WEBTOON_WEEKLY]
     # first in the queue: the uploads both the alerts and the schedule need, and Bilibili's week (slow, seconds)
     if not VIDEOS:
@@ -1915,24 +1911,47 @@ def main():
         complete_anime()
     except Exception as e:  # a short entry still works with AniList times, so this must never stop the alerts
         print(f"FAIL completing anime: {e}", file=sys.stderr)
-    youtube, later = anime(state, lambda: manga(state, urls))  # manga between the YouTube cards and the VPN feed's wait
+    manga_done = []
+
+    def run_manga():
+        manga_done.append(True)
+        manga(state, urls)
+    youtube, later, failed = None, [], False
+    try:
+        youtube, later = anime(state, run_manga)  # manga between the YouTube cards and the VPN feed's wait
+    except Exception:  # the state must still be saved (the F1 cards and alerts already out), or the next check sends them again
+        traceback.print_exc()
+        failed = True
+        if not manga_done:  # anime failed before it got to the manga checks
+            try:
+                run_manga()
+            except Exception:
+                traceback.print_exc()
     try:
         wait_for_youtube(youtube, later)
     except Exception as e:  # waiting must never cost the run its alerts' saved state
         print(f"FAIL waiting for YouTube: {e}", file=sys.stderr)
     f1_thread.join()
+    # a series no longer in urls.txt: its chapter list goes (added back, its first check records its chapters silently
+    # again, as for any new series). Not when urls.txt is empty, which is more likely a mistake than the wish to drop all.
+    for key in [k for k in state if k.startswith(("http://", "https://")) and k not in urls] if urls else []:
+        del state[key]
     try:
         schedule(state)
     except Exception as e:  # the countdown page must never stop the alerts
         print(f"FAIL schedule: {e}", file=sys.stderr)
-    STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1))
+    STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
     try:
         library(state)
     except Exception as e:  # the LINE list cards must never stop the alerts
         print(f"FAIL library: {e}", file=sys.stderr)
+    if failed:
+        sys.exit(1)  # the run still shows as failed; the workflow commits the state saved above
 
 
 if __name__ == "__main__":
+    for stream in (sys.stdout, sys.stderr):  # Thai titles in the log, whatever the console's own encoding (Windows: cp1252)
+        stream.reconfigure(encoding="utf-8")
     if sys.argv[1:] == ["test"]:
         from unittest import mock
         h = ('<a href="https://x.net/manga/a/%e0%b8%95-2/">2</a><a href="https://x.net/other/">o</a>'
@@ -1982,7 +2001,7 @@ if __name__ == "__main__":
         assert thai_title("เกิดใหม่เป็นขุนนาง ภาค 3 / Tensei Kizoku 3 ตอนที่ 4 [ซับไทย]") == "เกิดใหม่เป็นขุนนาง ภาค 3"
         import tempfile
         with tempfile.TemporaryDirectory() as tmp, mock.patch(__name__ + ".HERE", Path(tmp)):
-            Path(tmp, "anime.txt").write_text("Kurumi | 1 | 0 | 1 | 0 | kurumi-chan\nSword | 2 | 0 | 1 | 0 | tensei shitara ken\nNew | 3\n")
+            Path(tmp, "anime.txt").write_text("Kurumi | 1 | 0 | 1 | 0 | kurumi-chan\nSword | 2 | 0 | 1 | 0 | tensei shitara ken\nNew | 3\n", encoding="utf-8")
             sh = {1: {"name": "Kurumi", "yt": "kurumi-chan", "offset": 0, "first": [1]}, 2: {"name": "Sword", "yt": "tensei shitara ken", "offset": 0, "first": [1]},
                   3: {"name": "New", "yt": "", "offset": 0, "first": [1]}}
             th = {1: ("Ani-One Thailand",), 2: ("Ani-One Thailand",), 3: ("Muse Thailand",)}
@@ -1992,7 +2011,7 @@ if __name__ == "__main__":
                     ("อีกเรื่อง ตอนที่ 5 [ซับไทย]", "d", 1000, "Muse Thailand")]                        # due on Ani-One, posted on Muse: no
             got = learn_thai_titles(sh, vids, {(1, 5): 1100, (3, 1): 100}, th)
             assert got == [(1, "คุรุมิจัง นักสู้ fx"), (2, "กลายเป็นดาบ")], got
-            assert Path(tmp, "anime.txt").read_text() == ("Kurumi | 1 | 0 | 1 | 0 | kurumi-chan|คุรุมิจัง นักสู้ fx\n"
+            assert Path(tmp, "anime.txt").read_text(encoding="utf-8") == ("Kurumi | 1 | 0 | 1 | 0 | kurumi-chan|คุรุมิจัง นักสู้ fx\n"
                                                           "Sword | 2 | 0 | 1 | 0 | tensei shitara ken|กลายเป็นดาบ\nNew | 3\n")
             assert re.search(sh[1]["yt"], "คุรุมิจัง นักสู้ fx ตอนที่ 6 [ซับไทย]") and learn_thai_titles(sh, vids, {(1, 5): 1100}, th) == []
         assert f1_time(92.274) == "1:32.274" and f1_time(6120.785) == "1:42:00.785" and f1_time(61.05) == "1:01.050"
@@ -2083,8 +2102,8 @@ if __name__ == "__main__":
                     mock.patch(__name__ + ".notify", lambda title, msg, links, *a: cards.append((clock[0] - T, links))), \
                     mock.patch.dict(os.environ, {"LINE_TOKEN": "x", "YOUTUBE_KEY": "y"}), mock.patch("builtins.print"), \
                     mock.patch("time.time", lambda: clock[0]), mock.patch("time.sleep", sleep):
-                Path(tmp, "anime.txt").write_text("Kurumi | 1 | 0 | 1 | 0 | kurumi-chan\n")
-                Path(tmp, "thai_times.txt").write_text("1 | Ani-One Thailand | - | -\n")
+                Path(tmp, "anime.txt").write_text("Kurumi | 1 | 0 | 1 | 0 | kurumi-chan\n", encoding="utf-8")
+                Path(tmp, "thai_times.txt").write_text("1 | Ani-One Thailand | - | -\n", encoding="utf-8")
                 wait_for_youtube(*anime(state, lambda: None))
         st = {"anime": []}
         check_at(T - 250, lambda t: [vid(T + 8)] if t >= T + 12 else [], st)  # the check before T; the video listed 12 s after T

@@ -7,14 +7,24 @@ Sends a LINE message (official account **Alert Watch**) when a tracked manga cha
 - **LINE menu:** four buttons, in the same style as the website: **Next**, **Timetable**, **Aired** and **F1 Live**. The menu image is [richmenu.png](richmenu.png), drawn from [richmenu.html](richmenu.html).
 
 <p>
-  <img src="docs/next.jpg" width="400" alt="Website: countdown to the next episode and today's episodes, light and dark">
-  <img src="docs/timetable.jpg" width="400" alt="Website: the week's timetable, light and dark">
+  <img src="docs/next.webp" width="400" alt="Website: countdown to the next episode and today's episodes, light and dark">
+  <img src="docs/timetable.webp" width="400" alt="Website: the week's timetable, light and dark">
 </p>
 <p>
-  <img src="docs/aired.jpg" width="400" alt="Website: episodes aired over the past week, with Watch buttons, light and dark">
+  <img src="docs/aired.webp" width="400" alt="Website: episodes aired over the past week, with Watch buttons, light and dark">
 </p>
 
 <img src="richmenu.png" width="600" alt="LINE menu: Next, Timetable, Aired and F1 Live">
+
+## Tech stack
+
+- **Watcher:** Python 3, standard library only (nothing to `pip install`): [watch.py](watch.py), plus [vpn_feeds.py](vpn_feeds.py) for the one feed that only answers from Thailand (through a free [VPN Gate](https://www.vpngate.net) server with OpenVPN).
+- **Runs on:** GitHub Actions ([watch.yml](.github/workflows/watch.yml)), started every 5 minutes by [cron-job.org](https://cron-job.org); its state is committed back to the repository.
+- **Alerts:** the [LINE Messaging API](https://developers.line.biz/en/docs/messaging-api/) (broadcast Flex cards and a rich menu).
+- **LINE commands:** Google Apps Script ([line/Code.gs](line/Code.gs)), which edits the lists through the GitHub API.
+- **Website:** one static HTML page with no framework and no build step ([site/anime/index.html](site/anime/index.html)), published to GitHub Pages by [pages.yml](.github/workflows/pages.yml).
+- **Data:** AniList, MyAnimeList, Syoboi Calendar, the YouTube Data API, OpenF1, WEBTOON's RSS feeds and the manga and anime sites listed below.
+- **Checks:** [ci.yml](.github/workflows/ci.yml) compiles the code and runs the offline self-checks on every push and pull request; Dependabot keeps the workflows' actions up to date.
 
 ## What gets an alert
 
@@ -79,15 +89,15 @@ Every manga card and the LINE list say "Chapter 216" (several new chapters in a 
 
 You can also edit the files directly:
 
-- [urls.txt](urls.txt): one series link per line.
+- [urls.txt](urls.txt): one series link per line. A series taken off the list also loses its saved chapters; added back, its chapters so far are recorded without alerts, as for any new series.
   - **Manga also on WEBTOON Thai** (`WEBTOON_TWINS` in `watch.py`): 15 of the manga-site series, found on WEBTOON Thai by their Thai titles (Reborn Rich, Bad Guy, Reality Quest, The Boy of Death (ตั๋วโกงชีวิต), Killer Peter (นักฆ่าย้อนวัย), Juvenile Prison (เยาวชนคนคุก), +99 Wooden Stick, The Ultimate Shut-In, The Delusional Hunter, Secretly More Powerful than the Hero, A Sense of Amusement (สนามเด็กล่า), Genius Grandson of the Loan Shark King, What a Bountiful Harvest, Demon Lord!, The Regressed Son of a Duke Is an Assassin (ลูกชายคนเล็กของดยุกคือมือสังหาร), Life Changer (คอลเซ็นเตอร์เปลี่ยนชีวิต)). They're alerted when the manga site posts a chapter, the fastest source the watcher can read, with their WEBTOON title. The card and the LINE list open the series in the WEBTOON app when WEBTOON has that chapter free ("Chapter 112"), and the manga site when the site is ahead. WEBTOON's count is its newest free episode on its website plus the episodes the app has locked behind coins or ads, as counted in the app in Oct 2026 (`WEBTOON_LOCKED` in `watch.py`: +1 to +3; update it if WEBTOON changes how many it locks). Reborn Rich's and Bad Guy's free episodes on WEBTOON's website stop at Ep.10 and Ep.55, so their app counts are counted by the week instead (`WEBTOON_WEEKLY`): Reborn Rich Ep.208 and Bad Guy Ep.310 on Wed 14 Oct 2026, one more every Wednesday at 22:00 Thai time, each with a card ("Reborn Rich, Chapter 209") (`webtoon_newest` in `ci-state.json`), counted on through the seasons the way the manga sites count: Juvenile Prison's "S2 Ep.12" is chapter 112, since season 1 ended at Ep.100 (each season's start is learned once from WEBTOON's episode list, `webtoon_seasons`). The locked episodes ("35 เหรียญ หรือดูโฆษณา") exist only in the WEBTOON app, which the watcher can't read, hence the fixed counts. For these series (all but Reality Quest and Life Changer, which have no locked count), a card also comes when the app gets one more episode (WEBTOON frees one more; Reborn Rich and Bad Guy: every Wednesday 22:00), giving the app's newest chapter: "+99 ท่อนไม้พร้อมบวก, Chapter 218" (216 free + 2); it comes only when the app is ahead of the manga site, since a chapter the site has came with the site's card (so Bad Guy, with the site at 322 and the app at 311, gets none yet) (`webtoon_app` in `ci-state.json`), and it opens the series' page in the WEBTOON app.
-- [anime.txt](anime.txt): `name | AniList id | Syoboi TID (0 = none) | first episode number(s) | episode offset | YouTube keywords`. A short `name | AniList id` line is filled in automatically. Thai names are learned automatically too, for every show: from a Muse or Ani-One Thai-sub upload that already matches (its title has both names), or, when an upload is titled only in Thai, from the only show on that channel with that episode number due within 45 minutes of the upload. They're added to the YouTube keywords (the run logs `learned Thai title for ...`), so a channel switching to Thai-only titles (as Ani-One did for FX Senshi Kurumi-chan's episode 5) isn't missed.
+- [anime.txt](anime.txt): `name | AniList id | Syoboi TID (0 = none) | first episode number(s) | episode offset | YouTube keywords`. A short `name | AniList id` line is filled in automatically. Thai names are learned automatically too, for every show: from a Muse or Ani-One Thai-sub upload that already matches (its title has both names), or, when an upload is titled only in Thai, from the only show on that channel with that episode number due within 45 minutes of the upload. They're added to the YouTube keywords (the run logs `learned Thai title for ...`), so a channel switching to Thai-only titles (as Ani-One did for FX Senshi Kurumi-chan's episode 5) isn't missed. The keywords are a pattern (`|` between alternatives); one that isn't a valid pattern (a stray `(` or `+`) is matched as plain text instead. If a LINE command (or your own edit) changes anime.txt while a check is running and that check changes the same lines (filling in a line, adding a learned name), your edit is kept, and the check makes its change again next time.
 - [thai_times.txt](thai_times.txt): `AniList id | platform | weekday | HH:MM [| days before Japan]` sets when each show comes out with Thai subs. Use `- | -` when only the platform is known. This file overrides the release times the watcher works out on its own (stored in `thai_times_auto.json`).
 
 ## How it runs
 
 - [cron-job.org](https://cron-job.org) starts [watch.yml](.github/workflows/watch.yml) every 5 minutes through GitHub's dispatch API. GitHub's own schedule never fired for this repo.
-- [watch.py](watch.py) checks the sources, sends the LINE alerts, and commits `ci-state.json` (what has been sent), `schedule.json` (website data) and `library.json` (data for the LINE `list` command).
+- [watch.py](watch.py) checks the sources, sends the LINE alerts, and commits `ci-state.json` (what has been sent), `schedule.json` (website data) and `library.json` (data for the LINE `list` command). If a check fails partway, what it has sent is still saved and committed, so nothing goes out twice; the run still shows as failed.
 - Sources:
   - Manga: the sites' pages.
   - Webtoon: RSS feeds.
@@ -96,7 +106,7 @@ You can also edit the files directly:
   - **When AniList or Syoboi is down** (on 21 Oct 2026 both were: AniList switched its API off for everyone, and Syoboi's server was offline), the watcher carries on with their last good answers, saved as `anilist_media` and `tv_times` in `ci-state.json` (or, before anything is saved, the episodes in `schedule.json`). Alerts, Watch links and the website keep working; the run logs `FAIL anilist: ... (using its last saved answer)`. New shows and changed air times wait until the site is back, and release times aren't learned meanwhile.
   - Thai-sub videos: the YouTube Data API (each channel's 50 newest uploads).
   - Thai-sub episodes on [animegojo](https://animegojos.com): used for the shows not on Muse/Ani-One (Netflix, Disney+, Bilibili, online). A series counts only if its page says (ซับไทย), never พากย์ไทย. These shows get **no card at the scheduled time** — one card (and a website Watch button) is sent only once animegojo has the episode, within ~8 days of release. Episodes released together (a whole Netflix season at once) are grouped into one card, e.g. "Episode 01-10"; if animegojo uploads them in parts, each part gets its own card as it appears ("Episode 01-03", then "Episode 04-07", ...). If a site continues a new cour on an older page (`GOJO_SHIFT` in `watch.py`; Yozakura Cour 2 appears as ตอนที่ 13+), the numbers are mapped back.
-  - **Two sites race: animeruka and animegojo** (and suba-anime for Yozakura). Each episode gets one card, from whichever site posted it first, and the card opens that site's episode page. Every card shows when the episode aired (its platform's Thai release time, or Japanese TV), not when the site posted it. animeruka is read from its episode feed (`FEEDS` in `watch.py`), ซับไทย posts only, which gives each upload's exact time. anime-waku was dropped: its Cloudflare bot check refused GitHub's servers. animegojo shows no upload times, so an episode first seen there is taken as uploaded halfway between the last check and this one (`first_source` marks the order `estimated`). Ordinary requests only: if a site answers with Cloudflare's bot check (as animeruka has for GitHub's servers), the run logs `FAIL animeruka: HTTP 403 (Cloudflare bot check)` and the other sites carry on. Run the workflow with **sites** to see which ones GitHub can read. On the website, each episode shows the show's official platform (Netflix, Bilibili, Muse Thailand...), never the site its Watch button opens; Yozakura, with no Thai platform, shows none.
+  - **Two sites race: animeruka and animegojo** (and suba-anime for Yozakura). Each episode gets one card, from whichever site posted it first, and the card opens that site's episode page. Every card shows when the episode aired (its platform's Thai release time, or Japanese TV), not when the site posted it. animeruka is read from its episode feed (`FEEDS` in `watch.py`), ซับไทย posts only, which gives each upload's exact time. The feed only answers visitors in Thailand, so [vpn_feeds.py](vpn_feeds.py) reads it through a free Thai VPN Gate server, taking only the connection settings from VPN Gate's configs (never scripts or routes: the configs come from volunteers' servers). anime-waku was dropped: its Cloudflare bot check refused GitHub's servers. animegojo shows no upload times, so an episode first seen there is taken as uploaded halfway between the last check and this one (`first_source` marks the order `estimated`). Ordinary requests only: if a site answers with Cloudflare's bot check (as animeruka has for GitHub's servers), the run logs `FAIL animeruka: HTTP 403 (Cloudflare bot check)` and the other sites carry on. Run the workflow with **sites** to see which ones GitHub can read. On the website, each episode shows the show's official platform (Netflix, Bilibili, Muse Thailand...), never the site its Watch button opens; Yozakura, with no Thai platform, shows none.
   - **Mission: Yozakura Family Season 2 Cour 2** is the only show also checked on [suba-anime](https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/) (`OTHER_PAGES` in `watch.py`), and it's never dropped: suba-anime races with the sites above for every episode, and the fastest gets the card. Its page lists the whole season, so Cour 2's episode 1 is its ตอนที่ 13 (animegojo too: `GOJO_SHIFT`); episodes marked (ยังไม่มา) aren't out yet. It's checked from a day before each episode is due, with ordinary requests only (if the site ever puts up a bot check, the run reports it rather than working around it). 
   - For animegojo shows, each show's ซับไทย page is remembered (`gojo_pages` in `ci-state.json`). Besides animegojo's fast-moving home page, the watcher checks that page from a day before each episode is due, so an episode is caught even after it scrolls off the home page; the website's Watch buttons use the same page.
   - A show with no saved page (a new season, like Edgerunners 2 or Yozakura Cour 2) is found by searching animegojo (`gojo_search` in `ci-state.json`). Pages already there at the first search are older seasons and never count; a page counts once it is new or gains an episode that is due, and is then saved.
@@ -109,8 +119,8 @@ You can also edit the files directly:
   - **richmenu** installs the LINE menu.
   - **f1check** has LINE check every kind of card (anime, manga, and the F1 results, standings and live cards, built from the latest race) without sending anything.
   - **sites** checks which anime sources GitHub can read right now (animegojo, suba-anime, animeruka and its episode feed).
-- `python3 watch.py test` runs the self-checks.
-- [line/Code.gs](line/Code.gs) is the LINE command webhook. It runs on Google Apps Script with these script properties: `LINE_TOKEN`, `GITHUB_TOKEN`, `OWNER_ID`. After you change it, redeploy it with **Manage deployments → New version**.
+- `python3 watch.py test` runs the self-checks (offline: every request is mocked). The **ci** workflow runs them on every push and pull request.
+- [line/Code.gs](line/Code.gs) is the LINE command webhook. It runs on Google Apps Script with these script properties: `LINE_TOKEN`, `GITHUB_TOKEN`, `OWNER_ID`, and `WEBHOOK_KEY`, a long random string that the webhook URL in the LINE Developers console must then end with (`.../exec?key=<it>`). Apps Script can't read LINE's signature header, so the key is what shows a request comes from LINE; until it's set, requests are accepted as before. After you change the script, redeploy it with **Manage deployments → New version**.
 - The `site/` folder holds the website. `.github/workflows/pages.yml` publishes it to GitHub Pages whenever it changes (in **Settings → Pages** the source is **GitHub Actions**):
   - `anime/`, the anime site, one page that reads `schedule.json` from this repo;
   - `index.html`, which forwards to `anime/`;
@@ -120,3 +130,29 @@ You can also edit the files directly:
   - `f1.html`, which forwards to the F1 Live site (old links);
   - `f1-logo.png`, the official F1 logo used in the F1 LINE cards;
   - the icons (`favicon.svg`, `favicon-32.png`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`) and `manifest.webmanifest`.
+
+## Run your own copy
+
+1. Fork the repository. In **Settings → Pages**, set the source to **GitHub Actions**.
+2. Point the code at your fork: `REPO` in [line/Code.gs](line/Code.gs), `DATA` in [site/anime/index.html](site/anime/index.html), and the `isaraapae.github.io/alert-watch` addresses in [watch.py](watch.py) and the site's `og:` tags.
+3. Make a LINE Messaging API channel in the [LINE Developers console](https://developers.line.biz/console/) and a YouTube Data API key in Google Cloud, then add them as repository secrets:
+   ```bash
+   gh secret set LINE_TOKEN -R <you>/alert-watch
+   gh secret set YOUTUBE_KEY -R <you>/alert-watch
+   ```
+4. Put your own series in [urls.txt](urls.txt), [anime.txt](anime.txt) and [thai_times.txt](thai_times.txt). To start from nothing, delete `ci-state.json`: the first check then records the anime episodes and manga chapters already out without sending them (F1 sends its latest session as a sample).
+5. Have [cron-job.org](https://cron-job.org) start the watcher every 5 minutes: a `POST` to `https://api.github.com/repos/<you>/alert-watch/actions/workflows/watch.yml/dispatches` with the body `{"ref":"main"}` and the headers `Accept: application/vnd.github+json` and `Authorization: Bearer <token>`. Use a fine-grained token for this repository only, with **Actions: Read and write** and nothing else.
+6. For the LINE commands (optional): make a Google Apps Script project, paste in [line/Code.gs](line/Code.gs), and set its script properties: `LINE_TOKEN`, `GITHUB_TOKEN` (a fine-grained token for this repository only, **Contents: Read and write**), `WEBHOOK_KEY`, and `OWNER_ID` (message the account once and it replies with yours). Deploy it as a web app (execute as you, anyone can access), then set the LINE webhook URL to its `/exec` address plus `?key=<WEBHOOK_KEY>`.
+7. Run the workflow by hand with **ping** to get a test card, and with **richmenu** to install the menu.
+
+To try it on a computer, `python3 watch.py test` runs the self-checks, and `python3 watch.py` runs a check. Without `LINE_TOKEN` nothing is sent; it keeps its state in `state.json`, or the file named by `MANGA_STATE`. The environment variables it reads:
+
+| Variable | Needed for |
+|---|---|
+| `LINE_TOKEN` | sending to LINE (without it, a run only reports) |
+| `YOUTUBE_KEY` | the Muse and Ani-One Thailand uploads (without it, YouTube's public feeds, which can be hours behind) |
+| `MANGA_STATE` | the state file (default `state.json`; the workflow uses `ci-state.json`) |
+
+## License
+
+The code is under the [MIT License](LICENSE). The F1 logo, driver photos, series covers and other artwork belong to their owners and aren't covered by it.

@@ -6,6 +6,19 @@
 <meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0F0F11" media="(prefers-color-scheme: dark)">
 <title>Alert Watch Anime</title>
+<meta name="description" content="Countdown to the next Thai-sub anime episode, this week's timetable and what aired, with Watch links. Thai time.">
+<!-- the preview a link to this page gets when it's shared (LINE, chat apps) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Alert Watch">
+<meta property="og:title" content="Alert Watch Anime">
+<meta property="og:description" content="Countdown to the next Thai-sub anime episode, this week's timetable and what aired, with Watch links.">
+<meta property="og:url" content="https://isaraapae.github.io/alert-watch/anime/">
+<meta property="og:image" content="https://isaraapae.github.io/alert-watch/icon-512.png">
+<meta property="og:image:width" content="512">
+<meta property="og:image:height" content="512">
+<meta property="og:image:alt" content="Alert Watch icon">
+<meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://isaraapae.github.io/alert-watch/anime/">
 <link rel="preconnect" href="https://raw.githubusercontent.com" crossorigin>
 <link rel="preconnect" href="https://s4.anilist.co">
 <link rel="icon" href="../favicon.svg?v=2" type="image/svg+xml">
@@ -35,8 +48,8 @@ early.catch(() => {});   // handled in load()
   --text: #17171A;
   --text-2: #6B6B73;
   --hairline: #3C3C4326;
-  --accent: #C24A44;
-  --menu-on: #FF6961;
+  --accent: #B8443E;  /* 4.6:1 on the Watch button's tint, 5.3:1 on white (WCAG AA) */
+  --menu-on: var(--accent);  /* the open tab; the dark themes' --accent (#FF6961) makes it #FF6961 there, as before */
   --shadow: 0 1px 2px #0000000A, 0 10px 28px -14px #00000029;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Sukhumvit Set", "Thonburi", "Noto Sans Thai", system-ui, sans-serif;
@@ -81,7 +94,7 @@ svg.ico { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: rou
 }
 .round svg { width: 22px; height: 22px; }
 
-.label { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 14px 4px -4px; font-size: 13px; color: var(--text-2); }
+.label { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 14px 4px -4px; font-size: 13px; font-weight: 400; color: var(--text-2); }  /* an h2: day headings for screen readers, looking as before */
 .label b { font-size: 17px; font-weight: 600; color: var(--text); }
 
 .card { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 18px 20px; min-width: 0; }
@@ -263,7 +276,7 @@ function episodeRow(e) {
   return row;
 }
 function group(box, title, today, rows, emptyText) {
-  const label = el("p", "label"); label.append(el("b", null, title));
+  const label = el("h2", "label"); label.append(el("b", null, title));
   if (rows.length) label.append(el("span", null, rows.length === 1 ? "1 episode" : `${rows.length} episodes`));
   const card = el("div", "card list");
   if (rows.length) rows.forEach(r => card.append(r)); else card.append(el("p", "empty", emptyText));

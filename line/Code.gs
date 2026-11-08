@@ -5,6 +5,9 @@
 //   LINE_TOKEN    channel access token from the LINE Developers console
 //   GITHUB_TOKEN  fine-grained token for IsaraApae/alert-watch with Contents: Read and write
 //   OWNER_ID      your LINE user ID, so only you can use the commands (message Alert Watch once to see it)
+//   WEBHOOK_KEY   optional, a long random string; once set, the LINE webhook URL must end in ?key=<it>. Apps Script
+//                 can't read LINE's signature header, so this is what shows a request comes from LINE: without it,
+//                 anyone who learned this script's address and your OWNER_ID could send it commands.
 
 const REPO = "IsaraApae/alert-watch";
 const BRANCH = "main";
@@ -20,6 +23,8 @@ const HELP = [
 
 function doPost(e) {
   const props = PropertiesService.getScriptProperties();
+  const key = props.getProperty("WEBHOOK_KEY");
+  if (key && (e.parameter || {}).key !== key) return ContentService.createTextOutput("ok");  // not from LINE's webhook: ignored
   const events = JSON.parse(e.postData.contents).events || [];
   for (const ev of events) {
     if (ev.type !== "message" || ev.message.type !== "text") continue;
