@@ -507,7 +507,8 @@ def f1_recheck(state, token, s, meeting):
     rows = f1_rows(results, drivers)
     name, session = meeting.get("meeting_name") or s.get("country_name") or "Formula 1", s["session_name"]
     when = datetime.fromisoformat(s["date_start"]).astimezone(THAI).strftime("%a %d %b %Y · %H:%M")
-    note = "Result changed after the race: " + ", ".join(moved[:8]) + (f" and {len(moved) - 8} more" if len(moved) > 8 else "")
+    after = "qualifying" if "Qualifying" in session else "the race"
+    note = f"Result changed after {after}: " + ", ".join(moved[:8]) + (f" and {len(moved) - 8} more" if len(moved) > 8 else "")
     if not token:  # on the Mac: show what would be sent
         print(f"F1 {session} · {name} · result updated | {note}")
     else:
@@ -521,6 +522,55 @@ def f1_recheck(state, token, s, meeting):
     del seen[key]
     if session == "Race":
         f1_standings(state, token, s, meeting, again=True)
+
+
+def f1_grid(state, token, s, meeting, race):
+    """A qualifying whose card is out: when the starting grid differs from its order (grid penalties: São Paulo 2026,
+    Russell P2 -> P7, Leclerc P4 -> P14), a "Starting grid" card in grid order with who moved; again if the grid changes
+    after that. Only until the race (or sprint) starts, and only once two checks in a row see it, as in f1_recheck."""
+    key = str(s["session_key"])
+    order = state.get("f1_final", {}).get(key)  # the qualifying result as sent: [[car, position, points]]
+    if not order or not race or time.time() >= datetime.fromisoformat(race["date_start"]).timestamp():
+        return
+    try:
+        grid = json.loads(get(f"{OPENF1}/starting_grid?session_key={key}"))
+    except urllib.error.HTTPError as e:
+        if e.code == 404:  # OpenF1's "No results found": no grid yet
+            return
+        raise
+    if not isinstance(grid, list) or not grid:
+        return
+    sent = state.setdefault("f1_grid", {})  # {qualifying: [[car, grid place]] as last sent}
+    seen = state.setdefault("f1_grid_seen", {})  # {qualifying: a changed grid seen once, waiting for the next check}
+    sig = sorted([x["driver_number"], x["position"]] for x in grid)
+    was = sent.get(key) or sorted([n, p] for n, p, _ in order)
+    if sig == was:
+        seen.pop(key, None)
+        return
+    if seen.get(key) != sig:
+        seen[key] = sig  # sent if the next check (5 minutes on) gives the same grid
+        return
+    grid = sorted(grid, key=lambda x: x["position"])
+    drivers = f1_drivers(s, {x["driver_number"] for x in grid})
+    old = dict(map(tuple, was))
+    moved = [f"{(drivers.get(x['driver_number']) or {}).get('name_acronym') or x['driver_number']} P{old.get(x['driver_number'], '?')} → P{x['position']}"
+             for x in grid if old.get(x["driver_number"]) != x["position"]
+             and (old.get(x["driver_number"]) or 0) < x["position"]]  # who dropped back (the penalties): the rest only moved up into their places
+    rows = [(str(x["position"]), drivers.get(x["driver_number"], {}), f1_time(x["lap_duration"]) if x.get("lap_duration") else "No time") for x in grid]
+    name, session = meeting.get("meeting_name") or s.get("country_name") or "Formula 1", s["session_name"]
+    when = datetime.fromisoformat(s["date_start"]).astimezone(THAI).strftime("%a %d %b %Y · %H:%M")
+    note = f"{race['session_name']} starting grid, changed after qualifying: " + ", ".join(moved[:8]) + (f" and {len(moved) - 8} more" if len(moved) > 8 else "")
+    if not token:  # on the Mac: show what would be sent
+        print(f"F1 {session} · {name} · starting grid | {note}")
+    else:
+        card = {"type": "flex", "altText": f"F1 {name}: starting grid. {note}"[:400],
+                "contents": f1_card(meeting, f"{session} · Starting grid", when, rows, key, note)}
+        plain = {"type": "text", "text": f"F1 {name}: {race['session_name'].lower()} starting grid\n{note}\n\n" + "\n".join(
+            f"{p} {f1_name(d)} ({d.get('team_name') or ''}) {v}" for p, d, v in rows)}
+        if not (line_send(token, card) or line_send(token, plain)):
+            return  # tried again on the next check
+    sent[key] = sig
+    del seen[key]
 
 
 # the F1 Live site (its own repo, IsaraApae/f1-live): "?live" opens its Live tab, "?replay=KEY" a session's replay
@@ -622,12 +672,20 @@ def f1(state):
                 continue
         key = str(s["session_key"])
         if key in sent:
-            if s["session_name"] in ("Race", "Sprint"):  # its card is out: follow its result for changes after the flag
+            if s["session_name"] in ("Race", "Sprint", "Qualifying", "Sprint Qualifying"):  # its card is out: follow its result for changes after the flag
                 try:
                     f1_recheck(state, token, s, meetings.get(s["meeting_key"]) or
                                meetings.setdefault(s["meeting_key"], (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0]))
                 except Exception as e:
                     print(f"FAIL f1 recheck {s['session_name']}: {e}", file=sys.stderr)
+            if s["session_name"] in ("Qualifying", "Sprint Qualifying"):  # and the grid it sets, for penalties
+                race = next((r for r in sessions if r["meeting_key"] == s["meeting_key"]
+                             and r["session_name"] == ("Race" if s["session_name"] == "Qualifying" else "Sprint")), None)
+                try:
+                    f1_grid(state, token, s, meetings.get(s["meeting_key"]) or
+                            meetings.setdefault(s["meeting_key"], (json.loads(get(f"{OPENF1}/meetings?meeting_key={s['meeting_key']}")) or [{}])[0]), race)
+                except Exception as e:
+                    print(f"FAIL f1 grid {s['session_name']}: {e}", file=sys.stderr)
             continue
         try:
             results = json.loads(get(f"{OPENF1}/session_result?session_key={key}"))
@@ -657,8 +715,9 @@ def f1(state):
     following = {str(s["session_key"]) for s in sessions}
     for k in [k for k in state.get("f1_final", {}) if k not in following]:  # out of the 3-day window: no longer followed
         del state["f1_final"][k]
-    for k in [k for k in state.get("f1_seen", {}) if k not in following]:
-        del state["f1_seen"][k]
+    for kind in ("f1_seen", "f1_grid", "f1_grid_seen"):
+        for k in [k for k in state.get(kind, {}) if k not in following]:
+            del state[kind][k]
 
 
 COVER_OVERRIDES = {  # series whose own cover LINE can't show (AVIF): a JPEG copy on the GitHub Pages site
@@ -1803,6 +1862,20 @@ if __name__ == "__main__":
         assert chapter_runs([343, 340, 341, 342, 344, 345]) == "Chapter 340-345"
         assert chapter_runs([340, 341, 343, 9.1]) == "Chapter 9.1, 340-341, 343"
         assert chapter_runs([216]) == "Chapter 216"
+        # the starting grid: same as qualifying -> nothing; changed -> sent on the second check that sees it
+        st = {"f1_final": {"9": [[63, 2, None], [1, 1, None], [16, 3, None]]}}
+        q = {"session_key": 9, "session_name": "Qualifying", "date_start": "2026-11-07T18:00:00+00:00", "meeting_key": 1}
+        race = {"session_name": "Race", "date_start": "2099-01-01T00:00:00+00:00"}
+        g = lambda order: json.dumps([{"position": p, "driver_number": n, "lap_duration": 87.5} for p, n in enumerate(order, 1)])
+        with mock.patch(__name__ + ".f1_drivers", return_value={}), mock.patch(__name__ + ".line_send", return_value=True) as send:
+            with mock.patch(__name__ + ".get", return_value=g([1, 63, 16])):
+                f1_grid(st, "t", q, {}, race)
+            with mock.patch(__name__ + ".get", return_value=g([1, 16, 63])):
+                f1_grid(st, "t", q, {}, race)
+                assert not send.called and st["f1_grid_seen"]["9"]
+                f1_grid(st, "t", q, {}, race)
+            assert send.call_count == 1 and "63 P2 → P3" in send.call_args[0][1]["altText"], send.call_args
+            assert st["f1_grid"]["9"] == [[1, 1], [16, 2], [63, 3]] and "9" not in st["f1_grid_seen"]
         rss = "<item><link>https://www.webtoons.com/th/x/ep7-a/viewer?title_no=1&amp;episode_no=7</link></item>"
         with mock.patch(__name__ + ".get", lambda u: rss if "/rss?title_no=1" in u and "://www." in u else ""):
             assert webtoon("https://m.webtoons.com/th/x/y/list?title_no=1") == {"EP.7": "https://www.webtoons.com/th/x/ep7-a/viewer?title_no=1&episode_no=7"}
