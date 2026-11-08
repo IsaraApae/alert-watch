@@ -50,7 +50,8 @@ jobs:
           if ${{ !inputs.ping && !inputs.richmenu && !inputs.f1check }}; then
             mkdir -p feeds && rm -f feeds/*
             export FEED_DIR=feeds
-            timeout 180 python3 -u vpn_feeds.py &
+            # without the LINE and YouTube keys, which it doesn't need: it runs OpenVPN with configs from volunteers' servers
+            env -u LINE_TOKEN -u YOUTUBE_KEY timeout 180 python3 -u vpn_feeds.py &
           fi
           python3 -u watch.py ${{ inputs.ping && 'ping' || '' }}${{ inputs.richmenu && 'richmenu' || '' }}${{ inputs.f1check && 'f1check' || '' }}${{ inputs.sites && 'sites' || '' }} || status=$?
           wait
