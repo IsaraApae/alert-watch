@@ -1211,6 +1211,9 @@ def schedule(state=None):
         return gojo[i]
     for link in [k for k, (a, n, p) in kept.items() if p < now - 8 * 86400]:
         del kept[link]
+    # the site's Watch button comes with the LINE card, never before it (Magic Repo Man 6, 8 Nov 2026: a premiere's link was
+    # on the site at 01:00, its card at 01:55, when it played): episodes whose card is out, not still waiting for a "Watch now"
+    carded = set(state.get("anime", [])) - set(state.get("watch_later", {}))
     out, jp = [], {}
     for i, s in shows.items():
         m = info.get(i, {})
@@ -1232,11 +1235,11 @@ def schedule(state=None):
                     watch = have.get(ep + s["offset"] + shift)
                 if watch:
                     links[f"{i}:{ep}"] = watch
-                rows.append({"ep": ep + s["offset"], "at": t, **({"watch": watch} if watch else {})})  # the platform is the show's own
+                rows.append({"ep": ep + s["offset"], "at": t, **({"watch": watch} if watch and f"{i}:{ep}" in carded else {})})  # the platform is the show's own
         for r in rows:  # a whole season out at once (Netflix) is one "EP 01-10" row on the site: its Watch opens the series
             if r.get("watch") and sum(x["at"] == r["at"] for x in rows) > 1:
                 r["watch"] = series_page(r["watch"])
-        rows += [{"ep": n, "at": p, "watch": in_brave(link)} for link, (a, n, p) in kept.items() if a == i]
+        rows += [{"ep": n, "at": p, **({"watch": in_brave(link)} if link in state.get("specials", []) else {})} for link, (a, n, p) in kept.items() if a == i]
         rows.sort(key=lambda r: r["at"])
         if m.get("status") == "FINISHED" and not rows:  # ended, its last episode over a week ago (off Aired too): off the site
             continue
