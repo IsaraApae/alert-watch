@@ -48,8 +48,8 @@ early.catch(() => {});   // handled in load()
   --text: #17171A;
   --text-2: #6B6B73;
   --hairline: #3C3C4326;
-  --accent: #C24A44;
-  --menu-on: #FF6961;
+  --accent: #B8443E;  /* 4.6:1 on the Watch button's tint, 5.3:1 on white (WCAG AA) */
+  --menu-on: var(--accent);  /* the open tab; the dark themes' --accent (#FF6961) makes it #FF6961 there, as before */
   --shadow: 0 1px 2px #0000000A, 0 10px 28px -14px #00000029;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Sukhumvit Set", "Thonburi", "Noto Sans Thai", system-ui, sans-serif;
