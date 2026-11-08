@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Notify (macOS) when a watched manga page lists a chapter it didn't list last run."""
-import email.utils, html, json, os, re, shutil, subprocess, sys, threading, time, unicodedata, urllib.error, urllib.request
+import email.utils, html, json, os, re, shutil, subprocess, sys, threading, time, traceback, unicodedata, urllib.error, urllib.request
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -1227,6 +1227,12 @@ def anime_list():
                                 "offset": int(r[4] or 0), "yt": r[5] if len(r) > 5 else ""}
         except (IndexError, ValueError):
             print(f"SKIP anime.txt line (needs at least: name | AniList id): {line[:80]}", file=sys.stderr)
+            continue
+        try:
+            re.compile(r[5])
+        except re.error as e:  # a hand-typed keyword with a stray ( or +: matched as plain text, so it can't stop every check
+            print(f"anime.txt keywords for {r[0]} aren't a valid pattern ({e}); matching them as plain text", file=sys.stderr)
+            shows[int(r[1])]["yt"] = "|".join(literal(k) for k in r[5].split("|"))
     return shows
 
 
@@ -1915,7 +1921,22 @@ def main():
         complete_anime()
     except Exception as e:  # a short entry still works with AniList times, so this must never stop the alerts
         print(f"FAIL completing anime: {e}", file=sys.stderr)
-    youtube, later = anime(state, lambda: manga(state, urls))  # manga between the YouTube cards and the VPN feed's wait
+    manga_done = []
+
+    def run_manga():
+        manga_done.append(True)
+        manga(state, urls)
+    youtube, later, failed = None, [], False
+    try:
+        youtube, later = anime(state, run_manga)  # manga between the YouTube cards and the VPN feed's wait
+    except Exception:  # the state must still be saved (the F1 cards and alerts already out), or the next check sends them again
+        traceback.print_exc()
+        failed = True
+        if not manga_done:  # anime failed before it got to the manga checks
+            try:
+                run_manga()
+            except Exception:
+                traceback.print_exc()
     try:
         wait_for_youtube(youtube, later)
     except Exception as e:  # waiting must never cost the run its alerts' saved state
@@ -1930,6 +1951,8 @@ def main():
         library(state)
     except Exception as e:  # the LINE list cards must never stop the alerts
         print(f"FAIL library: {e}", file=sys.stderr)
+    if failed:
+        sys.exit(1)  # the run still shows as failed; the workflow commits the state saved above
 
 
 if __name__ == "__main__":
