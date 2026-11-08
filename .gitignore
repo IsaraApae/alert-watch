@@ -1,4 +1,14 @@
+# the watcher run on a computer (GitHub Actions uses ci-state.json, which is committed)
 state.json
 watch.log
 __pycache__/
+*.pyc
+# written by the workflow's run: the VPN feed copies, and the OpenVPN packages the cache keeps
 feeds/
+debs/
+# local environment and editor/OS files
+.env
+.venv/
+.DS_Store
+.vscode/
+.idea/
