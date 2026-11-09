@@ -398,6 +398,11 @@ def f1_badge(n):
         {"type": "text", "text": f"{'▲' if n > 0 else '▼'}{abs(n)}", "size": "xxs", "weight": "bold", "color": c}]}
 
 
+def f1_arrow(n, **k):
+    """▲3 / ▼5 as coloured text, as the site's timing shows places gained (lighter than f1_badge, for 22 rows in 30 KB)."""
+    return {"type": "text", "text": f"{'▲' if n > 0 else '▼'}{abs(n)}", "size": "xxs", "weight": "bold", "color": F1C["green"] if n > 0 else F1C["red_ink"], **k}
+
+
 def f1_row(moved, contents, base=None, **box):
     """One of the site's slots: rounded, on the row grey (or base), outlined green if it moved up and red if down (only
     those carry the 1px border: a card has up to 22 rows, and LINE takes at most 30 KB a card)."""
@@ -411,16 +416,19 @@ def f1_stripe(colour, height=None):
     return {"type": "box", "layout": "vertical", "width": "4px", "flex": 0, **({"height": height} if height else {}), "backgroundColor": colour, "contents": []}
 
 
-def f1_slot(pos, d, end, moved=0, tint=False, team=True, mark=None, out=False, compact=False):
+def f1_slot(pos, d, end, moved=0, tint=False, team=True, mark=None, out=False, compact=False, arrow=None):
     """A driver as the site lists a session: on the team's stripe, the position, the tag and team, the full name, and on the
     right the time (DNF, DNS and DSQ in red). tint: the winner's row, tinted with the team colour; mark: a red line under.
-    compact: one line (position, tag, name, time), for a card that would be too big for LINE otherwise."""
+    compact: one line (position, tag, name, time), for a card that would be too big for LINE otherwise. moved: places it
+    moved, outlined green or red; arrow: places for its ▲/▼ (moved if not given)."""
+    arrow = moved if arrow is None else arrow
     c = "#" + (d.get("team_colour") or "777777")
     t = lambda text, **k: {"type": "text", "text": text, **k}
     if compact:
+        tag = f1_tag(d, flex=0)
         return f1_row(moved, [f1_stripe(c), {"type": "box", "layout": "baseline", "spacing": "sm", "paddingAll": "6px", "paddingEnd": "10px", "contents": [
-            t(str(pos).rjust(2, "\u2007"), size="xs", weight="bold", color=F1C["text"], flex=0), f1_tag(d, flex=0),
-            t(f1_full(d), size="xxs", color=F1C["dim"], flex=1),
+            {**tag, "contents": [{"type": "span", "text": str(pos).rjust(2, "\u2007") + "  "}] + tag["contents"]},  # the position in the tag's text: lighter
+            t(f1_full(d), size="xxs", color=F1C["dim"], flex=1), *([f1_arrow(arrow, flex=0)] if arrow else []),
             *([t(end, size="xs", weight="bold", color=F1C["red_ink"] if out else F1C["text"], flex=0)] if end else [])]}],
                       base=f1_mix(c, F1C["row"], .12) if tint else None)
     main = [f1_tag(d, team and d.get("team_name")), t(f1_full(d), size="xs", weight="bold", color=F1C["text"]),
@@ -428,14 +436,14 @@ def f1_slot(pos, d, end, moved=0, tint=False, team=True, mark=None, out=False, c
     return f1_row(moved, [f1_stripe(c), {"type": "box", "layout": "horizontal", "alignItems": "center", "spacing": "md",
                                          "paddingAll": "7px", "paddingStart": "6px", "paddingEnd": "10px", "contents": [
         {"type": "box", "layout": "vertical", "width": "22px", "flex": 0, "contents": [t(pos, size="sm", weight="bold", color=F1C["text"], align="end")]},
-        {"type": "box", "layout": "vertical", "contents": main},
+        {"type": "box", "layout": "vertical", "contents": main}, *([f1_arrow(arrow, flex=0)] if arrow else []),
         *([t(end, size="xs", weight="bold", color=F1C["red_ink"] if out else F1C["text"], flex=0, align="end")] if end else [])]}],
                   base=f1_mix(c, F1C["row"], .12) if tint else None)
 
 
 def f1_changes(title, changes):
     """Who moved, under a red heading, each in the site's row: their stripe, tag and full name, then P13 struck through ->
-    P10 and the points it changed, outlined green if they gained and red if they lost.
+    P10 ▲3 (green, or red and ▼) and the points it changed, outlined green if they gained and red if they lost.
     changes: [(driver, old position, new position, points gained)]."""
     t = lambda text, **k: {"type": "text", "text": text, **k}
     place = lambda p: f"P{p}" if isinstance(p, int) else "NC"
@@ -447,49 +455,54 @@ def f1_changes(title, changes):
             "contents": [f1_tag(d, flex=0), t(f1_full(d), size="xs", weight="bold", color=F1C["text"], flex=1),
                          {"type": "text", "size": "xs", "weight": "bold", "color": F1C["text"], "flex": 0, "contents": [
                              {"type": "span", "text": place(old), "size": "xxs", "weight": "regular", "color": F1C["dim"], "decoration": "line-through"},
-                             {"type": "span", "text": " → ", "size": "xxs", "weight": "regular", "color": F1C["dim"]}, {"type": "span", "text": place(new)},
+                             {"type": "span", "text": " → ", "size": "xxs", "weight": "regular", "color": F1C["dim"]}, {"type": "span", "text": place(new) + (f" {'▲' if gained > 0 else '▼'}{abs(gained)}" if isinstance(old, int) and isinstance(new, int) else ""),
+                              "color": F1C["green"] if gained > 0 else F1C["red_ink"]},
                              *([{"type": "span", "text": f"  {'+' if pts > 0 else ''}{pts:g} pt{'s' if abs(pts) != 1 else ''}", "size": "xxs",
                                  "color": F1C["green"] if pts > 0 else F1C["red_ink"]}] if pts else [])]}]}])
     return {"type": "box", "layout": "vertical", "spacing": "xs", "contents": [t(title.upper(), size="xxs", weight="bold", color=F1C["red_ink"])] + [line(*c) for c in changes[:8]]}
 
 
-def f1_card(meeting, session, when, rows, replay_key=None, note=None, changes=None):
+def f1_card(meeting, session, when, rows, replay_key=None, note=None, changes=None, gains=None):
     """A session's result card, like the session on the site's weekend page: the podium (P2, P1, P3 on tiles tinted with
     their team's colour, each face cut out, with their time), then everyone else, from P4, in the site's rows. After a change after the
-    flag (changes), a "Result changed" panel titled note on top and the drivers who moved outlined, green up and red down;
-    buttons open the session's replay and its full result on the site (which follows the official result)."""
+    flag (changes), a "Result changed" panel titled note on top and the drivers who moved outlined, green up and red down,
+    each with ▲/▼ and the places; else, for a race or sprint, ▲/▼ for the places each gained or lost since the start
+    (gains: {car: places}), as the site shows; buttons open the session's replay and its full result on the site (which follows the official result)."""
     t = lambda text, **k: {"type": "text", "text": text, **k}
     moved = {d.get("driver_number"): (old - new if isinstance(old, int) and isinstance(new, int) else 0) for d, old, new, _ in changes or []}
+    arrows = moved if changes else gains or {}
 
     def podium(pos, d, val):
-        c, first = "#" + (d.get("team_colour") or "777777"), pos == "1"
+        c, first, move = "#" + (d.get("team_colour") or "777777"), pos == "1", arrows.get(d.get("driver_number"), 0)
         return {"type": "box", "layout": "vertical", "flex": 1, "cornerRadius": "12px", "backgroundColor": f1_mix(c, F1C["panel"], .13),
                 "borderWidth": "1px", "borderColor": f1_mix(c, F1C["line"], .4), "paddingStart": "10px", "paddingEnd": "8px",
                 "paddingTop": "16px" if first else "10px", "paddingBottom": "12px" if first else "10px", "contents": [
-            t(pos, size="xl", weight="bold", color=F1C["text"]),
+            {"type": "box", "layout": "horizontal", "alignItems": "center", "contents": [
+                t(pos, size="xl", weight="bold", color=F1C["text"]), *([f1_badge(move)] if move else [])]},
             {"type": "box", "layout": "vertical", "margin": "sm", "contents": [f1_face(f1_photo(d, 200), "64px" if first else "52px")]},
             f1_tag(d, margin="sm"),
             t(f1_last(d), size="xs", weight="bold", color=F1C["text"]),
             *([t(d["team_name"], size="xxs", color=F1C["dim"])] if d.get("team_name") else []),
             t(val, size="xxs", weight="bold", color=F1C["red_ink"] if val in ("DNF", "DNS", "DSQ") else F1C["text"], margin="sm")]}
 
-    def build(team, compact):
+    def build(team, compact, arrows):
         top = [rows[i] for i in (1, 0, 2) if i < len(rows)] if len(rows) >= 3 else rows[:3]   # a podium: P2, P1 in the middle, P3
         head = [f1_changes(note or "Result changed", changes)] if changes else [t(note, size="xs", weight="bold", color=F1C["red_ink"], wrap=True)] if note else []
         body = head + [
             t("PODIUM", size="xxs", weight="bold", color=F1C["dim"], margin="lg" if head else "none"),
             {"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "flex-end", "margin": "sm", "contents": [podium(*r) for r in top]},
             {"type": "box", "layout": "vertical", "margin": "lg", "spacing": "xs", "contents": [
-                f1_slot(p, d, v, moved.get(d.get("driver_number"), 0), team=team, out=v in ("DNF", "DNS", "DSQ"), compact=compact)
+                f1_slot(p, d, v, moved.get(d.get("driver_number"), 0), team=team, out=v in ("DNF", "DNS", "DSQ"), compact=compact,
+                        arrow=arrows.get(d.get("driver_number"), 0))
                 for p, d, v in rows[3:]]}]  # the top 3 are on the podium, not listed again
         return {"type": "bubble", "size": "mega", "header": f1_head(meeting.get("meeting_name") or "Formula 1", when, meeting, session),
                 "body": {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": body},
                 **({"footer": f1_buttons(("Watch replay", f"{F1_SITE}?replay={replay_key}"), ("Full result", f"{F1_SITE}?result={replay_key}"))}
                    if replay_key else {})}
     # the site's look while it fits in LINE's 30 KB; a bigger card (a long "Result changed" list) gets plainer rows: without
-    # the team, then on one line
-    for team, compact in ((True, False), (False, False), (False, True)):
-        card = build(team, compact)
+    # the team, then on one line, then without the rows' arrows
+    for team, compact, keep in ((True, False, True), (False, False, True), (False, True, True), (False, True, False)):
+        card = build(team, compact, arrows if keep else {})
         if f1_size(card) <= F1_MAX:
             break
     return card
@@ -622,6 +635,24 @@ def f1_standings(state, token, s, meeting, again=False):
     del sent[:-50]
 
 
+def f1_gains(state, s, sessions, results):
+    """For a race or sprint: {car: places gained (+) or lost (-) since the start}, against the starting grid OpenF1 gives
+    for its qualifying (penalties included), else the qualifying order as sent; {} for other sessions or no grid."""
+    names = {"Race": ("Qualifying",), "Sprint": ("Sprint Qualifying", "Sprint Shootout")}.get(s["session_name"])
+    q = next((x for x in sessions if names and x["meeting_key"] == s["meeting_key"] and x["session_name"] in names), None)
+    if not q:
+        return {}
+    try:
+        start = {x["driver_number"]: x["position"] for x in json.loads(get(f"{OPENF1}/starting_grid?session_key={q['session_key']}"))
+                 if isinstance(x.get("position"), int)}
+    except Exception:
+        start = {}
+    if not start:
+        start = {n: p for n, p, _ in state.get("f1_final", {}).get(str(q["session_key"])) or [] if isinstance(p, int)}
+    return {x["driver_number"]: start[x["driver_number"]] - x["position"] for x in results
+            if isinstance(x.get("position"), int) and x["driver_number"] in start}
+
+
 def f1_sig(results):
     """A race's or sprint's result in short, to notice when it changes: [[car number, position, points]]."""
     return sorted([x["driver_number"], x.get("position"), x.get("points")] for x in results)
@@ -680,16 +711,17 @@ def f1_recheck(state, token, s, meeting):
 
 def f1_grid_card(meeting, race, grid, drivers, qual, key):
     """The Starting grid card, like the site's grid view of a qualifying: a red Grid penalties panel (who dropped back, P2
-    -> P7), then the grid in order in the site's rows, each dropped driver outlined red with "▼5 · Qualified P2" under."""
+    -> P7), then the grid in order in the site's rows, each dropped driver outlined red with ▼5 and "Qualified P2" under, and ▲1 for each who moved up into the gaps."""
     t = lambda text, **k: {"type": "text", "text": text, **k}
     drop = lambda x: max(x["position"] - (qual.get(x["driver_number"]) or x["position"]), 0)
     back = sorted((x for x in grid if drop(x)), key=lambda x: x["position"])
     start = datetime.fromisoformat(race["date_start"]).astimezone(THAI).strftime("%a %d %b · %H:%M")
 
-    def build(team, compact):
+    def build(team, compact, arrows=True):
         rows = [f1_slot(str(x["position"]), drivers.get(x["driver_number"], {"driver_number": x["driver_number"]}),
                         f1_time(x["lap_duration"]) if x.get("lap_duration") else None, -drop(x), team=team, compact=compact,
-                        mark=f"▼{drop(x)} · Qualified P{qual[x['driver_number']]}" if drop(x) else None) for x in grid]
+                        arrow=(qual.get(x["driver_number"]) or x["position"]) - x["position"] if arrows else 0,
+                        mark=f"Qualified P{qual[x['driver_number']]}" if drop(x) else None) for x in grid]
         body = ([f1_changes("Grid penalties", [(drivers.get(x["driver_number"], {}), qual[x["driver_number"]], x["position"], 0) for x in back])] if back else []) + [
             t("STARTING GRID", size="xxs", weight="bold", color=F1C["dim"], margin="lg" if back else "none"),
             {"type": "box", "layout": "vertical", "margin": "sm", "spacing": "xs", "contents": rows}]
@@ -697,8 +729,8 @@ def f1_grid_card(meeting, race, grid, drivers, qual, key):
                 "header": f1_head(meeting.get("meeting_name") or "Formula 1", f"{race['session_name']} · {start} · changed after qualifying", meeting, "Starting grid"),
                 "body": {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": body},
                 "footer": f1_buttons(("See the grid", f"{F1_SITE}?result={key}"), ("Watch qualifying", f"{F1_SITE}?replay={key}"))}
-    for team, compact in ((True, False), (False, False), (False, True)):  # plainer rows only if LINE's 30 KB needs it
-        card = build(team, compact)
+    for step in ((True, False), (False, False), (False, True), (False, True, False)):  # plainer rows only if LINE's 30 KB needs it
+        card = build(*step)
         if f1_size(card) <= F1_MAX:
             break
     return card
@@ -885,7 +917,8 @@ def f1(state):
                 state.setdefault("f1_final", {})[key] = f1_sig(results)
                 continue
             plain = {"type": "text", "text": f"F1 {session} · {name}\n{when}\n" + "\n".join(f"{p} {f1_name(d)} ({d.get('team_name') or ''}) {v}" for p, d, v in rows)}
-            card = {"type": "flex", "altText": f"F1 {session} · {name}: {top}"[:400], "contents": f1_card(meeting, session, when, rows, key)}
+            card = {"type": "flex", "altText": f"F1 {session} · {name}: {top}"[:400], "contents": f1_card(meeting, session, when, rows, key,
+                                                                                                     gains=f1_gains(state, s, sessions, results))}
             if line_send(token, card) or line_send(token, plain):
                 sent.append(key)
                 state.setdefault("f1_final", {})[key] = f1_sig(results)  # the result as sent: a later change gets its own card
@@ -2272,9 +2305,13 @@ if __name__ == "__main__":
         cards = {"anime card": {"type": "flex", "altText": "check", "contents": card("New episode: One Piece (Fall 2026, TV)",
                                                                                    "Episode 01/?\nNetflix · 15 Oct 2026 22:30", sample, "https://www.youtube.com/")},
                  "manga card": {"type": "flex", "altText": "check", "contents": card("New chapter: Reality Quest", "ตอนที่ 225", sample, "https://example.com/")},
-                 "results": {"type": "flex", "altText": "check", "contents": f1_card(meeting, "Race", when, rows, key)},
+                 "results": {"type": "flex", "altText": "check", "contents": f1_card(meeting, "Race", when, rows, key,
+                             gains={d.get("driver_number"): (-1) ** i * (i % 4) for i, (_, d, _) in enumerate(rows)})},
                  "updated results": {"type": "flex", "altText": "check", "contents": f1_card(meeting, "Race · Updated", when, rows, key,
-                                     "Result changed after the race: HIR P13 → P10 (+1 pt), PIA P7 → P13 (-6 pts)")},
+                                     "RESULT CHANGED AFTER THE RACE", [(rows[2][1], 3, 1, 7), (rows[0][1], 1, 3, -10), (rows[12][1], 13, 10, 1)])},
+                 "starting grid": {"type": "flex", "altText": "check", "contents": f1_grid_card(
+                     meeting, s, [{"driver_number": d.get("driver_number"), "position": i + 1} for i, (_, d, _) in enumerate(rows[:2] + rows[3:6] + rows[2:3] + rows[6:])],
+                     drivers, {d.get("driver_number"): i + 1 for i, (_, d, _) in enumerate(rows)}, key)},
                  "live": {"type": "flex", "altText": "check", "contents": f1_live_card(meeting, "Race", when, True)}}
         captured, line_send = [], lambda token, message: captured.append(message) or True   # module level: f1_standings now captures instead of sending
         f1_standings({}, token, s, meeting)
