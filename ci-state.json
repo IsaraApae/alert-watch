@@ -2915,7 +2915,8 @@
   "202250:6",
   "189123:5",
   "185756:7",
-  "199426:6"
+  "199426:6",
+  "213657:5"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4196,6 +4197,17 @@
    "published": 1794152700,
    "scheduled": 1794152700,
    "notified": true
+  },
+  "213657:5": {
+   "title": "Mission: Yozakura Family Season 2 Cour 2",
+   "episode": 5,
+   "version": "ซับไทย",
+   "first": "suba-anime",
+   "url": "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/ep-17",
+   "detected": 1794189910,
+   "published": null,
+   "notified": true,
+   "order": "estimated"
   }
  },
  "watch_links": {
@@ -4307,7 +4319,8 @@
   "202250:6": "https://isaraapae.github.io/alert-watch/b.html?v=ApTAib-ab0o",
   "189123:5": "https://animeruka.com/ep/ao-no-hako-blue-box-season-2-ep-5/",
   "185756:7": "https://isaraapae.github.io/alert-watch/b.html?v=Nl1Onan5ziY",
-  "199426:6": "https://isaraapae.github.io/alert-watch/b.html?v=GJvl-JDmW9c"
+  "199426:6": "https://isaraapae.github.io/alert-watch/b.html?v=GJvl-JDmW9c",
+  "213657:5": "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/ep-17"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4402,7 +4415,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794189625,
+ "anime_checked": 1794189910,
  "mal_totals": {
   "60601": [
    12,
