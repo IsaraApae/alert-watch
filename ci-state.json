@@ -4419,7 +4419,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794282910,
+ "anime_checked": 1794283222,
  "mal_totals": {
   "60601": [
    12,
@@ -5112,6 +5112,15 @@
    "session_name": "Practice 1",
    "date_start": "2026-11-20T00:30:00+00:00",
    "date_end": "2026-11-20T01:30:00+00:00",
+   "meeting_key": 1300,
+   "year": 2026,
+   "country_name": "United States"
+  },
+  {
+   "session_key": 11414,
+   "session_name": "Practice 2",
+   "date_start": "2026-11-20T04:00:00+00:00",
+   "date_end": "2026-11-20T05:00:00+00:00",
    "meeting_key": 1300,
    "year": 2026,
    "country_name": "United States"
