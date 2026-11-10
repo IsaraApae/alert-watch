@@ -317,6 +317,17 @@ def f1_size(card):
     return len(json.dumps(card, separators=(",", ":")))
 
 
+def f1_send(token, plain, alt, build):
+    """Send an F1 card (build() makes it; alt is its one-line text), or the plain text if LINE refuses the card or it can't
+    be built (OpenF1 gave something the card doesn't expect): the news still arrives. False if LINE took neither."""
+    try:
+        card = {"type": "flex", "altText": alt[:400], "contents": build()}
+    except Exception as e:
+        print(f"FAIL f1 card ({alt[:60]}): {type(e).__name__}: {e}", file=sys.stderr)
+        card = None
+    return bool(card and line_send(token, card)) or line_send(token, plain)
+
+
 def f1_kind(session):
     """The site's chip for a session (its weekend page): Race red, Sprint amber, Quali and SQ purple, FP1 to FP3 blue."""
     s = session.split(" · ")[0]
@@ -624,17 +635,17 @@ def f1_standings(state, token, s, meeting, again=False):
         if key not in sent:
             sent.append(key)
         return
-    # every driver, the faces as long as LINE's 30 KB allows: all of them, then the podium's only, then none (which always fits)
-    for keep in (len(drows), 3, 0):
-        dcard = f1_standings_card("Drivers' Championship", after, [r if i < keep else r[:3] + (None,) + r[4:] for i, r in enumerate(drows)], colour)
-        if f1_size(dcard) <= F1_MAX:
-            break
-    card = {"type": "flex", "altText": f"F1 standings {after[:1].lower()}{after[1:]}: {top(drows)}"[:400], "contents": {"type": "carousel", "contents": [
-        dcard, f1_standings_card("Teams' Championship", after, trows, colour)]}}
+    def cards():
+        # every driver, the faces as long as LINE's 30 KB allows: all of them, then the podium's only, then none (which always fits)
+        for keep in (len(drows), 3, 0):
+            dcard = f1_standings_card("Drivers' Championship", after, [r if i < keep else r[:3] + (None,) + r[4:] for i, r in enumerate(drows)], colour)
+            if f1_size(dcard) <= F1_MAX:
+                break
+        return {"type": "carousel", "contents": [dcard, f1_standings_card("Teams' Championship", after, trows, colour)]}
     plain = {"type": "text", "text": f"F1 standings {after[:1].lower()}{after[1:]}\n\nDrivers\n" + "\n".join(
         f"{r[0]} ({'+' if r[1] > 0 else ''}{r[1] or '–'}) {r[4]} {r[6]:g}" for r in drows) + "\n\nTeams\n" + "\n".join(
         f"{r[0]} ({'+' if r[1] > 0 else ''}{r[1] or '–'}) {r[4]} {r[6]:g}" for r in trows)}
-    if (line_send(token, card) or line_send(token, plain)) and key not in sent:
+    if f1_send(token, plain, f"F1 standings {after[:1].lower()}{after[1:]}: {top(drows)}", cards) and key not in sent:
         sent.append(key)
     del sent[:-50]
 
@@ -701,11 +712,10 @@ def f1_recheck(state, token, s, meeting):
     if not token:  # on the Mac: show what would be sent
         print(f"F1 {session} · {name} · result updated | {note}")
     else:
-        card = {"type": "flex", "altText": f"F1 {session} · {name}: result updated. {note}"[:400],
-                "contents": f1_card(meeting, f"{session} · Updated", when, rows, key, f"RESULT CHANGED AFTER {after.upper()}", changes)}
         plain = {"type": "text", "text": f"F1 {session} · {name}: result updated\n{note}\n\n" + "\n".join(
             f"{p} {f1_name(d)} ({d.get('team_name') or ''}) {v}" for p, d, v in rows)}
-        if not (line_send(token, card) or line_send(token, plain)):
+        if not f1_send(token, plain, f"F1 {session} · {name}: result updated. {note}", lambda: f1_card(
+                meeting, f"{session} · Updated", when, rows, key, f"RESULT CHANGED AFTER {after.upper()}", changes)):
             return  # tried again on the next check
     final[key] = sig
     del seen[key]
@@ -778,11 +788,9 @@ def f1_grid(state, token, s, meeting, race):
     if not token:  # on the Mac: show what would be sent
         print(f"F1 {session} · {name} · starting grid | {note}")
     else:
-        card = {"type": "flex", "altText": f"F1 {name}: starting grid. {note}"[:400],
-                "contents": f1_grid_card(meeting, race, grid, drivers, qual, key)}
         plain = {"type": "text", "text": f"F1 {name}: {race['session_name'].lower()} starting grid\n{note}\n\n" + "\n".join(
             f"{p} {f1_name(d)} ({d.get('team_name') or ''}) {v}" for p, d, v in rows)}
-        if not (line_send(token, card) or line_send(token, plain)):
+        if not f1_send(token, plain, f"F1 {name}: starting grid. {note}", lambda: f1_grid_card(meeting, race, grid, drivers, qual, key)):
             return  # tried again on the next check
     sent[key] = sig
     del seen[key]
@@ -858,9 +866,8 @@ def f1_started(state, token, sessions, meetings):
         if not token:  # on the Mac: show what would be sent
             print(f"F1 live: {s['session_name']} · {name} · {when}")
         else:
-            card = {"type": "flex", "altText": f"F1 {s['session_name']} · {name} is live: open F1 Live", "contents": f1_live_card(meeting, s["session_name"], when, True)}
             plain = {"type": "text", "text": f"F1 {s['session_name']} · {name} is live now\n{F1_PAGE}"}
-            if not (line_send(token, card) or line_send(token, plain)):
+            if not f1_send(token, plain, f"F1 {s['session_name']} · {name} is live: open F1 Live", lambda: f1_live_card(meeting, s["session_name"], when, True)):
                 continue
         sent.append(key)
     del sent[:-100]
@@ -921,9 +928,8 @@ def f1(state):
                 state.setdefault("f1_final", {})[key] = f1_sig(results)
                 continue
             plain = {"type": "text", "text": f"F1 {session} · {name}\n{when}\n" + "\n".join(f"{p} {f1_name(d)} ({d.get('team_name') or ''}) {v}" for p, d, v in rows)}
-            card = {"type": "flex", "altText": f"F1 {session} · {name}: {top}"[:400], "contents": f1_card(meeting, session, when, rows, key,
-                                                                                                     gains=f1_gains(state, s, sessions, results))}
-            if line_send(token, card) or line_send(token, plain):
+            if f1_send(token, plain, f"F1 {session} · {name}: {top}",
+                       lambda: f1_card(meeting, session, when, rows, key, gains=f1_gains(state, s, sessions, results))):
                 sent.append(key)
                 state.setdefault("f1_final", {})[key] = f1_sig(results)  # the result as sent: a later change gets its own card
                 if session == "Race":
@@ -2143,6 +2149,12 @@ if __name__ == "__main__":
                 f1_grid(st, "t", q, {}, race)
             assert send.call_count == 1 and "63 P2 → P3" in send.call_args[0][1]["altText"], send.call_args
             assert st["f1_grid"]["9"] == [[1, 1], [16, 2], [63, 3]] and "9" not in st["f1_grid_seen"]
+        # a card that can't be built (OpenF1 gave something it doesn't expect) goes out as plain text; so does one LINE refuses
+        for build, takes in ((lambda: {}["x"], [True]), (lambda: {"type": "bubble"}, [False, True])):
+            with mock.patch(__name__ + ".line_send", side_effect=takes) as send, mock.patch("builtins.print"):
+                assert f1_send("t", {"type": "text", "text": "p"}, "alt", build) and send.call_args[0][1]["type"] == "text"
+        with mock.patch(__name__ + ".line_send", return_value=False), mock.patch("builtins.print"):
+            assert not f1_send("t", {"type": "text", "text": "p"}, "alt", dict)
         rss = "<item><link>https://www.webtoons.com/th/x/ep7-a/viewer?title_no=1&amp;episode_no=7</link></item>"
         with mock.patch(__name__ + ".get", lambda u: rss if "/rss?title_no=1" in u and "://www." in u else ""):
             assert webtoon("https://m.webtoons.com/th/x/y/list?title_no=1") == {"EP.7": "https://www.webtoons.com/th/x/ep7-a/viewer?title_no=1&episode_no=7"}
