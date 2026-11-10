@@ -12,6 +12,29 @@ STATE = HERE / os.environ.get("MANGA_STATE", "state.json")  # GitHub Actions kee
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 
 
+def write(path, text):
+    """Write a file whole or not at all: to a copy beside it, then swapped in. A check that is stopped half-way (watch.yml
+    ends one that hangs) leaves each file as it was or as it should be, never cut off, and the workflow commits them."""
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, path)
+
+
+SAVING = threading.Lock()
+
+
+def save(state):
+    """Save the state: at the end of a check, and during it once cards are out and a wait begins (for a YouTube video, for
+    the rest of the check after the F1 cards), so a check stopped in that wait doesn't send them again next time. The F1
+    thread and the main one both change the state: a save that catches the other mid-change is tried again."""
+    with SAVING:
+        for _ in range(20):
+            try:
+                return write(STATE, json.dumps(state, ensure_ascii=False, indent=1))
+            except RuntimeError:  # "dictionary changed size during iteration"
+                pass
+
+
 def chapters(url, html):
     """{chapter id: chapter link} on a series page: sub-links of the page (Madara theme) + data-num items (MangaReader theme)."""
     base = unquote(url).rstrip("/") + "/"
@@ -45,7 +68,7 @@ def webtoon_rows(list_url, page):
     return [(int(n), html.unescape(t).strip()) for n, t in re.findall(r'data-episode-no="(\d+)".*?class="subj"><span>([^<]*)', get(f"{list_url}&page={page}"), re.S)]
 
 
-def season_start(list_url, season, newest_no, ep, seasons):
+def season_start(list_url, season, ep, seasons):
     """How many chapters came before this season (Juvenile Prison's S2 Ep.1 is chapter 101: 100), from the list: the
     chapter just before the season's first episode. Kept per series in seasons ({season: chapters before})."""
     if season <= 1:
@@ -56,8 +79,8 @@ def season_start(list_url, season, newest_no, ep, seasons):
             rows += webtoon_rows(list_url, page)
             older = [(n, webtoon_ep(t)) for n, t in rows if webtoon_ep(t) and webtoon_ep(t)[0] < season]
             if older:
-                n, (s_prev, last) = max(older)
-                seasons[str(season)] = season_start(list_url, s_prev, n, last, seasons) + last
+                _, (s_prev, last) = max(older)
+                seasons[str(season)] = season_start(list_url, s_prev, last, seasons) + last
                 break
         else:
             raise RuntimeError(f"season {season}'s start not found")
@@ -75,7 +98,7 @@ def webtoon_chapters(url, state):
     for title, n in re.findall(r"<item>\s*<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</title>.*?episode_no=(\d+)", rss, re.S):
         found = webtoon_ep(html.unescape(title))
         if found:
-            out[f"EP.{n}"] = season_start(list_url, found[0], int(n), found[1], seasons) + found[1]
+            out[f"EP.{n}"] = season_start(list_url, found[0], found[1], seasons) + found[1]
     return out
 
 
@@ -171,19 +194,23 @@ def card(title, msg, image, uri=None):
 
 
 def notify(title, msg, links, image=None, uri=None):
+    """Send one alert. False if LINE took neither the card nor the plain text (LINE down, the month's messages used up):
+    the caller then leaves it unrecorded, so the next check sends it. True otherwise, also where there is no LINE to send
+    to (on a computer)."""
     if shutil.which("osascript"):  # absent on the GitHub runner
         subprocess.run(["osascript", "-e", f"display notification {json.dumps(msg)} with title {json.dumps(title)}"])
     token = os.environ.get("LINE_TOKEN")  # phone push: LINE official account broadcast; only set on GitHub
     if not token:
-        return
+        return True
     plain = {"type": "text", "text": f"{title}\n{links}"[:4500]}
     tries = ([{"type": "flex", "altText": f"{title} {msg}"[:400], "contents": card(title, msg, image, uri)}]
              if image and re.search(r"\.(jpe?g|png)$", urlparse(image).path, re.I) else []) + [plain]  # LINE cards show JPEG/PNG only
-    for message in tries:  # the card first when there is a cover; plain text if LINE refuses it, so the alert is never lost
+    for message in tries:  # the card first when there is a cover; plain text if LINE refuses it
         if line_send(token, message):
-            return
+            return True
     if "ping" in sys.argv:
         sys.exit(1)
+    return False
 
 
 def line_send(token, message):
@@ -297,7 +324,7 @@ def f1_drivers(s, wanted=()):
 # the F1 Live site's light look (IsaraApae/f1-live, css/app.css and css/calendar.css): its page grey, white cards, rows on
 # its "row" grey with the team's colour as a 4px stripe, a colour per kind of session, red for its main buttons and for
 # whoever dropped back
-F1C = {"bg": "#EEF0F4", "panel": "#FFFFFF", "panel2": "#F5F6F9", "row": "#FAFBFC", "line": "#E4E6EC", "chip": "#ECEEF3",
+F1C = {"panel": "#FFFFFF", "panel2": "#F5F6F9", "row": "#FAFBFC", "line": "#E4E6EC", "chip": "#ECEEF3",
        "text": "#111118", "dim": "#6B6F7C", "red": "#E10600", "red_ink": "#D10500", "green": "#16A34A", "purple": "#9333EA",
        "amber": "#D97706", "blue": "#2563EB"}
 F1_MAX = 29000  # LINE takes at most 30 KB a card: a card bigger than this is built again with less in each row
@@ -311,6 +338,17 @@ def f1_mix(a, b, share):
 
 def f1_size(card):
     return len(json.dumps(card, separators=(",", ":")))
+
+
+def f1_send(token, plain, alt, build):
+    """Send an F1 card (build() makes it; alt is its one-line text), or the plain text if LINE refuses the card or it can't
+    be built (OpenF1 gave something the card doesn't expect): the news still arrives. False if LINE took neither."""
+    try:
+        card = {"type": "flex", "altText": alt[:400], "contents": build()}
+    except Exception as e:
+        print(f"FAIL f1 card ({alt[:60]}): {type(e).__name__}: {e}", file=sys.stderr)
+        card = None
+    return bool(card and line_send(token, card)) or line_send(token, plain)
 
 
 def f1_kind(session):
@@ -384,9 +422,9 @@ def f1_tag(d, team=None, **k):
         *([{"type": "span", "text": f"  {team}", "size": "xxs", "weight": "regular", "color": F1C["dim"]}] if team else [])]}
 
 
-def f1_face(url, px, round_=True):
+def f1_face(url, px):
     """A cut-out face (no disc behind it, as on the site), round-framed; an empty frame when there's no photo."""
-    return {"type": "box", "layout": "vertical", "width": px, "height": px, "flex": 0, **({"cornerRadius": f"{int(px[:-2]) // 2}px"} if round_ else {}),
+    return {"type": "box", "layout": "vertical", "width": px, "height": px, "flex": 0, "cornerRadius": f"{int(px[:-2]) // 2}px",
             "contents": [{"type": "image", "url": url, "size": "full", "aspectRatio": "1:1", "aspectMode": "cover"}] if url else []}
 
 
@@ -403,22 +441,22 @@ def f1_arrow(n, **k):
     return {"type": "text", "text": f"{'▲' if n > 0 else '▼'}{abs(n)}", "size": "xxs", "weight": "bold", "color": F1C["green"] if n > 0 else F1C["red_ink"], **k}
 
 
-def f1_row(moved, contents, base=None, **box):
-    """One of the site's slots: rounded, on the row grey (or base), outlined green if it moved up and red if down (only
+def f1_row(moved, contents):
+    """One of the site's slots: rounded, on the row grey, outlined green if it moved up and red if down (only
     those carry the 1px border: a card has up to 22 rows, and LINE takes at most 30 KB a card)."""
     edge = F1C["green"] if moved > 0 else F1C["red"]
     line = ({"backgroundColor": f1_mix(edge, F1C["row"], .08), "borderWidth": "1px", "borderColor": f1_mix(edge, F1C["row"], .5)} if moved
-            else {"backgroundColor": base or F1C["row"]})
-    return {"type": "box", "layout": "horizontal", "cornerRadius": "8px", **line, **box, "contents": contents}
+            else {"backgroundColor": F1C["row"]})
+    return {"type": "box", "layout": "horizontal", "cornerRadius": "8px", **line, "contents": contents}
 
 
-def f1_stripe(colour, height=None):
-    return {"type": "box", "layout": "vertical", "width": "4px", "flex": 0, **({"height": height} if height else {}), "backgroundColor": colour, "contents": []}
+def f1_stripe(colour):
+    return {"type": "box", "layout": "vertical", "width": "4px", "flex": 0, "backgroundColor": colour, "contents": []}
 
 
-def f1_slot(pos, d, end, moved=0, tint=False, team=True, mark=None, out=False, compact=False, arrow=None):
+def f1_slot(pos, d, end, moved=0, team=True, mark=None, out=False, compact=False, arrow=None):
     """A driver as the site lists a session: on the team's stripe, the position, the tag and team, the full name, and on the
-    right the time (DNF, DNS and DSQ in red). tint: the winner's row, tinted with the team colour; mark: a red line under.
+    right the time (DNF, DNS and DSQ in red). mark: a red line under.
     compact: one line (position, tag, name, time), for a card that would be too big for LINE otherwise. moved: places it
     moved, outlined green or red; arrow: places for its ▲/▼ (moved if not given)."""
     arrow = moved if arrow is None else arrow
@@ -429,16 +467,14 @@ def f1_slot(pos, d, end, moved=0, tint=False, team=True, mark=None, out=False, c
         return f1_row(moved, [f1_stripe(c), {"type": "box", "layout": "baseline", "spacing": "sm", "paddingAll": "6px", "paddingEnd": "10px", "contents": [
             {**tag, "contents": [{"type": "span", "text": str(pos).rjust(2, "\u2007") + "  "}] + tag["contents"]},  # the position in the tag's text: lighter
             t(f1_full(d), size="xxs", color=F1C["dim"], flex=1), *([f1_arrow(arrow, flex=0)] if arrow else []),
-            *([t(end, size="xs", weight="bold", color=F1C["red_ink"] if out else F1C["text"], flex=0)] if end else [])]}],
-                      base=f1_mix(c, F1C["row"], .12) if tint else None)
+            *([t(end, size="xs", weight="bold", color=F1C["red_ink"] if out else F1C["text"], flex=0)] if end else [])]}])
     main = [f1_tag(d, team and d.get("team_name")), t(f1_full(d), size="xs", weight="bold", color=F1C["text"]),
             *([t(mark, size="xxs", weight="bold", color=F1C["red_ink"])] if mark else [])]
     return f1_row(moved, [f1_stripe(c), {"type": "box", "layout": "horizontal", "alignItems": "center", "spacing": "md",
                                          "paddingAll": "7px", "paddingStart": "6px", "paddingEnd": "10px", "contents": [
         {"type": "box", "layout": "vertical", "width": "22px", "flex": 0, "contents": [t(pos, size="sm", weight="bold", color=F1C["text"], align="end")]},
         {"type": "box", "layout": "vertical", "contents": main}, *([f1_arrow(arrow, flex=0)] if arrow else []),
-        *([t(end, size="xs", weight="bold", color=F1C["red_ink"] if out else F1C["text"], flex=0, align="end")] if end else [])]}],
-                  base=f1_mix(c, F1C["row"], .12) if tint else None)
+        *([t(end, size="xs", weight="bold", color=F1C["red_ink"] if out else F1C["text"], flex=0, align="end")] if end else [])]}])
 
 
 def f1_changes(title, changes):
@@ -508,11 +544,13 @@ def f1_card(meeting, session, when, rows, replay_key=None, note=None, changes=No
     return card
 
 
-def f1_standings_card(title, sub_title, rows, colour_of):
+def f1_standings_card(title, sub_title, rows, plain=0):
     """A championship table like the site's standings: the top 3 on tiles (P2, P1, P3) glowing with their team's colour,
     each face cut out over a team-colour bar (or the team's logo on a tinted square), their points large; then everyone
     else in the site's rows. Each shows the points gained in the race (green) and the gap to the leader, and ▲/▼ the
-    places they moved since before it (outlined green or red)."""
+    places they moved since before it (outlined green or red). plain: lighter rows from P4 down, for a table too big for
+    LINE's 30 KB otherwise (many drivers, most of them moved): 1 = ▲/▼ as coloured text and no outline, 2 = also without
+    the team under the name, 3 = also without the points gained and the gap under the points."""
     t = lambda text, **k: {"type": "text", "text": text, **k}
     lead = rows[0][6] if rows else 0
     gap = lambda i, points: "Leader" if not i else f"−{lead - points:g}" if lead - points else "Level"
@@ -549,14 +587,16 @@ def f1_standings_card(title, sub_title, rows, colour_of):
 
     def row(i, r):
         pos, move, colour, photo, name, team, points, gained = r
-        return f1_row(move, [f1_stripe(colour), {"type": "box", "layout": "horizontal", "alignItems": "center", "spacing": "md",
+        return f1_row(0 if plain else move, [f1_stripe(colour), {"type": "box", "layout": "horizontal", "alignItems": "center", "spacing": "md",
                                                   "paddingTop": "6px", "paddingBottom": "6px", "paddingStart": "6px", "paddingEnd": "10px", "contents": [
             {"type": "box", "layout": "vertical", "width": "22px", "flex": 0, "contents": [t(str(pos), size="sm", weight="bold", color=F1C["text"], align="center")]},
             *([picture(photo, colour, "30px")] if photo else []),
-            {"type": "box", "layout": "vertical", "contents": [t(name, size="xs", weight="bold", color=F1C["text"]), *([t(team, size="xxs", color=F1C["dim"])] if team else [])]},
-            *([f1_badge(move)] if move else []),
+            {"type": "box", "layout": "vertical", "contents": [t(name, size="xs", weight="bold", color=F1C["text"]),
+                                                               *([t(team, size="xxs", color=F1C["dim"])] if team and plain < 2 else [])]},
+            *([f1_arrow(move, flex=0) if plain else f1_badge(move)] if move else []),
             {"type": "box", "layout": "vertical", "flex": 0, "contents": [
-                t(f"{points:g}", size="sm", weight="bold", color=F1C["text"], align="end"), {**standing(i, points, gained), "align": "end"}]}]}])
+                t(f"{points:g}", size="sm", weight="bold", color=F1C["text"], align="end"),
+                *([{**standing(i, points, gained), "align": "end"}] if plain < 3 else [])]}]}])
 
     body = [{"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "flex-end", "contents": [tile(i, rows[i]) for i in (1, 0, 2) if i < len(rows)]},
             {"type": "box", "layout": "vertical", "margin": "lg", "spacing": "xs", "contents": [row(i, r) for i, r in enumerate(rows) if i >= 3]}]
@@ -620,17 +660,18 @@ def f1_standings(state, token, s, meeting, again=False):
         if key not in sent:
             sent.append(key)
         return
-    # every driver, the faces as long as LINE's 30 KB allows: all of them, then the podium's only, then none (which always fits)
-    for keep in (len(drows), 3, 0):
-        dcard = f1_standings_card("Drivers' Championship", after, [r if i < keep else r[:3] + (None,) + r[4:] for i, r in enumerate(drows)], colour)
-        if f1_size(dcard) <= F1_MAX:
-            break
-    card = {"type": "flex", "altText": f"F1 standings {after[:1].lower()}{after[1:]}: {top(drows)}"[:400], "contents": {"type": "carousel", "contents": [
-        dcard, f1_standings_card("Teams' Championship", after, trows, colour)]}}
+    def cards():
+        # every driver, with as much as LINE's 30 KB allows: every face, then the podium's only, then none, then lighter
+        # rows from P4 down (f1_standings_card's plain: 22 drivers who all moved need 1, 25 need 2, 28 need 3)
+        for keep, plain in ((len(drows), 0), (3, 0), (0, 0), (0, 1), (0, 2), (0, 3)):
+            dcard = f1_standings_card("Drivers' Championship", after, [r if i < keep else r[:3] + (None,) + r[4:] for i, r in enumerate(drows)], plain)
+            if f1_size(dcard) <= F1_MAX:
+                break
+        return {"type": "carousel", "contents": [dcard, f1_standings_card("Teams' Championship", after, trows)]}
     plain = {"type": "text", "text": f"F1 standings {after[:1].lower()}{after[1:]}\n\nDrivers\n" + "\n".join(
         f"{r[0]} ({'+' if r[1] > 0 else ''}{r[1] or '–'}) {r[4]} {r[6]:g}" for r in drows) + "\n\nTeams\n" + "\n".join(
         f"{r[0]} ({'+' if r[1] > 0 else ''}{r[1] or '–'}) {r[4]} {r[6]:g}" for r in trows)}
-    if (line_send(token, card) or line_send(token, plain)) and key not in sent:
+    if f1_send(token, plain, f"F1 standings {after[:1].lower()}{after[1:]}: {top(drows)}", cards) and key not in sent:
         sent.append(key)
     del sent[:-50]
 
@@ -697,11 +738,10 @@ def f1_recheck(state, token, s, meeting):
     if not token:  # on the Mac: show what would be sent
         print(f"F1 {session} · {name} · result updated | {note}")
     else:
-        card = {"type": "flex", "altText": f"F1 {session} · {name}: result updated. {note}"[:400],
-                "contents": f1_card(meeting, f"{session} · Updated", when, rows, key, f"RESULT CHANGED AFTER {after.upper()}", changes)}
         plain = {"type": "text", "text": f"F1 {session} · {name}: result updated\n{note}\n\n" + "\n".join(
             f"{p} {f1_name(d)} ({d.get('team_name') or ''}) {v}" for p, d, v in rows)}
-        if not (line_send(token, card) or line_send(token, plain)):
+        if not f1_send(token, plain, f"F1 {session} · {name}: result updated. {note}", lambda: f1_card(
+                meeting, f"{session} · Updated", when, rows, key, f"RESULT CHANGED AFTER {after.upper()}", changes)):
             return  # tried again on the next check
     final[key] = sig
     del seen[key]
@@ -774,11 +814,9 @@ def f1_grid(state, token, s, meeting, race):
     if not token:  # on the Mac: show what would be sent
         print(f"F1 {session} · {name} · starting grid | {note}")
     else:
-        card = {"type": "flex", "altText": f"F1 {name}: starting grid. {note}"[:400],
-                "contents": f1_grid_card(meeting, race, grid, drivers, qual, key)}
         plain = {"type": "text", "text": f"F1 {name}: {race['session_name'].lower()} starting grid\n{note}\n\n" + "\n".join(
             f"{p} {f1_name(d)} ({d.get('team_name') or ''}) {v}" for p, d, v in rows)}
-        if not (line_send(token, card) or line_send(token, plain)):
+        if not f1_send(token, plain, f"F1 {name}: starting grid. {note}", lambda: f1_grid_card(meeting, race, grid, drivers, qual, key)):
             return  # tried again on the next check
     sent[key] = sig
     del seen[key]
@@ -789,12 +827,12 @@ F1_SITE = "https://isaraapae.github.io/f1-live/"
 F1_PAGE = F1_SITE + "?live"
 
 
-def f1_live_card(meeting, session, when, live):
+def f1_live_card(meeting, session, when):
     """A LINE card when a session starts, with the site's header and its LIVE badge (red, a dot in front); tap to open the
     site's Live tab."""
-    badge = {"type": "box", "layout": "horizontal", "flex": 0, "cornerRadius": "6px", "backgroundColor": F1C["red"] if live else F1C["chip"],
+    badge = {"type": "box", "layout": "horizontal", "flex": 0, "cornerRadius": "6px", "backgroundColor": F1C["red"],
              "paddingStart": "7px", "paddingEnd": "7px", "paddingTop": "3px", "paddingBottom": "3px", "contents": [
-        {"type": "text", "text": "● LIVE" if live else "STARTING SOON", "size": "xxs", "weight": "bold", "color": "#FFFFFF" if live else F1C["dim"]}]}
+        {"type": "text", "text": "● LIVE", "size": "xxs", "weight": "bold", "color": "#FFFFFF"}]}
     return {"type": "bubble", "size": "mega", "action": {"type": "uri", "label": "Open F1 Live", "uri": F1_PAGE},
             "header": f1_head(meeting.get("meeting_name") or "Formula 1", when, meeting, session),
             "body": {"type": "box", "layout": "horizontal", "alignItems": "center", "spacing": "md", "backgroundColor": F1C["panel"], "paddingAll": "12px",
@@ -803,7 +841,7 @@ def f1_live_card(meeting, session, when, live):
             "footer": f1_buttons(("Open F1 Live", F1_PAGE))}
 
 
-JOB_START = float(os.environ.get("JOB_START") or time.time())  # when this GitHub job began (watch.yml): it has 9 minutes in all
+JOB_START = float(os.environ.get("JOB_START") or time.time())  # when this GitHub job began (watch.yml): the check has 8 minutes of the job's 9
 CHECK_EVERY = 5 * 60  # how often cron-job.org starts a check (watch.yml)
 
 
@@ -854,9 +892,8 @@ def f1_started(state, token, sessions, meetings):
         if not token:  # on the Mac: show what would be sent
             print(f"F1 live: {s['session_name']} · {name} · {when}")
         else:
-            card = {"type": "flex", "altText": f"F1 {s['session_name']} · {name} is live: open F1 Live", "contents": f1_live_card(meeting, s["session_name"], when, True)}
             plain = {"type": "text", "text": f"F1 {s['session_name']} · {name} is live now\n{F1_PAGE}"}
-            if not (line_send(token, card) or line_send(token, plain)):
+            if not f1_send(token, plain, f"F1 {s['session_name']} · {name} is live: open F1 Live", lambda: f1_live_card(meeting, s["session_name"], when)):
                 continue
         sent.append(key)
     del sent[:-100]
@@ -917,9 +954,8 @@ def f1(state):
                 state.setdefault("f1_final", {})[key] = f1_sig(results)
                 continue
             plain = {"type": "text", "text": f"F1 {session} · {name}\n{when}\n" + "\n".join(f"{p} {f1_name(d)} ({d.get('team_name') or ''}) {v}" for p, d, v in rows)}
-            card = {"type": "flex", "altText": f"F1 {session} · {name}: {top}"[:400], "contents": f1_card(meeting, session, when, rows, key,
-                                                                                                     gains=f1_gains(state, s, sessions, results))}
-            if line_send(token, card) or line_send(token, plain):
+            if f1_send(token, plain, f"F1 {session} · {name}: {top}",
+                       lambda: f1_card(meeting, session, when, rows, key, gains=f1_gains(state, s, sessions, results))):
                 sent.append(key)
                 state.setdefault("f1_final", {})[key] = f1_sig(results)  # the result as sent: a later change gets its own card
                 if session == "Race":
@@ -995,8 +1031,11 @@ BRAVE = "https://isaraapae.github.io/alert-watch/b.html?v="  # redirect page in 
 
 
 def in_brave(youtube_link):
-    """Card link that opens this YouTube video in the Brave browser (LINE cards only allow https:// links)."""
-    return BRAVE + re.search(r"[?&]v=([A-Za-z0-9_-]{11})", youtube_link)[1]
+    """Card link that opens this YouTube video in the Brave browser (LINE cards only allow https:// links). A link with no
+    video id to find (the channels' public feeds list a Short as /shorts/ID, which is read too) stays as it is, so the
+    card opens YouTube itself."""
+    found = re.search(r"(?:[?&]v=|/shorts/|youtu\.be/)([A-Za-z0-9_-]{11})", youtube_link)
+    return BRAVE + found[1] if found else youtube_link
 
 
 THAI = timezone(timedelta(hours=7))
@@ -1017,8 +1056,10 @@ def thai_times():
         early = int(r[4]) if len(r) == 5 and r[4].isdigit() else 0  # e.g. 7: released a week before Japanese TV
         if r[2] == r[3] == "-":  # platform known, release time not: keep the Japanese time, but name where to watch
             out[int(r[0])] = (r[1], None, None, 0)
-        elif r[2][:3].title() in WEEKDAYS and re.fullmatch(r"\d{1,2}[:.]\d{2}", r[3]):
+        elif r[2][:3].title() in WEEKDAYS and re.fullmatch(r"([01]?\d|2[0-3])[:.][0-5]\d", r[3]):  # a real time: 25:00 would stop every check
             out[int(r[0])] = (r[1], r[2][:3].title(), r[3].replace(".", ":"), early)
+        else:
+            print(f"SKIP thai_times.txt: {line.strip()} (the day and time aren't like \"Sun | 22:00\")", file=sys.stderr)
     return out
 
 
@@ -1218,7 +1259,7 @@ def learn_thai_titles(shows, videos, due, thai):
                 # a short line ("name | id") keeps the Thai name in its last field, which completing it later keeps
                 lines[n] = f"{line.rstrip()}|{literal(dict(learned)[i])}" if len(r) == 6 and r[5] else \
                     " | ".join((r + [""] * 6)[:5] + [shows[i]["yt"]])
-        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        write(path, "\n".join(lines) + "\n")
         for i, name in learned:
             print(f"learned Thai title for {shows[i]['name']}: {name}")
     return learned
@@ -1546,12 +1587,12 @@ def schedule(state=None):
     learned = {str(k): v for k, v in learn_release_times(shows, jp, videos, cards).items()} if tv_ok else {}
     merged = {k: v for k, v in {**known, **learned}.items() if int(k) in shows}  # a slot stays known after its week scrolls off
     if merged != known:
-        auto.write_text(json.dumps(merged, ensure_ascii=False, indent=1), encoding="utf-8")
+        write(auto, json.dumps(merged, ensure_ascii=False, indent=1))
         print("learned Thai release times:", "; ".join(f"{shows[int(k)]['name']}: {' '.join(x for x in v if x)}" for k, v in merged.items() if known.get(k) != v))
     path = HERE / "schedule.json"
     old = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     if old.get("shows") != out:
-        path.write_text(json.dumps({"updated": now, "shows": out}, ensure_ascii=False, indent=1), encoding="utf-8")
+        write(path, json.dumps({"updated": now, "shows": out}, ensure_ascii=False, indent=1))
     print(f"schedule: {sum(len(x['episodes']) for x in out)} episodes, {'updated' if old.get('shows') != out else 'unchanged'}")
 
 
@@ -1616,7 +1657,7 @@ def complete_anime():
         lines[n] = f"{name} | {aid} | {tid} | {first} | 0 | {keywords}"
         done.append(f"{name}: TV schedule {tid or 'none, AniList times'}, first episode {first or '-'}")
     if done:
-        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        write(path, "\n".join(lines) + "\n")
         print("completed anime:", "; ".join(done))
 
 
@@ -1693,9 +1734,10 @@ def anime(state, meanwhile=lambda: None):
                     continue  # a premiere that hasn't started (Ani-One, 3 Nov 2026: 22:40, not 22:30): the card comes when it's scheduled to play
                 # the time it came out: the video's start when that's later than the slot (a later premiere or upload)
                 line = episode_line(ep + s["offset"], total and total + s["offset"], max(t, v[2]) if v else t, thai[i][0] if i in thai else None)
+                if not notify(f"New episode: {s['name']}{label}", line, line + (f"\n{yt}" if yt else ""), (m.get("coverImage") or {}).get("large"), yt and in_brave(yt)):
+                    continue  # LINE didn't take it: left unrecorded, so the next check sends it
                 if not yt and s["yt"]:  # the video may still come later: send a "Watch now" card then
                     pending[f"{i}:{ep}"] = t
-                notify(f"New episode: {s['name']}{label}", line, line + (f"\n{yt}" if yt else ""), (m.get("coverImage") or {}).get("large"), yt and in_brave(yt))
                 log[f"{i}:{ep}"] = {"title": s["name"], "episode": ep + s["offset"], "version": "ซับไทย", "first": v[3] if v else (thai[i][0] if i in thai else "Japanese TV"),
                                     "url": yt or None, "detected": now, "published": v and int(v[2]), "scheduled": int(t), "notified": True,
                                     **({} if v else {"order": "uncertain"})}  # no video: the platform's time is a schedule, not a verified release
@@ -1713,12 +1755,13 @@ def anime(state, meanwhile=lambda: None):
             if premiere:
                 later[key] = premiere
                 continue  # a premiere that hasn't started: "Watch now" once it plays
+            out = False
             if yt:
                 where = next((ch for title, link, p, ch in videos if link == yt), "YouTube")
                 line = f"Episode {ep + s['offset']:02d} with Thai subs is up on {where}"
                 m = info.get(i, {})
-                notify(f"Watch now: {s['name']}", line, f"{line}\n{yt}", (m.get("coverImage") or {}).get("large"), in_brave(yt))
-            if yt or not s or now - t > 2 * 86400:  # sent, show removed, or no video within 2 days
+                out = notify(f"Watch now: {s['name']}", line, f"{line}\n{yt}", (m.get("coverImage") or {}).get("large"), in_brave(yt))
+            if out or not s or now - t > 2 * 86400:  # sent (if LINE didn't take it, the next check tries), show removed, or no video within 2 days
                 del pending[key]
         sent = state.setdefault("specials", [])  # links of specials already alerted
         for i, n, link, published, ch in specials(videos, shows, now - 2 * 86400):
@@ -1729,8 +1772,8 @@ def anime(state, meanwhile=lambda: None):
                 continue
             m = info.get(i, {})
             line = f"Special episode {n}\n{ch} · {datetime.fromtimestamp(published, THAI):%d %b %Y %H:%M}"
-            notify(f"New special: {shows[i]['name']}", line, f"{line}\n{link}", (m.get("coverImage") or {}).get("large"), in_brave(link))
-            sent.append(link)
+            if notify(f"New special: {shows[i]['name']}", line, f"{line}\n{link}", (m.get("coverImage") or {}).get("large"), in_brave(link)):
+                sent.append(link)
         del sent[:-50]
         return new, later
 
@@ -1846,7 +1889,8 @@ def anime(state, meanwhile=lambda: None):
         when = f"{'' if i in thai else 'Aired '}{datetime.fromtimestamp(due[(i, batch[0])], THAI):%d %b %Y %H:%M}"
         line = f"Episode {a:02d}{f'-{b:02d}' if b != a else ''}/{tot} · {site}\n{f'{thai[i][0]} · ' if i in thai else ''}{when}"
         label = f" ({season_label(m)})" if season_label(m) else ""
-        notify(f"New episode: {s['name']}{label}", line, f"{line}\n{link}", (m.get("coverImage") or {}).get("large"), link)
+        if not notify(f"New episode: {s['name']}{label}", line, f"{line}\n{link}", (m.get("coverImage") or {}).get("large"), link):
+            continue  # LINE didn't take it: left unrecorded, so the next check sends it
         for e in batch:
             seen.append(f"{i}:{e}")
             pending.pop(f"{i}:{e}", None)
@@ -1855,18 +1899,27 @@ def anime(state, meanwhile=lambda: None):
                                **({} if on_site[e][1] else {"order": "estimated"})}  # no upload time: the site's place in the race is estimated
     for key in list(log)[:-300]:
         del log[key]
+    # what otherwise only grows: the episodes alerted (the checks look a week back and a week ahead, and the newest 500
+    # are far more than that), and what was learned for a show since taken out of anime.txt (not while the list or
+    # AniList's answer is empty, which is a mistake or a failure, not the wish to drop every show)
+    del seen[:-500]
+    for kind, kept in (("gojo_pages", {str(i) for i in shows}), ("gojo_search", {str(i) for i in shows}),
+                       ("mal_totals", {str(m.get("idMal")) for m in info.values()})):
+        for k in [k for k in state.get(kind, {}) if shows and info and k not in kept]:
+            del state[kind][k]
     print(f"anime: {len(shows)} watched, {len(new)} {'seeded' if seed else 'new'}, {len(pending)} waiting for a Thai-sub video")
     return (youtube_check if not seed else None), later
 
 
-def wait_for_youtube(check, later):
+def wait_for_youtube(check, later, saved=lambda: None):
     """Keep the run going for what Muse and Ani-One are about to post, rather than leaving it to the next check up to 5
     minutes later: an episode due whose video isn't up yet (on 29 Oct 2026 Ani-One's 19:30 video only showed in YouTube's
     list at 19:50), a premiere (its card at the time it's scheduled to play) and an episode due before the next check
     starts. The channels concerned are read again, every 5 seconds in the first minute after something was due and every
     15 after that, and check (anime's youtube_check) sends each card as soon as it's due. Something due before the next
     check is looked for until a minute past its time; the rest until 4.5 minutes into the job, when the next check takes
-    over. Never on the Mac, nor without YOUTUBE_KEY (the public feeds GitHub gets can be hours old)."""
+    over. Never on the Mac, nor without YOUTUBE_KEY (the public feeds GitHub gets can be hours old). saved() is called
+    after each look, to save the state with the cards it sent."""
     if not check or not os.environ.get("LINE_TOKEN") or not os.environ.get("YOUTUBE_KEY"):
         return
     videos, read, began, waited = youtube_videos(), 0, time.time(), set()
@@ -1887,6 +1940,7 @@ def wait_for_youtube(check, later):
         read = time.time()
         videos = [v for v in videos if v[3] not in channels] + fresh
         later = check(videos)[1]
+        saved()
     if waited:
         done = Future()
         done.set_result(videos)
@@ -1923,16 +1977,27 @@ def setup_richmenu():
 
 
 def series_slug(url):
-    return [p for p in urlparse(unquote(url)).path.split("/") if p and p != "list"][-1]
+    """A series' name from its address: the last part of the path; None for an address without one (a site's home page)."""
+    return ([p for p in urlparse(unquote(url)).path.split("/") if p and p != "list"] or [None])[-1]
 
 
-def library(state):
+def tracked():
+    """The series pages in urls.txt. A line that isn't one (a site's home page: with no path, every link on the site would
+    count as a chapter) is skipped and named in the log, so one wrong line never stops the other series' alerts."""
+    urls = (HERE / "urls.txt").read_text(encoding="utf-8").split()
+    for url in urls:
+        if not series_slug(url):
+            print(f"SKIP {url}: not a series' page (urls.txt)", file=sys.stderr)
+    return [url for url in urls if series_slug(url)]
+
+
+def library(state, urls):
     """library.json for the LINE "list" cards: every manga with its cover, latest chapter and where its card opens.
     Covers are fetched once per series and reused; the file is rewritten only when something changed."""
     path = HERE / "library.json"
     old = {m["url"]: m for m in (json.loads(path.read_text(encoding="utf-8"))["manga"] if path.exists() else [])}
     out = []
-    for url in (HERE / "urls.txt").read_text(encoding="utf-8").split():
+    for url in urls:
         prev = old.get(url, {})
         if "cover" in prev and url not in COVER_OVERRIDES and (url not in WEBTOON_TWINS or prev.get("title")):  # a WEBTOON one: its title once
             title, image = prev.get("title"), prev["cover"]
@@ -1949,7 +2014,7 @@ def library(state):
         out.append({"url": url, "name": title or series_slug(url), "title": title, "cover": image,
                     "latest": state.get("chapter_labels", {}).get(url) or (f"Chapter {chapter_number(latest):g}" if latest else ""), "open": tap})
     if old != {m["url"]: m for m in out} or len(old) != len(out):
-        path.write_text(json.dumps({"manga": out}, ensure_ascii=False, indent=1), encoding="utf-8")
+        write(path, json.dumps({"manga": out}, ensure_ascii=False, indent=1))
 
 
 def manga(state, urls):
@@ -1982,16 +2047,21 @@ def manga(state, urls):
                     ep, since = WEBTOON_WEEKLY[tno]
                     app = ep + max(0, int((time.time() - since) // (7 * 86400)))
                 else:
-                    app = max(webtoon_chapters(twin, state).values(), default=0) + WEBTOON_LOCKED.get(tno, 0)
+                    app = max(webtoon_chapters(twin, state).values()) + WEBTOON_LOCKED.get(tno, 0)  # (an empty feed: keep the last count)
                 seen_app = state.setdefault("webtoon_app", {})  # {WEBTOON series: the app's newest at the last check}
+                # never down: a feed that came back short for one check would lower the count, and the next check, seeing
+                # the real one again, would send the same chapter's card a second time
+                app = max(app, seen_app.get(twin, 0))
+                out = True
                 # a new one in the app, ahead of the manga site (one the site has came with the site's card)
                 if (tno in WEBTOON_LOCKED or tno in WEBTOON_WEEKLY) and twin in seen_app and app > seen_app[twin] \
                         and app > max(map(chapter_number, found)):
                     title, image = cover(twin)
                     line = f"Chapter {app:g}"
-                    notify(f"New chapter: {title or name}", line, f"{line}\nlinewebtoon://episodeList/webtoon?titleNo={tno}", image, WEBTOON_APP + tno)
-                seen_app[twin] = app
-                newest[twin] = app
+                    out = notify(f"New chapter: {title or name}", line, f"{line}\nlinewebtoon://episodeList/webtoon?titleNo={tno}", image, WEBTOON_APP + tno)
+                if out:  # (if LINE didn't take the card, the count stays, and the next check sends it)
+                    seen_app[twin] = app
+                    newest[twin] = app
             except Exception as e:  # keep the last count
                 print(f"FAIL webtoon {name}: {e}", file=sys.stderr)
         new = sorted(set(found) - set(state[url])) if url in state else []  # first sight of a url = seed silently
@@ -2002,6 +2072,7 @@ def manga(state, urls):
             if old:
                 print(f"{name}: {', '.join(f'Chapter {chapter_number(c):g}' for c in old)} already in WEBTOON's card, not sent again")
             new = [c for c in new if c not in old]
+        out = True
         if new:
             number = lambda c: real.get(c) or chapter_number(c)  # "ซีซั่น-1/ตอนที่-216" -> 216, WEBTOON's "EP.48" -> 47 (its title's)
             new = sorted(new, key=number)
@@ -2014,27 +2085,28 @@ def manga(state, urls):
                     text = "\n".join(f"Chapter {number(f'EP.{e}'):g}\nlinewebtoon://viewer/webtoon?titleNo={no}&episodeNo={e}" for e in eps)
                     tap = f"{WEBTOON_APP}{no}&e={eps[0]}"
                 title, image = cover(url)  # LINE cards only open web addresses, so the card goes via a page that hands off to the app
-                notify(f"New chapter: {title or name}", labels[url] if no in WEBTOON_LOCKED and url in labels else shown, text, image, tap)
+                out = notify(f"New chapter: {title or name}", labels[url] if no in WEBTOON_LOCKED and url in labels else shown, text, image, tap)
             elif twin and max(map(chapter_number, new)) <= newest.get(twin, 0):  # WEBTOON has it too: the card opens it there
                 no = re.search(r"title_no=(\d+)", twin)[1]
                 title, image = cover(twin)
-                notify(f"New chapter: {title or name}", shown, f"{shown}\nlinewebtoon://episodeList/webtoon?titleNo={no}",
-                       image, WEBTOON_APP + no)
+                out = notify(f"New chapter: {title or name}", shown, f"{shown}\nlinewebtoon://episodeList/webtoon?titleNo={no}",
+                             image, WEBTOON_APP + no)
             else:  # cover card that opens the first new chapter; the text version lists each new chapter's link
                 links = {c: quote(found[c], safe=":/%?=&#") for c in new}
                 text = "\n".join(f"Chapter {number(c):g}\n{links[c]}" for c in new)
                 image = cover(url)[1]
                 title = twin and cover(twin)[0]  # a series also on WEBTOON: its WEBTOON title, as in the LINE list
-                notify(f"New chapter: {title or name}", shown, text, image and quote(image, safe=":/%?=&"), links[new[0]])
-        print(f"{name}: {len(found)} chapters, {len(new)} new")
-        state[url] = sorted(set(found) | set(state.get(url, [])))
+                out = notify(f"New chapter: {title or name}", shown, text, image and quote(image, safe=":/%?=&"), links[new[0]])
+        print(f"{name}: {len(found)} chapters, {len(new)} new" + ("" if out else " (LINE didn't take the card: the next check sends it)"))
+        # (new chapters whose card LINE didn't take stay unrecorded, so they are new again at the next check)
+        state[url] = sorted((set(found) - (set() if out else set(new))) | set(state.get(url, [])))
 
 
 def main():
     state = json.loads(STATE.read_text(encoding="utf-8")) if STATE.exists() else {}
     # the manga and WEBTOON pages, read in the background while the anime and F1 checks start (manga() takes them)
-    urls = (HERE / "urls.txt").read_text(encoding="utf-8").split()
-    twins = [WEBTOON_TWINS[u] for u in urls if u in WEBTOON_TWINS and re.search(r"title_no=(\d+)", WEBTOON_TWINS[u])[1] not in WEBTOON_WEEKLY]
+    urls = tracked()
+    twins =[WEBTOON_TWINS[u] for u in urls if u in WEBTOON_TWINS and re.search(r"title_no=(\d+)", WEBTOON_TWINS[u])[1] not in WEBTOON_WEEKLY]
     # first in the queue: the uploads both the alerts and the schedule need, and Bilibili's week (slow, seconds)
     if not VIDEOS:
         VIDEOS.append(POOL.submit(read_youtube))
@@ -2046,6 +2118,7 @@ def main():
             f1(state)
         except Exception as e:  # F1 results must never stop the other alerts
             print(f"FAIL f1: {e}", file=sys.stderr)
+        save(state)  # its cards are out: saved now, while the main thread may still wait minutes for YouTube
     # F1 alongside the anime and manga checks and the wait for YouTube (it can wait minutes for a session to start, which
     # must hold up no other alert); it touches only its own f1_* keys
     f1_thread = threading.Thread(target=run_f1)
@@ -2070,8 +2143,9 @@ def main():
                 run_manga()
             except Exception:
                 traceback.print_exc()
+    save(state)  # the cards so far are out: saved before the wait for YouTube, in case the check is stopped in it
     try:
-        wait_for_youtube(youtube, later)
+        wait_for_youtube(youtube, later, lambda: save(state))
     except Exception as e:  # waiting must never cost the run its alerts' saved state
         print(f"FAIL waiting for YouTube: {e}", file=sys.stderr)
     f1_thread.join()
@@ -2079,13 +2153,19 @@ def main():
     # again, as for any new series). Not when urls.txt is empty, which is more likely a mistake than the wish to drop all.
     for key in [k for k in state if k.startswith(("http://", "https://")) and k not in urls] if urls else []:
         del state[key]
+    # and what was kept for its WEBTOON side: its label for the LINE list, the app's count, its seasons' starts
+    on_webtoon = {WEBTOON_TWINS[u] for u in urls if u in WEBTOON_TWINS}
+    numbers = {no[1] for u in [*urls, *on_webtoon] if (no := re.search(r"title_no=(\d+)", u))}
+    for kind, kept in (("chapter_labels", set(urls)), ("webtoon_app", on_webtoon), ("webtoon_newest", on_webtoon), ("webtoon_seasons", numbers)):
+        for key in [k for k in state.get(kind, {}) if urls and k not in kept]:
+            del state[kind][key]
     try:
         schedule(state)
     except Exception as e:  # the countdown page must never stop the alerts
         print(f"FAIL schedule: {e}", file=sys.stderr)
-    STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
+    save(state)
     try:
-        library(state)
+        library(state, urls)
     except Exception as e:  # the LINE list cards must never stop the alerts
         print(f"FAIL library: {e}", file=sys.stderr)
     if failed:
@@ -2119,6 +2199,16 @@ if __name__ == "__main__":
                 f1_grid(st, "t", q, {}, race)
             assert send.call_count == 1 and "63 P2 → P3" in send.call_args[0][1]["altText"], send.call_args
             assert st["f1_grid"]["9"] == [[1, 1], [16, 2], [63, 3]] and "9" not in st["f1_grid_seen"]
+        # a card that can't be built (OpenF1 gave something it doesn't expect) goes out as plain text; so does one LINE refuses
+        for build, takes in ((lambda: {}["x"], [True]), (lambda: {"type": "bubble"}, [False, True])):
+            with mock.patch(__name__ + ".line_send", side_effect=takes) as send, mock.patch("builtins.print"):
+                assert f1_send("t", {"type": "text", "text": "p"}, "alt", build) and send.call_args[0][1]["type"] == "text"
+        with mock.patch(__name__ + ".line_send", return_value=False), mock.patch("builtins.print"):
+            assert not f1_send("t", {"type": "text", "text": "p"}, "alt", dict)
+        # the drivers' standings with 28 drivers who all moved: too big for LINE as the site draws them, within 30 KB at the plainest
+        big = [(i + 1, (-1) ** i * (1 + i % 3), "#27F4D2", None, f"Firstname Lastname{i:02d}", "Red Bull Racing", 400 - 12.5 * i, max(25 - i, 0)) for i in range(28)]
+        table = lambda plain: f1_size(f1_standings_card("Drivers' Championship", "After the São Paulo Grand Prix · updated", big, plain))
+        assert table(3) <= F1_MAX < table(2) < table(1) < table(0), [table(n) for n in range(4)]
         rss = "<item><link>https://www.webtoons.com/th/x/ep7-a/viewer?title_no=1&amp;episode_no=7</link></item>"
         with mock.patch(__name__ + ".get", lambda u: rss if "/rss?title_no=1" in u and "://www." in u else ""):
             assert webtoon("https://m.webtoons.com/th/x/y/list?title_no=1") == {"EP.7": "https://www.webtoons.com/th/x/ep7-a/viewer?title_no=1&episode_no=7"}
@@ -2201,6 +2291,7 @@ if __name__ == "__main__":
             "https://animeruka.com/anime/cyberpunk-edgerunners-season-2/", GOJO + "/list/3165/",
             "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/", "https://animeruka.com/ep/113639/"]  # not a series' episode: stays as it is
         assert in_brave("https://www.youtube.com/watch?v=j7zFyWX6t8M") == BRAVE + "j7zFyWX6t8M"
+        assert in_brave("https://www.youtube.com/shorts/j7zFyWX6t8M") == BRAVE + "j7zFyWX6t8M" and in_brave("https://www.youtube.com/@x") == "https://www.youtube.com/@x"
         T = datetime(2026, 10, 4, 21, 30, tzinfo=THAI).timestamp()
         sh = {1: {"yt": "abc", "first": [1]}, 2: {"yt": "xyz", "first": [14]}}
         got = learn_release_times(sh, {1: {1: T}, 2: {1: T}}, [("abc ตอนที่ 1 [ซับไทย]", "l", T + 1800, "Ani-One Thailand"),
@@ -2226,7 +2317,7 @@ if __name__ == "__main__":
         assert same_show("佐々木とピーちゃん シーズン２", "佐々木とピーちゃん Season2")
         assert not same_show("ジョジョの奇妙な冒険 スティール・ボール・ラン", "ジョジョの奇妙な冒険")  # a franchise name alone isn't the show
         # wait_for_youtube, on a fake clock with a fake channel: an Ani-One show's episode 5 due at T
-        T, clock, cards = 1793900000, [0.0], []
+        T, clock, cards, line_up = 1793900000, [0.0], [], [True]  # line_up: whether LINE takes the cards
         media = {"info": {"media": [{"id": 1, "episodes": 12, "coverImage": {"large": "https://x/c.jpg"}}]},
                  "web": {"airingSchedules": [{"episode": 5, "airingAt": T, "media": {"id": 1}}]}}
         vid = lambda start: ("Kurumi-chan ตอนที่ 5 [ซับไทย]", "https://www.youtube.com/watch?v=k5k5k5k5k5k", float(start), "Ani-One Thailand")
@@ -2242,7 +2333,7 @@ if __name__ == "__main__":
                     mock.patch(__name__ + ".JOB_START", start - 3), mock.patch(__name__ + ".anilist", lambda q, v: media), \
                     mock.patch(__name__ + ".get", mock.Mock(side_effect=OSError)), mock.patch(__name__ + ".read_feed", mock.Mock(side_effect=OSError)), \
                     mock.patch(__name__ + ".read_youtube", lambda channels=None: listed(clock[0])), \
-                    mock.patch(__name__ + ".notify", lambda title, msg, links, *a: cards.append((clock[0] - T, links))), \
+                    mock.patch(__name__ + ".notify", lambda title, msg, links, *a: cards.append((clock[0] - T, links)) or line_up[0]), \
                     mock.patch.dict(os.environ, {"LINE_TOKEN": "x", "YOUTUBE_KEY": "y"}), mock.patch("builtins.print"), \
                     mock.patch("time.time", lambda: clock[0]), mock.patch("time.sleep", sleep):
                 Path(tmp, "anime.txt").write_text("Kurumi | 1 | 0 | 1 | 0 | kurumi-chan\n", encoding="utf-8")
@@ -2259,6 +2350,48 @@ if __name__ == "__main__":
         cards.clear()
         check_at(T - 250, lambda t: [vid(T + 100)], {"anime": []})  # a premiere after the next check starts: that check's
         assert cards == [], cards
+        # LINE down: the card it didn't take isn't recorded, so the next check sends it, and only once
+        st, line_up[0] = {"anime": []}, False
+        check_at(T + 50, lambda t: [vid(T + 8)], st)
+        assert len(cards) == 1 and "1:5" not in st["anime"] and "1:5" not in st["first_source"], (cards, st)
+        line_up[0] = True
+        check_at(T + 350, lambda t: [vid(T + 8)], st)
+        check_at(T + 650, lambda t: [vid(T + 8)], st)
+        assert len(cards) == 2 and "1:5" in st["anime"], (cards, st)
+        # the state doesn't grow for ever: the newest 500 alerted episodes stay, and a show no longer in anime.txt (9) loses its page
+        st = {"anime": [f"9:{n}" for n in range(600)] + ["1:5"], "gojo_pages": {"9": ["/list/9/", 0], "1": ["/list/1/", 0]}}
+        check_at(T + 950, lambda t: [vid(T + 8)], st)
+        assert len(st["anime"]) == 500 and st["anime"][-1] == "1:5" and list(st["gojo_pages"]) == ["1"] and len(cards) == 2, (cards, st)
+        # the same for a manga chapter
+        page = '<a href="https://x.net/manga/a/c-1/">1</a><a href="https://x.net/manga/a/c-2/">2</a>'
+        st, sent = {"https://x.net/manga/a/": ["c-1"]}, []
+        for up, want in ((False, ["c-1"]), (True, ["c-1", "c-2"]), (True, ["c-1", "c-2"])):
+            with mock.patch(__name__ + ".get", lambda u: page), mock.patch(__name__ + ".cover", lambda u: (None, None)), \
+                    mock.patch(__name__ + ".notify", lambda title, msg, links, *a: sent.append(msg) or up), mock.patch("builtins.print"):
+                manga(st, ["https://x.net/manga/a/"])
+            assert st["https://x.net/manga/a/"] == want, st
+        assert sent == ["Chapter 2", "Chapter 2"], sent
+        # WEBTOON's count never goes down: its feed coming back short (4) or empty for one check doesn't get Chapter 5's card sent again
+        twin, feeds = "https://www.webtoons.com/th/x/y/list?title_no=1", [{"EP.5": 5.0}, {"EP.4": 4.0}, {"EP.5": 5.0}, {}, {"EP.6": 6.0}]
+        st, sent = {"https://x.net/manga/a/": ["c-1", "c-2"], "webtoon_app": {twin: 5}}, []
+        with mock.patch.dict(WEBTOON_TWINS, {"https://x.net/manga/a/": twin}), mock.patch.dict(WEBTOON_LOCKED, {"1": 0}), \
+                mock.patch(__name__ + ".webtoon_chapters", lambda u, s: feeds.pop(0)), mock.patch(__name__ + ".get", lambda u: page), \
+                mock.patch(__name__ + ".cover", lambda u: (None, None)), mock.patch(__name__ + ".notify", lambda title, msg, links, *a: sent.append(msg) or True), \
+                mock.patch("builtins.print"):
+            for _ in range(5):
+                manga(st, ["https://x.net/manga/a/"])
+        assert sent == ["Chapter 6"] and st["webtoon_app"][twin] == 6, (sent, st)
+        # the state is saved whole, through a copy that doesn't stay
+        with tempfile.TemporaryDirectory() as tmp, mock.patch(__name__ + ".STATE", Path(tmp, "s.json")):
+            save({"anime": ["1:5"], "ชื่อ": {"a": 1}})
+            save({"anime": ["1:5", "1:6"], "ชื่อ": {"a": 1}})
+            assert json.loads(Path(tmp, "s.json").read_text(encoding="utf-8"))["anime"] == ["1:5", "1:6"] and os.listdir(tmp) == ["s.json"], os.listdir(tmp)
+        # a line that would stop every check is skipped: a site's home page in urls.txt, an impossible time in thai_times.txt
+        with tempfile.TemporaryDirectory() as tmp, mock.patch(__name__ + ".HERE", Path(tmp)), mock.patch("builtins.print"):
+            Path(tmp, "urls.txt").write_text("https://x.net\nhttps://x.net/\nhttps://x.net/manga/a/\nhttps://www.webtoons.com/th/x/y/list?title_no=1\n", encoding="utf-8")
+            assert tracked() == ["https://x.net/manga/a/", "https://www.webtoons.com/th/x/y/list?title_no=1"], tracked()
+            Path(tmp, "thai_times.txt").write_text("1 | Muse Thailand | Sun | 25:00\n2 | Muse Thailand | Sun | 23.30\n3 | Netflix | - | -\n", encoding="utf-8")
+            assert thai_times() == {2: ("Muse Thailand", "Sun", "23:30", 0), 3: ("Netflix", None, None, 0)}, thai_times()
         print("ok")
     elif sys.argv[1:] == ["ping"]:
         # test: one Webtoon card of each kind, built the same way as real alerts
@@ -2312,10 +2445,13 @@ if __name__ == "__main__":
                  "starting grid": {"type": "flex", "altText": "check", "contents": f1_grid_card(
                      meeting, s, [{"driver_number": d.get("driver_number"), "position": i + 1} for i, (_, d, _) in enumerate(rows[:2] + rows[3:6] + rows[2:3] + rows[6:])],
                      drivers, {d.get("driver_number"): i + 1 for i, (_, d, _) in enumerate(rows)}, key)},
-                 "live": {"type": "flex", "altText": "check", "contents": f1_live_card(meeting, "Race", when, True)}}
+                 "live": {"type": "flex", "altText": "check", "contents": f1_live_card(meeting, "Race", when)}}
         captured, line_send = [], lambda token, message: captured.append(message) or True   # module level: f1_standings now captures instead of sending
         f1_standings({}, token, s, meeting)
         cards["standings"] = captured[0]
+        F1_MAX = 0  # as if nothing fitted: the drivers' table at its plainest (f1_standings_card's plain=3), for LINE to check too
+        f1_standings({}, token, s, meeting)
+        cards["standings, plainest rows"] = captured[1]
         for name, message in cards.items():
             req = urllib.request.Request("https://api.line.me/v2/bot/message/validate/broadcast",
                                          data=json.dumps({"messages": [message]}, separators=(",", ":")).encode(),

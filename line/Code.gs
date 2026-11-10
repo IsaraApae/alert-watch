@@ -65,6 +65,8 @@ function handle(text) {
 
 function addManga(url) {
   if (!/^https?:\/\/\S+$/.test(url)) return "Send it like this:\nadd https://manga-lc.net/manga/reborn-rich/";
+  // a site's home page (nothing after its name) is no series: the watcher skips such a line
+  if (!url.split(/[?#]/)[0].split("/").slice(3).some(p => p && p !== "list")) return "That's a site's front page, not a series. Send the series' own page:\nadd https://manga-lc.net/manga/reborn-rich/";
   const f = readFile("urls.txt");
   const lines = f.text.split("\n").filter(l => l.trim());
   if (lines.some(l => l.trim() === url)) return "Already tracked:\n" + seriesName(url);
@@ -91,7 +93,8 @@ function addAnime(title) {
   // the newest airing or upcoming match, so "Blue Box" means the current season
   const pick = media.find(m => m.status === "RELEASING" || m.status === "NOT_YET_RELEASED") || media[0];
   if (!pick) return `Couldn't find "${title}" on AniList. Try the English or Japanese title.`;
-  const name = (pick.title.english || pick.title.romaji).replace(/\|/g, "/");
+  // without a leading "#" (#COMPASS 2.0): a line starting with one is a comment in anime.txt, which the watcher skips
+  const name = (pick.title.english || pick.title.romaji).replace(/\|/g, "/").replace(/^[#\s]+/, "") || "AniList " + pick.id;
   const f = readFile("anime.txt");
   if (f.text.split("\n").some(l => (l.split("|")[1] || "").trim() === String(pick.id))) return "Already tracked: " + name;
   writeFile("anime.txt", f.text.replace(/\n*$/, "\n") + `${name} | ${pick.id}\n`, f.sha, "Add anime from LINE");
