@@ -2920,7 +2920,8 @@
   "189123:5",
   "185756:7",
   "199426:6",
-  "213657:5"
+  "213657:5",
+  "207329:6"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4212,6 +4213,17 @@
    "published": null,
    "notified": true,
    "order": "estimated"
+  },
+  "207329:6": {
+   "title": "The Laid-Off Cheat-Granting Mage Enjoys a Second Lease on Life",
+   "episode": 6,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=WvNfDUNw-fg",
+   "detected": 1794324600,
+   "published": 1794324600,
+   "scheduled": 1794324600,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4324,7 +4336,8 @@
   "189123:5": "https://animeruka.com/ep/ao-no-hako-blue-box-season-2-ep-5/",
   "185756:7": "https://isaraapae.github.io/alert-watch/b.html?v=Nl1Onan5ziY",
   "199426:6": "https://isaraapae.github.io/alert-watch/b.html?v=GJvl-JDmW9c",
-  "213657:5": "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/ep-17"
+  "213657:5": "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/ep-17",
+  "207329:6": "https://isaraapae.github.io/alert-watch/b.html?v=WvNfDUNw-fg"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4419,7 +4432,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794324013,
+ "anime_checked": 1794324312,
  "mal_totals": {
   "60601": [
    12,
