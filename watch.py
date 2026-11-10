@@ -1005,8 +1005,11 @@ BRAVE = "https://isaraapae.github.io/alert-watch/b.html?v="  # redirect page in 
 
 
 def in_brave(youtube_link):
-    """Card link that opens this YouTube video in the Brave browser (LINE cards only allow https:// links)."""
-    return BRAVE + re.search(r"[?&]v=([A-Za-z0-9_-]{11})", youtube_link)[1]
+    """Card link that opens this YouTube video in the Brave browser (LINE cards only allow https:// links). A link with no
+    video id to find (the channels' public feeds list a Short as /shorts/ID, which is read too) stays as it is, so the
+    card opens YouTube itself."""
+    found = re.search(r"(?:[?&]v=|/shorts/|youtu\.be/)([A-Za-z0-9_-]{11})", youtube_link)
+    return BRAVE + found[1] if found else youtube_link
 
 
 THAI = timezone(timedelta(hours=7))
@@ -2008,8 +2011,11 @@ def manga(state, urls):
                     ep, since = WEBTOON_WEEKLY[tno]
                     app = ep + max(0, int((time.time() - since) // (7 * 86400)))
                 else:
-                    app = max(webtoon_chapters(twin, state).values(), default=0) + WEBTOON_LOCKED.get(tno, 0)
+                    app = max(webtoon_chapters(twin, state).values()) + WEBTOON_LOCKED.get(tno, 0)  # (an empty feed: keep the last count)
                 seen_app = state.setdefault("webtoon_app", {})  # {WEBTOON series: the app's newest at the last check}
+                # never down: a feed that came back short for one check would lower the count, and the next check, seeing
+                # the real one again, would send the same chapter's card a second time
+                app = max(app, seen_app.get(twin, 0))
                 out = True
                 # a new one in the app, ahead of the manga site (one the site has came with the site's card)
                 if (tno in WEBTOON_LOCKED or tno in WEBTOON_WEEKLY) and twin in seen_app and app > seen_app[twin] \
@@ -2237,6 +2243,7 @@ if __name__ == "__main__":
             "https://animeruka.com/anime/cyberpunk-edgerunners-season-2/", GOJO + "/list/3165/",
             "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/", "https://animeruka.com/ep/113639/"]  # not a series' episode: stays as it is
         assert in_brave("https://www.youtube.com/watch?v=j7zFyWX6t8M") == BRAVE + "j7zFyWX6t8M"
+        assert in_brave("https://www.youtube.com/shorts/j7zFyWX6t8M") == BRAVE + "j7zFyWX6t8M" and in_brave("https://www.youtube.com/@x") == "https://www.youtube.com/@x"
         T = datetime(2026, 10, 4, 21, 30, tzinfo=THAI).timestamp()
         sh = {1: {"yt": "abc", "first": [1]}, 2: {"yt": "xyz", "first": [14]}}
         got = learn_release_times(sh, {1: {1: T}, 2: {1: T}}, [("abc ตอนที่ 1 [ซับไทย]", "l", T + 1800, "Ani-One Thailand"),
@@ -2312,6 +2319,16 @@ if __name__ == "__main__":
                 manga(st, ["https://x.net/manga/a/"])
             assert st["https://x.net/manga/a/"] == want, st
         assert sent == ["Chapter 2", "Chapter 2"], sent
+        # WEBTOON's count never goes down: its feed coming back short (4) or empty for one check doesn't get Chapter 5's card sent again
+        twin, feeds = "https://www.webtoons.com/th/x/y/list?title_no=1", [{"EP.5": 5.0}, {"EP.4": 4.0}, {"EP.5": 5.0}, {}, {"EP.6": 6.0}]
+        st, sent = {"https://x.net/manga/a/": ["c-1", "c-2"], "webtoon_app": {twin: 5}}, []
+        with mock.patch.dict(WEBTOON_TWINS, {"https://x.net/manga/a/": twin}), mock.patch.dict(WEBTOON_LOCKED, {"1": 0}), \
+                mock.patch(__name__ + ".webtoon_chapters", lambda u, s: feeds.pop(0)), mock.patch(__name__ + ".get", lambda u: page), \
+                mock.patch(__name__ + ".cover", lambda u: (None, None)), mock.patch(__name__ + ".notify", lambda title, msg, links, *a: sent.append(msg) or True), \
+                mock.patch("builtins.print"):
+            for _ in range(5):
+                manga(st, ["https://x.net/manga/a/"])
+        assert sent == ["Chapter 6"] and st["webtoon_app"][twin] == 6, (sent, st)
         # a line that would stop every check is skipped: a site's home page in urls.txt, an impossible time in thai_times.txt
         with tempfile.TemporaryDirectory() as tmp, mock.patch(__name__ + ".HERE", Path(tmp)), mock.patch("builtins.print"):
             Path(tmp, "urls.txt").write_text("https://x.net\nhttps://x.net/\nhttps://x.net/manga/a/\nhttps://www.webtoons.com/th/x/y/list?title_no=1\n", encoding="utf-8")
