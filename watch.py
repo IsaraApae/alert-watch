@@ -12,6 +12,29 @@ STATE = HERE / os.environ.get("MANGA_STATE", "state.json")  # GitHub Actions kee
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 
 
+def write(path, text):
+    """Write a file whole or not at all: to a copy beside it, then swapped in. A check that is stopped half-way (watch.yml
+    ends one that hangs) leaves each file as it was or as it should be, never cut off, and the workflow commits them."""
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, path)
+
+
+SAVING = threading.Lock()
+
+
+def save(state):
+    """Save the state: at the end of a check, and during it once cards are out and a wait begins (for a YouTube video, for
+    the rest of the check after the F1 cards), so a check stopped in that wait doesn't send them again next time. The F1
+    thread and the main one both change the state: a save that catches the other mid-change is tried again."""
+    with SAVING:
+        for _ in range(20):
+            try:
+                return write(STATE, json.dumps(state, ensure_ascii=False, indent=1))
+            except RuntimeError:  # "dictionary changed size during iteration"
+                pass
+
+
 def chapters(url, html):
     """{chapter id: chapter link} on a series page: sub-links of the page (Madara theme) + data-num items (MangaReader theme)."""
     base = unquote(url).rstrip("/") + "/"
@@ -818,7 +841,7 @@ def f1_live_card(meeting, session, when):
             "footer": f1_buttons(("Open F1 Live", F1_PAGE))}
 
 
-JOB_START = float(os.environ.get("JOB_START") or time.time())  # when this GitHub job began (watch.yml): it has 9 minutes in all
+JOB_START = float(os.environ.get("JOB_START") or time.time())  # when this GitHub job began (watch.yml): the check has 8 minutes of the job's 9
 CHECK_EVERY = 5 * 60  # how often cron-job.org starts a check (watch.yml)
 
 
@@ -1236,7 +1259,7 @@ def learn_thai_titles(shows, videos, due, thai):
                 # a short line ("name | id") keeps the Thai name in its last field, which completing it later keeps
                 lines[n] = f"{line.rstrip()}|{literal(dict(learned)[i])}" if len(r) == 6 and r[5] else \
                     " | ".join((r + [""] * 6)[:5] + [shows[i]["yt"]])
-        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        write(path, "\n".join(lines) + "\n")
         for i, name in learned:
             print(f"learned Thai title for {shows[i]['name']}: {name}")
     return learned
@@ -1564,12 +1587,12 @@ def schedule(state=None):
     learned = {str(k): v for k, v in learn_release_times(shows, jp, videos, cards).items()} if tv_ok else {}
     merged = {k: v for k, v in {**known, **learned}.items() if int(k) in shows}  # a slot stays known after its week scrolls off
     if merged != known:
-        auto.write_text(json.dumps(merged, ensure_ascii=False, indent=1), encoding="utf-8")
+        write(auto, json.dumps(merged, ensure_ascii=False, indent=1))
         print("learned Thai release times:", "; ".join(f"{shows[int(k)]['name']}: {' '.join(x for x in v if x)}" for k, v in merged.items() if known.get(k) != v))
     path = HERE / "schedule.json"
     old = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     if old.get("shows") != out:
-        path.write_text(json.dumps({"updated": now, "shows": out}, ensure_ascii=False, indent=1), encoding="utf-8")
+        write(path, json.dumps({"updated": now, "shows": out}, ensure_ascii=False, indent=1))
     print(f"schedule: {sum(len(x['episodes']) for x in out)} episodes, {'updated' if old.get('shows') != out else 'unchanged'}")
 
 
@@ -1634,7 +1657,7 @@ def complete_anime():
         lines[n] = f"{name} | {aid} | {tid} | {first} | 0 | {keywords}"
         done.append(f"{name}: TV schedule {tid or 'none, AniList times'}, first episode {first or '-'}")
     if done:
-        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        write(path, "\n".join(lines) + "\n")
         print("completed anime:", "; ".join(done))
 
 
@@ -1888,14 +1911,15 @@ def anime(state, meanwhile=lambda: None):
     return (youtube_check if not seed else None), later
 
 
-def wait_for_youtube(check, later):
+def wait_for_youtube(check, later, saved=lambda: None):
     """Keep the run going for what Muse and Ani-One are about to post, rather than leaving it to the next check up to 5
     minutes later: an episode due whose video isn't up yet (on 29 Oct 2026 Ani-One's 19:30 video only showed in YouTube's
     list at 19:50), a premiere (its card at the time it's scheduled to play) and an episode due before the next check
     starts. The channels concerned are read again, every 5 seconds in the first minute after something was due and every
     15 after that, and check (anime's youtube_check) sends each card as soon as it's due. Something due before the next
     check is looked for until a minute past its time; the rest until 4.5 minutes into the job, when the next check takes
-    over. Never on the Mac, nor without YOUTUBE_KEY (the public feeds GitHub gets can be hours old)."""
+    over. Never on the Mac, nor without YOUTUBE_KEY (the public feeds GitHub gets can be hours old). saved() is called
+    after each look, to save the state with the cards it sent."""
     if not check or not os.environ.get("LINE_TOKEN") or not os.environ.get("YOUTUBE_KEY"):
         return
     videos, read, began, waited = youtube_videos(), 0, time.time(), set()
@@ -1916,6 +1940,7 @@ def wait_for_youtube(check, later):
         read = time.time()
         videos = [v for v in videos if v[3] not in channels] + fresh
         later = check(videos)[1]
+        saved()
     if waited:
         done = Future()
         done.set_result(videos)
@@ -1989,7 +2014,7 @@ def library(state, urls):
         out.append({"url": url, "name": title or series_slug(url), "title": title, "cover": image,
                     "latest": state.get("chapter_labels", {}).get(url) or (f"Chapter {chapter_number(latest):g}" if latest else ""), "open": tap})
     if old != {m["url"]: m for m in out} or len(old) != len(out):
-        path.write_text(json.dumps({"manga": out}, ensure_ascii=False, indent=1), encoding="utf-8")
+        write(path, json.dumps({"manga": out}, ensure_ascii=False, indent=1))
 
 
 def manga(state, urls):
@@ -2093,6 +2118,7 @@ def main():
             f1(state)
         except Exception as e:  # F1 results must never stop the other alerts
             print(f"FAIL f1: {e}", file=sys.stderr)
+        save(state)  # its cards are out: saved now, while the main thread may still wait minutes for YouTube
     # F1 alongside the anime and manga checks and the wait for YouTube (it can wait minutes for a session to start, which
     # must hold up no other alert); it touches only its own f1_* keys
     f1_thread = threading.Thread(target=run_f1)
@@ -2117,8 +2143,9 @@ def main():
                 run_manga()
             except Exception:
                 traceback.print_exc()
+    save(state)  # the cards so far are out: saved before the wait for YouTube, in case the check is stopped in it
     try:
-        wait_for_youtube(youtube, later)
+        wait_for_youtube(youtube, later, lambda: save(state))
     except Exception as e:  # waiting must never cost the run its alerts' saved state
         print(f"FAIL waiting for YouTube: {e}", file=sys.stderr)
     f1_thread.join()
@@ -2136,7 +2163,7 @@ def main():
         schedule(state)
     except Exception as e:  # the countdown page must never stop the alerts
         print(f"FAIL schedule: {e}", file=sys.stderr)
-    STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
+    save(state)
     try:
         library(state, urls)
     except Exception as e:  # the LINE list cards must never stop the alerts
@@ -2354,6 +2381,11 @@ if __name__ == "__main__":
             for _ in range(5):
                 manga(st, ["https://x.net/manga/a/"])
         assert sent == ["Chapter 6"] and st["webtoon_app"][twin] == 6, (sent, st)
+        # the state is saved whole, through a copy that doesn't stay
+        with tempfile.TemporaryDirectory() as tmp, mock.patch(__name__ + ".STATE", Path(tmp, "s.json")):
+            save({"anime": ["1:5"], "ชื่อ": {"a": 1}})
+            save({"anime": ["1:5", "1:6"], "ชื่อ": {"a": 1}})
+            assert json.loads(Path(tmp, "s.json").read_text(encoding="utf-8"))["anime"] == ["1:5", "1:6"] and os.listdir(tmp) == ["s.json"], os.listdir(tmp)
         # a line that would stop every check is skipped: a site's home page in urls.txt, an impossible time in thai_times.txt
         with tempfile.TemporaryDirectory() as tmp, mock.patch(__name__ + ".HERE", Path(tmp)), mock.patch("builtins.print"):
             Path(tmp, "urls.txt").write_text("https://x.net\nhttps://x.net/\nhttps://x.net/manga/a/\nhttps://www.webtoons.com/th/x/y/list?title_no=1\n", encoding="utf-8")

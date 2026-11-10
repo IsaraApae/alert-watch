@@ -1,6 +1,8 @@
 # the watcher run on a computer (GitHub Actions uses ci-state.json, which is committed)
 state.json
 watch.log
+# the copy a file is written to before it's swapped in (watch.py's write); only left behind by a run stopped mid-write
+*.tmp
 __pycache__/
 *.pyc
 # written by the workflow's run: the VPN feed copies, and the OpenVPN packages the cache keeps
