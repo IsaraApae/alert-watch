@@ -2449,6 +2449,9 @@ if __name__ == "__main__":
         captured, line_send = [], lambda token, message: captured.append(message) or True   # module level: f1_standings now captures instead of sending
         f1_standings({}, token, s, meeting)
         cards["standings"] = captured[0]
+        F1_MAX = 0  # as if nothing fitted: the drivers' table at its plainest (f1_standings_card's plain=3), for LINE to check too
+        f1_standings({}, token, s, meeting)
+        cards["standings, plainest rows"] = captured[1]
         for name, message in cards.items():
             req = urllib.request.Request("https://api.line.me/v2/bot/message/validate/broadcast",
                                          data=json.dumps({"messages": [message]}, separators=(",", ":")).encode(),
