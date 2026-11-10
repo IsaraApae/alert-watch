@@ -45,7 +45,7 @@ def webtoon_rows(list_url, page):
     return [(int(n), html.unescape(t).strip()) for n, t in re.findall(r'data-episode-no="(\d+)".*?class="subj"><span>([^<]*)', get(f"{list_url}&page={page}"), re.S)]
 
 
-def season_start(list_url, season, newest_no, ep, seasons):
+def season_start(list_url, season, ep, seasons):
     """How many chapters came before this season (Juvenile Prison's S2 Ep.1 is chapter 101: 100), from the list: the
     chapter just before the season's first episode. Kept per series in seasons ({season: chapters before})."""
     if season <= 1:
@@ -56,8 +56,8 @@ def season_start(list_url, season, newest_no, ep, seasons):
             rows += webtoon_rows(list_url, page)
             older = [(n, webtoon_ep(t)) for n, t in rows if webtoon_ep(t) and webtoon_ep(t)[0] < season]
             if older:
-                n, (s_prev, last) = max(older)
-                seasons[str(season)] = season_start(list_url, s_prev, n, last, seasons) + last
+                _, (s_prev, last) = max(older)
+                seasons[str(season)] = season_start(list_url, s_prev, last, seasons) + last
                 break
         else:
             raise RuntimeError(f"season {season}'s start not found")
@@ -75,7 +75,7 @@ def webtoon_chapters(url, state):
     for title, n in re.findall(r"<item>\s*<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</title>.*?episode_no=(\d+)", rss, re.S):
         found = webtoon_ep(html.unescape(title))
         if found:
-            out[f"EP.{n}"] = season_start(list_url, found[0], int(n), found[1], seasons) + found[1]
+            out[f"EP.{n}"] = season_start(list_url, found[0], found[1], seasons) + found[1]
     return out
 
 
@@ -301,7 +301,7 @@ def f1_drivers(s, wanted=()):
 # the F1 Live site's light look (IsaraApae/f1-live, css/app.css and css/calendar.css): its page grey, white cards, rows on
 # its "row" grey with the team's colour as a 4px stripe, a colour per kind of session, red for its main buttons and for
 # whoever dropped back
-F1C = {"bg": "#EEF0F4", "panel": "#FFFFFF", "panel2": "#F5F6F9", "row": "#FAFBFC", "line": "#E4E6EC", "chip": "#ECEEF3",
+F1C = {"panel": "#FFFFFF", "panel2": "#F5F6F9", "row": "#FAFBFC", "line": "#E4E6EC", "chip": "#ECEEF3",
        "text": "#111118", "dim": "#6B6F7C", "red": "#E10600", "red_ink": "#D10500", "green": "#16A34A", "purple": "#9333EA",
        "amber": "#D97706", "blue": "#2563EB"}
 F1_MAX = 29000  # LINE takes at most 30 KB a card: a card bigger than this is built again with less in each row
@@ -399,9 +399,9 @@ def f1_tag(d, team=None, **k):
         *([{"type": "span", "text": f"  {team}", "size": "xxs", "weight": "regular", "color": F1C["dim"]}] if team else [])]}
 
 
-def f1_face(url, px, round_=True):
+def f1_face(url, px):
     """A cut-out face (no disc behind it, as on the site), round-framed; an empty frame when there's no photo."""
-    return {"type": "box", "layout": "vertical", "width": px, "height": px, "flex": 0, **({"cornerRadius": f"{int(px[:-2]) // 2}px"} if round_ else {}),
+    return {"type": "box", "layout": "vertical", "width": px, "height": px, "flex": 0, "cornerRadius": f"{int(px[:-2]) // 2}px",
             "contents": [{"type": "image", "url": url, "size": "full", "aspectRatio": "1:1", "aspectMode": "cover"}] if url else []}
 
 
@@ -418,22 +418,22 @@ def f1_arrow(n, **k):
     return {"type": "text", "text": f"{'▲' if n > 0 else '▼'}{abs(n)}", "size": "xxs", "weight": "bold", "color": F1C["green"] if n > 0 else F1C["red_ink"], **k}
 
 
-def f1_row(moved, contents, base=None, **box):
-    """One of the site's slots: rounded, on the row grey (or base), outlined green if it moved up and red if down (only
+def f1_row(moved, contents):
+    """One of the site's slots: rounded, on the row grey, outlined green if it moved up and red if down (only
     those carry the 1px border: a card has up to 22 rows, and LINE takes at most 30 KB a card)."""
     edge = F1C["green"] if moved > 0 else F1C["red"]
     line = ({"backgroundColor": f1_mix(edge, F1C["row"], .08), "borderWidth": "1px", "borderColor": f1_mix(edge, F1C["row"], .5)} if moved
-            else {"backgroundColor": base or F1C["row"]})
-    return {"type": "box", "layout": "horizontal", "cornerRadius": "8px", **line, **box, "contents": contents}
+            else {"backgroundColor": F1C["row"]})
+    return {"type": "box", "layout": "horizontal", "cornerRadius": "8px", **line, "contents": contents}
 
 
-def f1_stripe(colour, height=None):
-    return {"type": "box", "layout": "vertical", "width": "4px", "flex": 0, **({"height": height} if height else {}), "backgroundColor": colour, "contents": []}
+def f1_stripe(colour):
+    return {"type": "box", "layout": "vertical", "width": "4px", "flex": 0, "backgroundColor": colour, "contents": []}
 
 
-def f1_slot(pos, d, end, moved=0, tint=False, team=True, mark=None, out=False, compact=False, arrow=None):
+def f1_slot(pos, d, end, moved=0, team=True, mark=None, out=False, compact=False, arrow=None):
     """A driver as the site lists a session: on the team's stripe, the position, the tag and team, the full name, and on the
-    right the time (DNF, DNS and DSQ in red). tint: the winner's row, tinted with the team colour; mark: a red line under.
+    right the time (DNF, DNS and DSQ in red). mark: a red line under.
     compact: one line (position, tag, name, time), for a card that would be too big for LINE otherwise. moved: places it
     moved, outlined green or red; arrow: places for its ▲/▼ (moved if not given)."""
     arrow = moved if arrow is None else arrow
@@ -444,16 +444,14 @@ def f1_slot(pos, d, end, moved=0, tint=False, team=True, mark=None, out=False, c
         return f1_row(moved, [f1_stripe(c), {"type": "box", "layout": "baseline", "spacing": "sm", "paddingAll": "6px", "paddingEnd": "10px", "contents": [
             {**tag, "contents": [{"type": "span", "text": str(pos).rjust(2, "\u2007") + "  "}] + tag["contents"]},  # the position in the tag's text: lighter
             t(f1_full(d), size="xxs", color=F1C["dim"], flex=1), *([f1_arrow(arrow, flex=0)] if arrow else []),
-            *([t(end, size="xs", weight="bold", color=F1C["red_ink"] if out else F1C["text"], flex=0)] if end else [])]}],
-                      base=f1_mix(c, F1C["row"], .12) if tint else None)
+            *([t(end, size="xs", weight="bold", color=F1C["red_ink"] if out else F1C["text"], flex=0)] if end else [])]}])
     main = [f1_tag(d, team and d.get("team_name")), t(f1_full(d), size="xs", weight="bold", color=F1C["text"]),
             *([t(mark, size="xxs", weight="bold", color=F1C["red_ink"])] if mark else [])]
     return f1_row(moved, [f1_stripe(c), {"type": "box", "layout": "horizontal", "alignItems": "center", "spacing": "md",
                                          "paddingAll": "7px", "paddingStart": "6px", "paddingEnd": "10px", "contents": [
         {"type": "box", "layout": "vertical", "width": "22px", "flex": 0, "contents": [t(pos, size="sm", weight="bold", color=F1C["text"], align="end")]},
         {"type": "box", "layout": "vertical", "contents": main}, *([f1_arrow(arrow, flex=0)] if arrow else []),
-        *([t(end, size="xs", weight="bold", color=F1C["red_ink"] if out else F1C["text"], flex=0, align="end")] if end else [])]}],
-                  base=f1_mix(c, F1C["row"], .12) if tint else None)
+        *([t(end, size="xs", weight="bold", color=F1C["red_ink"] if out else F1C["text"], flex=0, align="end")] if end else [])]}])
 
 
 def f1_changes(title, changes):
@@ -523,7 +521,7 @@ def f1_card(meeting, session, when, rows, replay_key=None, note=None, changes=No
     return card
 
 
-def f1_standings_card(title, sub_title, rows, colour_of, plain=0):
+def f1_standings_card(title, sub_title, rows, plain=0):
     """A championship table like the site's standings: the top 3 on tiles (P2, P1, P3) glowing with their team's colour,
     each face cut out over a team-colour bar (or the team's logo on a tinted square), their points large; then everyone
     else in the site's rows. Each shows the points gained in the race (green) and the gap to the leader, and ▲/▼ the
@@ -643,10 +641,10 @@ def f1_standings(state, token, s, meeting, again=False):
         # every driver, with as much as LINE's 30 KB allows: every face, then the podium's only, then none, then lighter
         # rows from P4 down (f1_standings_card's plain: 22 drivers who all moved need 1, 25 need 2, 28 need 3)
         for keep, plain in ((len(drows), 0), (3, 0), (0, 0), (0, 1), (0, 2), (0, 3)):
-            dcard = f1_standings_card("Drivers' Championship", after, [r if i < keep else r[:3] + (None,) + r[4:] for i, r in enumerate(drows)], colour, plain)
+            dcard = f1_standings_card("Drivers' Championship", after, [r if i < keep else r[:3] + (None,) + r[4:] for i, r in enumerate(drows)], plain)
             if f1_size(dcard) <= F1_MAX:
                 break
-        return {"type": "carousel", "contents": [dcard, f1_standings_card("Teams' Championship", after, trows, colour)]}
+        return {"type": "carousel", "contents": [dcard, f1_standings_card("Teams' Championship", after, trows)]}
     plain = {"type": "text", "text": f"F1 standings {after[:1].lower()}{after[1:]}\n\nDrivers\n" + "\n".join(
         f"{r[0]} ({'+' if r[1] > 0 else ''}{r[1] or '–'}) {r[4]} {r[6]:g}" for r in drows) + "\n\nTeams\n" + "\n".join(
         f"{r[0]} ({'+' if r[1] > 0 else ''}{r[1] or '–'}) {r[4]} {r[6]:g}" for r in trows)}
@@ -806,12 +804,12 @@ F1_SITE = "https://isaraapae.github.io/f1-live/"
 F1_PAGE = F1_SITE + "?live"
 
 
-def f1_live_card(meeting, session, when, live):
+def f1_live_card(meeting, session, when):
     """A LINE card when a session starts, with the site's header and its LIVE badge (red, a dot in front); tap to open the
     site's Live tab."""
-    badge = {"type": "box", "layout": "horizontal", "flex": 0, "cornerRadius": "6px", "backgroundColor": F1C["red"] if live else F1C["chip"],
+    badge = {"type": "box", "layout": "horizontal", "flex": 0, "cornerRadius": "6px", "backgroundColor": F1C["red"],
              "paddingStart": "7px", "paddingEnd": "7px", "paddingTop": "3px", "paddingBottom": "3px", "contents": [
-        {"type": "text", "text": "● LIVE" if live else "STARTING SOON", "size": "xxs", "weight": "bold", "color": "#FFFFFF" if live else F1C["dim"]}]}
+        {"type": "text", "text": "● LIVE", "size": "xxs", "weight": "bold", "color": "#FFFFFF"}]}
     return {"type": "bubble", "size": "mega", "action": {"type": "uri", "label": "Open F1 Live", "uri": F1_PAGE},
             "header": f1_head(meeting.get("meeting_name") or "Formula 1", when, meeting, session),
             "body": {"type": "box", "layout": "horizontal", "alignItems": "center", "spacing": "md", "backgroundColor": F1C["panel"], "paddingAll": "12px",
@@ -872,7 +870,7 @@ def f1_started(state, token, sessions, meetings):
             print(f"F1 live: {s['session_name']} · {name} · {when}")
         else:
             plain = {"type": "text", "text": f"F1 {s['session_name']} · {name} is live now\n{F1_PAGE}"}
-            if not f1_send(token, plain, f"F1 {s['session_name']} · {name} is live: open F1 Live", lambda: f1_live_card(meeting, s["session_name"], when, True)):
+            if not f1_send(token, plain, f"F1 {s['session_name']} · {name} is live: open F1 Live", lambda: f1_live_card(meeting, s["session_name"], when)):
                 continue
         sent.append(key)
     del sent[:-100]
@@ -2168,7 +2166,7 @@ if __name__ == "__main__":
             assert not f1_send("t", {"type": "text", "text": "p"}, "alt", dict)
         # the drivers' standings with 28 drivers who all moved: too big for LINE as the site draws them, within 30 KB at the plainest
         big = [(i + 1, (-1) ** i * (1 + i % 3), "#27F4D2", None, f"Firstname Lastname{i:02d}", "Red Bull Racing", 400 - 12.5 * i, max(25 - i, 0)) for i in range(28)]
-        table = lambda plain: f1_size(f1_standings_card("Drivers' Championship", "After the São Paulo Grand Prix · updated", big, {}, plain))
+        table = lambda plain: f1_size(f1_standings_card("Drivers' Championship", "After the São Paulo Grand Prix · updated", big, plain))
         assert table(3) <= F1_MAX < table(2) < table(1) < table(0), [table(n) for n in range(4)]
         rss = "<item><link>https://www.webtoons.com/th/x/ep7-a/viewer?title_no=1&amp;episode_no=7</link></item>"
         with mock.patch(__name__ + ".get", lambda u: rss if "/rss?title_no=1" in u and "://www." in u else ""):
@@ -2397,7 +2395,7 @@ if __name__ == "__main__":
                  "starting grid": {"type": "flex", "altText": "check", "contents": f1_grid_card(
                      meeting, s, [{"driver_number": d.get("driver_number"), "position": i + 1} for i, (_, d, _) in enumerate(rows[:2] + rows[3:6] + rows[2:3] + rows[6:])],
                      drivers, {d.get("driver_number"): i + 1 for i, (_, d, _) in enumerate(rows)}, key)},
-                 "live": {"type": "flex", "altText": "check", "contents": f1_live_card(meeting, "Race", when, True)}}
+                 "live": {"type": "flex", "altText": "check", "contents": f1_live_card(meeting, "Race", when)}}
         captured, line_send = [], lambda token, message: captured.append(message) or True   # module level: f1_standings now captures instead of sending
         f1_standings({}, token, s, meeting)
         cards["standings"] = captured[0]
