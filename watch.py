@@ -523,11 +523,13 @@ def f1_card(meeting, session, when, rows, replay_key=None, note=None, changes=No
     return card
 
 
-def f1_standings_card(title, sub_title, rows, colour_of):
+def f1_standings_card(title, sub_title, rows, colour_of, plain=0):
     """A championship table like the site's standings: the top 3 on tiles (P2, P1, P3) glowing with their team's colour,
     each face cut out over a team-colour bar (or the team's logo on a tinted square), their points large; then everyone
     else in the site's rows. Each shows the points gained in the race (green) and the gap to the leader, and ▲/▼ the
-    places they moved since before it (outlined green or red)."""
+    places they moved since before it (outlined green or red). plain: lighter rows from P4 down, for a table too big for
+    LINE's 30 KB otherwise (many drivers, most of them moved): 1 = ▲/▼ as coloured text and no outline, 2 = also without
+    the team under the name, 3 = also without the points gained and the gap under the points."""
     t = lambda text, **k: {"type": "text", "text": text, **k}
     lead = rows[0][6] if rows else 0
     gap = lambda i, points: "Leader" if not i else f"−{lead - points:g}" if lead - points else "Level"
@@ -564,14 +566,16 @@ def f1_standings_card(title, sub_title, rows, colour_of):
 
     def row(i, r):
         pos, move, colour, photo, name, team, points, gained = r
-        return f1_row(move, [f1_stripe(colour), {"type": "box", "layout": "horizontal", "alignItems": "center", "spacing": "md",
+        return f1_row(0 if plain else move, [f1_stripe(colour), {"type": "box", "layout": "horizontal", "alignItems": "center", "spacing": "md",
                                                   "paddingTop": "6px", "paddingBottom": "6px", "paddingStart": "6px", "paddingEnd": "10px", "contents": [
             {"type": "box", "layout": "vertical", "width": "22px", "flex": 0, "contents": [t(str(pos), size="sm", weight="bold", color=F1C["text"], align="center")]},
             *([picture(photo, colour, "30px")] if photo else []),
-            {"type": "box", "layout": "vertical", "contents": [t(name, size="xs", weight="bold", color=F1C["text"]), *([t(team, size="xxs", color=F1C["dim"])] if team else [])]},
-            *([f1_badge(move)] if move else []),
+            {"type": "box", "layout": "vertical", "contents": [t(name, size="xs", weight="bold", color=F1C["text"]),
+                                                               *([t(team, size="xxs", color=F1C["dim"])] if team and plain < 2 else [])]},
+            *([f1_arrow(move, flex=0) if plain else f1_badge(move)] if move else []),
             {"type": "box", "layout": "vertical", "flex": 0, "contents": [
-                t(f"{points:g}", size="sm", weight="bold", color=F1C["text"], align="end"), {**standing(i, points, gained), "align": "end"}]}]}])
+                t(f"{points:g}", size="sm", weight="bold", color=F1C["text"], align="end"),
+                *([{**standing(i, points, gained), "align": "end"}] if plain < 3 else [])]}]}])
 
     body = [{"type": "box", "layout": "horizontal", "spacing": "sm", "alignItems": "flex-end", "contents": [tile(i, rows[i]) for i in (1, 0, 2) if i < len(rows)]},
             {"type": "box", "layout": "vertical", "margin": "lg", "spacing": "xs", "contents": [row(i, r) for i, r in enumerate(rows) if i >= 3]}]
@@ -636,9 +640,10 @@ def f1_standings(state, token, s, meeting, again=False):
             sent.append(key)
         return
     def cards():
-        # every driver, the faces as long as LINE's 30 KB allows: all of them, then the podium's only, then none (which always fits)
-        for keep in (len(drows), 3, 0):
-            dcard = f1_standings_card("Drivers' Championship", after, [r if i < keep else r[:3] + (None,) + r[4:] for i, r in enumerate(drows)], colour)
+        # every driver, with as much as LINE's 30 KB allows: every face, then the podium's only, then none, then lighter
+        # rows from P4 down (f1_standings_card's plain: 22 drivers who all moved need 1, 25 need 2, 28 need 3)
+        for keep, plain in ((len(drows), 0), (3, 0), (0, 0), (0, 1), (0, 2), (0, 3)):
+            dcard = f1_standings_card("Drivers' Championship", after, [r if i < keep else r[:3] + (None,) + r[4:] for i, r in enumerate(drows)], colour, plain)
             if f1_size(dcard) <= F1_MAX:
                 break
         return {"type": "carousel", "contents": [dcard, f1_standings_card("Teams' Championship", after, trows, colour)]}
@@ -2161,6 +2166,10 @@ if __name__ == "__main__":
                 assert f1_send("t", {"type": "text", "text": "p"}, "alt", build) and send.call_args[0][1]["type"] == "text"
         with mock.patch(__name__ + ".line_send", return_value=False), mock.patch("builtins.print"):
             assert not f1_send("t", {"type": "text", "text": "p"}, "alt", dict)
+        # the drivers' standings with 28 drivers who all moved: too big for LINE as the site draws them, within 30 KB at the plainest
+        big = [(i + 1, (-1) ** i * (1 + i % 3), "#27F4D2", None, f"Firstname Lastname{i:02d}", "Red Bull Racing", 400 - 12.5 * i, max(25 - i, 0)) for i in range(28)]
+        table = lambda plain: f1_size(f1_standings_card("Drivers' Championship", "After the São Paulo Grand Prix · updated", big, {}, plain))
+        assert table(3) <= F1_MAX < table(2) < table(1) < table(0), [table(n) for n in range(4)]
         rss = "<item><link>https://www.webtoons.com/th/x/ep7-a/viewer?title_no=1&amp;episode_no=7</link></item>"
         with mock.patch(__name__ + ".get", lambda u: rss if "/rss?title_no=1" in u and "://www." in u else ""):
             assert webtoon("https://m.webtoons.com/th/x/y/list?title_no=1") == {"EP.7": "https://www.webtoons.com/th/x/ep7-a/viewer?title_no=1&episode_no=7"}
