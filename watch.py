@@ -1876,6 +1876,14 @@ def anime(state, meanwhile=lambda: None):
                                **({} if on_site[e][1] else {"order": "estimated"})}  # no upload time: the site's place in the race is estimated
     for key in list(log)[:-300]:
         del log[key]
+    # what otherwise only grows: the episodes alerted (the checks look a week back and a week ahead, and the newest 500
+    # are far more than that), and what was learned for a show since taken out of anime.txt (not while the list or
+    # AniList's answer is empty, which is a mistake or a failure, not the wish to drop every show)
+    del seen[:-500]
+    for kind, kept in (("gojo_pages", {str(i) for i in shows}), ("gojo_search", {str(i) for i in shows}),
+                       ("mal_totals", {str(m.get("idMal")) for m in info.values()})):
+        for k in [k for k in state.get(kind, {}) if shows and info and k not in kept]:
+            del state[kind][k]
     print(f"anime: {len(shows)} watched, {len(new)} {'seeded' if seed else 'new'}, {len(pending)} waiting for a Thai-sub video")
     return (youtube_check if not seed else None), later
 
@@ -2118,6 +2126,12 @@ def main():
     # again, as for any new series). Not when urls.txt is empty, which is more likely a mistake than the wish to drop all.
     for key in [k for k in state if k.startswith(("http://", "https://")) and k not in urls] if urls else []:
         del state[key]
+    # and what was kept for its WEBTOON side: its label for the LINE list, the app's count, its seasons' starts
+    on_webtoon = {WEBTOON_TWINS[u] for u in urls if u in WEBTOON_TWINS}
+    numbers = {no[1] for u in [*urls, *on_webtoon] if (no := re.search(r"title_no=(\d+)", u))}
+    for kind, kept in (("chapter_labels", set(urls)), ("webtoon_app", on_webtoon), ("webtoon_newest", on_webtoon), ("webtoon_seasons", numbers)):
+        for key in [k for k in state.get(kind, {}) if urls and k not in kept]:
+            del state[kind][key]
     try:
         schedule(state)
     except Exception as e:  # the countdown page must never stop the alerts
@@ -2317,6 +2331,10 @@ if __name__ == "__main__":
         check_at(T + 350, lambda t: [vid(T + 8)], st)
         check_at(T + 650, lambda t: [vid(T + 8)], st)
         assert len(cards) == 2 and "1:5" in st["anime"], (cards, st)
+        # the state doesn't grow for ever: the newest 500 alerted episodes stay, and a show no longer in anime.txt (9) loses its page
+        st = {"anime": [f"9:{n}" for n in range(600)] + ["1:5"], "gojo_pages": {"9": ["/list/9/", 0], "1": ["/list/1/", 0]}}
+        check_at(T + 950, lambda t: [vid(T + 8)], st)
+        assert len(st["anime"]) == 500 and st["anime"][-1] == "1:5" and list(st["gojo_pages"]) == ["1"] and len(cards) == 2, (cards, st)
         # the same for a manga chapter
         page = '<a href="https://x.net/manga/a/c-1/">1</a><a href="https://x.net/manga/a/c-2/">2</a>'
         st, sent = {"https://x.net/manga/a/": ["c-1"]}, []
