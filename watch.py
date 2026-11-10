@@ -171,19 +171,23 @@ def card(title, msg, image, uri=None):
 
 
 def notify(title, msg, links, image=None, uri=None):
+    """Send one alert. False if LINE took neither the card nor the plain text (LINE down, the month's messages used up):
+    the caller then leaves it unrecorded, so the next check sends it. True otherwise, also where there is no LINE to send
+    to (on a computer)."""
     if shutil.which("osascript"):  # absent on the GitHub runner
         subprocess.run(["osascript", "-e", f"display notification {json.dumps(msg)} with title {json.dumps(title)}"])
     token = os.environ.get("LINE_TOKEN")  # phone push: LINE official account broadcast; only set on GitHub
     if not token:
-        return
+        return True
     plain = {"type": "text", "text": f"{title}\n{links}"[:4500]}
     tries = ([{"type": "flex", "altText": f"{title} {msg}"[:400], "contents": card(title, msg, image, uri)}]
              if image and re.search(r"\.(jpe?g|png)$", urlparse(image).path, re.I) else []) + [plain]  # LINE cards show JPEG/PNG only
-    for message in tries:  # the card first when there is a cover; plain text if LINE refuses it, so the alert is never lost
+    for message in tries:  # the card first when there is a cover; plain text if LINE refuses it
         if line_send(token, message):
-            return
+            return True
     if "ping" in sys.argv:
         sys.exit(1)
+    return False
 
 
 def line_send(token, message):
@@ -1693,9 +1697,10 @@ def anime(state, meanwhile=lambda: None):
                     continue  # a premiere that hasn't started (Ani-One, 3 Nov 2026: 22:40, not 22:30): the card comes when it's scheduled to play
                 # the time it came out: the video's start when that's later than the slot (a later premiere or upload)
                 line = episode_line(ep + s["offset"], total and total + s["offset"], max(t, v[2]) if v else t, thai[i][0] if i in thai else None)
+                if not notify(f"New episode: {s['name']}{label}", line, line + (f"\n{yt}" if yt else ""), (m.get("coverImage") or {}).get("large"), yt and in_brave(yt)):
+                    continue  # LINE didn't take it: left unrecorded, so the next check sends it
                 if not yt and s["yt"]:  # the video may still come later: send a "Watch now" card then
                     pending[f"{i}:{ep}"] = t
-                notify(f"New episode: {s['name']}{label}", line, line + (f"\n{yt}" if yt else ""), (m.get("coverImage") or {}).get("large"), yt and in_brave(yt))
                 log[f"{i}:{ep}"] = {"title": s["name"], "episode": ep + s["offset"], "version": "ซับไทย", "first": v[3] if v else (thai[i][0] if i in thai else "Japanese TV"),
                                     "url": yt or None, "detected": now, "published": v and int(v[2]), "scheduled": int(t), "notified": True,
                                     **({} if v else {"order": "uncertain"})}  # no video: the platform's time is a schedule, not a verified release
@@ -1713,12 +1718,13 @@ def anime(state, meanwhile=lambda: None):
             if premiere:
                 later[key] = premiere
                 continue  # a premiere that hasn't started: "Watch now" once it plays
+            out = False
             if yt:
                 where = next((ch for title, link, p, ch in videos if link == yt), "YouTube")
                 line = f"Episode {ep + s['offset']:02d} with Thai subs is up on {where}"
                 m = info.get(i, {})
-                notify(f"Watch now: {s['name']}", line, f"{line}\n{yt}", (m.get("coverImage") or {}).get("large"), in_brave(yt))
-            if yt or not s or now - t > 2 * 86400:  # sent, show removed, or no video within 2 days
+                out = notify(f"Watch now: {s['name']}", line, f"{line}\n{yt}", (m.get("coverImage") or {}).get("large"), in_brave(yt))
+            if out or not s or now - t > 2 * 86400:  # sent (if LINE didn't take it, the next check tries), show removed, or no video within 2 days
                 del pending[key]
         sent = state.setdefault("specials", [])  # links of specials already alerted
         for i, n, link, published, ch in specials(videos, shows, now - 2 * 86400):
@@ -1729,8 +1735,8 @@ def anime(state, meanwhile=lambda: None):
                 continue
             m = info.get(i, {})
             line = f"Special episode {n}\n{ch} · {datetime.fromtimestamp(published, THAI):%d %b %Y %H:%M}"
-            notify(f"New special: {shows[i]['name']}", line, f"{line}\n{link}", (m.get("coverImage") or {}).get("large"), in_brave(link))
-            sent.append(link)
+            if notify(f"New special: {shows[i]['name']}", line, f"{line}\n{link}", (m.get("coverImage") or {}).get("large"), in_brave(link)):
+                sent.append(link)
         del sent[:-50]
         return new, later
 
@@ -1846,7 +1852,8 @@ def anime(state, meanwhile=lambda: None):
         when = f"{'' if i in thai else 'Aired '}{datetime.fromtimestamp(due[(i, batch[0])], THAI):%d %b %Y %H:%M}"
         line = f"Episode {a:02d}{f'-{b:02d}' if b != a else ''}/{tot} · {site}\n{f'{thai[i][0]} · ' if i in thai else ''}{when}"
         label = f" ({season_label(m)})" if season_label(m) else ""
-        notify(f"New episode: {s['name']}{label}", line, f"{line}\n{link}", (m.get("coverImage") or {}).get("large"), link)
+        if not notify(f"New episode: {s['name']}{label}", line, f"{line}\n{link}", (m.get("coverImage") or {}).get("large"), link):
+            continue  # LINE didn't take it: left unrecorded, so the next check sends it
         for e in batch:
             seen.append(f"{i}:{e}")
             pending.pop(f"{i}:{e}", None)
@@ -1984,14 +1991,16 @@ def manga(state, urls):
                 else:
                     app = max(webtoon_chapters(twin, state).values(), default=0) + WEBTOON_LOCKED.get(tno, 0)
                 seen_app = state.setdefault("webtoon_app", {})  # {WEBTOON series: the app's newest at the last check}
+                out = True
                 # a new one in the app, ahead of the manga site (one the site has came with the site's card)
                 if (tno in WEBTOON_LOCKED or tno in WEBTOON_WEEKLY) and twin in seen_app and app > seen_app[twin] \
                         and app > max(map(chapter_number, found)):
                     title, image = cover(twin)
                     line = f"Chapter {app:g}"
-                    notify(f"New chapter: {title or name}", line, f"{line}\nlinewebtoon://episodeList/webtoon?titleNo={tno}", image, WEBTOON_APP + tno)
-                seen_app[twin] = app
-                newest[twin] = app
+                    out = notify(f"New chapter: {title or name}", line, f"{line}\nlinewebtoon://episodeList/webtoon?titleNo={tno}", image, WEBTOON_APP + tno)
+                if out:  # (if LINE didn't take the card, the count stays, and the next check sends it)
+                    seen_app[twin] = app
+                    newest[twin] = app
             except Exception as e:  # keep the last count
                 print(f"FAIL webtoon {name}: {e}", file=sys.stderr)
         new = sorted(set(found) - set(state[url])) if url in state else []  # first sight of a url = seed silently
@@ -2002,6 +2011,7 @@ def manga(state, urls):
             if old:
                 print(f"{name}: {', '.join(f'Chapter {chapter_number(c):g}' for c in old)} already in WEBTOON's card, not sent again")
             new = [c for c in new if c not in old]
+        out = True
         if new:
             number = lambda c: real.get(c) or chapter_number(c)  # "ซีซั่น-1/ตอนที่-216" -> 216, WEBTOON's "EP.48" -> 47 (its title's)
             new = sorted(new, key=number)
@@ -2014,20 +2024,21 @@ def manga(state, urls):
                     text = "\n".join(f"Chapter {number(f'EP.{e}'):g}\nlinewebtoon://viewer/webtoon?titleNo={no}&episodeNo={e}" for e in eps)
                     tap = f"{WEBTOON_APP}{no}&e={eps[0]}"
                 title, image = cover(url)  # LINE cards only open web addresses, so the card goes via a page that hands off to the app
-                notify(f"New chapter: {title or name}", labels[url] if no in WEBTOON_LOCKED and url in labels else shown, text, image, tap)
+                out = notify(f"New chapter: {title or name}", labels[url] if no in WEBTOON_LOCKED and url in labels else shown, text, image, tap)
             elif twin and max(map(chapter_number, new)) <= newest.get(twin, 0):  # WEBTOON has it too: the card opens it there
                 no = re.search(r"title_no=(\d+)", twin)[1]
                 title, image = cover(twin)
-                notify(f"New chapter: {title or name}", shown, f"{shown}\nlinewebtoon://episodeList/webtoon?titleNo={no}",
-                       image, WEBTOON_APP + no)
+                out = notify(f"New chapter: {title or name}", shown, f"{shown}\nlinewebtoon://episodeList/webtoon?titleNo={no}",
+                             image, WEBTOON_APP + no)
             else:  # cover card that opens the first new chapter; the text version lists each new chapter's link
                 links = {c: quote(found[c], safe=":/%?=&#") for c in new}
                 text = "\n".join(f"Chapter {number(c):g}\n{links[c]}" for c in new)
                 image = cover(url)[1]
                 title = twin and cover(twin)[0]  # a series also on WEBTOON: its WEBTOON title, as in the LINE list
-                notify(f"New chapter: {title or name}", shown, text, image and quote(image, safe=":/%?=&"), links[new[0]])
-        print(f"{name}: {len(found)} chapters, {len(new)} new")
-        state[url] = sorted(set(found) | set(state.get(url, [])))
+                out = notify(f"New chapter: {title or name}", shown, text, image and quote(image, safe=":/%?=&"), links[new[0]])
+        print(f"{name}: {len(found)} chapters, {len(new)} new" + ("" if out else " (LINE didn't take the card: the next check sends it)"))
+        # (new chapters whose card LINE didn't take stay unrecorded, so they are new again at the next check)
+        state[url] = sorted((set(found) - (set() if out else set(new))) | set(state.get(url, [])))
 
 
 def main():
@@ -2226,7 +2237,7 @@ if __name__ == "__main__":
         assert same_show("佐々木とピーちゃん シーズン２", "佐々木とピーちゃん Season2")
         assert not same_show("ジョジョの奇妙な冒険 スティール・ボール・ラン", "ジョジョの奇妙な冒険")  # a franchise name alone isn't the show
         # wait_for_youtube, on a fake clock with a fake channel: an Ani-One show's episode 5 due at T
-        T, clock, cards = 1793900000, [0.0], []
+        T, clock, cards, line_up = 1793900000, [0.0], [], [True]  # line_up: whether LINE takes the cards
         media = {"info": {"media": [{"id": 1, "episodes": 12, "coverImage": {"large": "https://x/c.jpg"}}]},
                  "web": {"airingSchedules": [{"episode": 5, "airingAt": T, "media": {"id": 1}}]}}
         vid = lambda start: ("Kurumi-chan ตอนที่ 5 [ซับไทย]", "https://www.youtube.com/watch?v=k5k5k5k5k5k", float(start), "Ani-One Thailand")
@@ -2242,7 +2253,7 @@ if __name__ == "__main__":
                     mock.patch(__name__ + ".JOB_START", start - 3), mock.patch(__name__ + ".anilist", lambda q, v: media), \
                     mock.patch(__name__ + ".get", mock.Mock(side_effect=OSError)), mock.patch(__name__ + ".read_feed", mock.Mock(side_effect=OSError)), \
                     mock.patch(__name__ + ".read_youtube", lambda channels=None: listed(clock[0])), \
-                    mock.patch(__name__ + ".notify", lambda title, msg, links, *a: cards.append((clock[0] - T, links))), \
+                    mock.patch(__name__ + ".notify", lambda title, msg, links, *a: cards.append((clock[0] - T, links)) or line_up[0]), \
                     mock.patch.dict(os.environ, {"LINE_TOKEN": "x", "YOUTUBE_KEY": "y"}), mock.patch("builtins.print"), \
                     mock.patch("time.time", lambda: clock[0]), mock.patch("time.sleep", sleep):
                 Path(tmp, "anime.txt").write_text("Kurumi | 1 | 0 | 1 | 0 | kurumi-chan\n", encoding="utf-8")
@@ -2259,6 +2270,23 @@ if __name__ == "__main__":
         cards.clear()
         check_at(T - 250, lambda t: [vid(T + 100)], {"anime": []})  # a premiere after the next check starts: that check's
         assert cards == [], cards
+        # LINE down: the card it didn't take isn't recorded, so the next check sends it, and only once
+        st, line_up[0] = {"anime": []}, False
+        check_at(T + 50, lambda t: [vid(T + 8)], st)
+        assert len(cards) == 1 and "1:5" not in st["anime"] and "1:5" not in st["first_source"], (cards, st)
+        line_up[0] = True
+        check_at(T + 350, lambda t: [vid(T + 8)], st)
+        check_at(T + 650, lambda t: [vid(T + 8)], st)
+        assert len(cards) == 2 and "1:5" in st["anime"], (cards, st)
+        # the same for a manga chapter
+        page = '<a href="https://x.net/manga/a/c-1/">1</a><a href="https://x.net/manga/a/c-2/">2</a>'
+        st, sent = {"https://x.net/manga/a/": ["c-1"]}, []
+        for up, want in ((False, ["c-1"]), (True, ["c-1", "c-2"]), (True, ["c-1", "c-2"])):
+            with mock.patch(__name__ + ".get", lambda u: page), mock.patch(__name__ + ".cover", lambda u: (None, None)), \
+                    mock.patch(__name__ + ".notify", lambda title, msg, links, *a: sent.append(msg) or up), mock.patch("builtins.print"):
+                manga(st, ["https://x.net/manga/a/"])
+            assert st["https://x.net/manga/a/"] == want, st
+        assert sent == ["Chapter 2", "Chapter 2"], sent
         print("ok")
     elif sys.argv[1:] == ["ping"]:
         # test: one Webtoon card of each kind, built the same way as real alerts
