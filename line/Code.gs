@@ -65,6 +65,8 @@ function handle(text) {
 
 function addManga(url) {
   if (!/^https?:\/\/\S+$/.test(url)) return "Send it like this:\nadd https://manga-lc.net/manga/reborn-rich/";
+  // a site's home page (nothing after its name) is no series: the watcher skips such a line
+  if (!url.split(/[?#]/)[0].split("/").slice(3).some(p => p && p !== "list")) return "That's a site's front page, not a series. Send the series' own page:\nadd https://manga-lc.net/manga/reborn-rich/";
   const f = readFile("urls.txt");
   const lines = f.text.split("\n").filter(l => l.trim());
   if (lines.some(l => l.trim() === url)) return "Already tracked:\n" + seriesName(url);

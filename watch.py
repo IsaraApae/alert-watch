@@ -1021,8 +1021,10 @@ def thai_times():
         early = int(r[4]) if len(r) == 5 and r[4].isdigit() else 0  # e.g. 7: released a week before Japanese TV
         if r[2] == r[3] == "-":  # platform known, release time not: keep the Japanese time, but name where to watch
             out[int(r[0])] = (r[1], None, None, 0)
-        elif r[2][:3].title() in WEEKDAYS and re.fullmatch(r"\d{1,2}[:.]\d{2}", r[3]):
+        elif r[2][:3].title() in WEEKDAYS and re.fullmatch(r"([01]?\d|2[0-3])[:.][0-5]\d", r[3]):  # a real time: 25:00 would stop every check
             out[int(r[0])] = (r[1], r[2][:3].title(), r[3].replace(".", ":"), early)
+        else:
+            print(f"SKIP thai_times.txt: {line.strip()} (the day and time aren't like \"Sun | 22:00\")", file=sys.stderr)
     return out
 
 
@@ -1930,16 +1932,27 @@ def setup_richmenu():
 
 
 def series_slug(url):
-    return [p for p in urlparse(unquote(url)).path.split("/") if p and p != "list"][-1]
+    """A series' name from its address: the last part of the path; None for an address without one (a site's home page)."""
+    return ([p for p in urlparse(unquote(url)).path.split("/") if p and p != "list"] or [None])[-1]
 
 
-def library(state):
+def tracked():
+    """The series pages in urls.txt. A line that isn't one (a site's home page: with no path, every link on the site would
+    count as a chapter) is skipped and named in the log, so one wrong line never stops the other series' alerts."""
+    urls = (HERE / "urls.txt").read_text(encoding="utf-8").split()
+    for url in urls:
+        if not series_slug(url):
+            print(f"SKIP {url}: not a series' page (urls.txt)", file=sys.stderr)
+    return [url for url in urls if series_slug(url)]
+
+
+def library(state, urls):
     """library.json for the LINE "list" cards: every manga with its cover, latest chapter and where its card opens.
     Covers are fetched once per series and reused; the file is rewritten only when something changed."""
     path = HERE / "library.json"
     old = {m["url"]: m for m in (json.loads(path.read_text(encoding="utf-8"))["manga"] if path.exists() else [])}
     out = []
-    for url in (HERE / "urls.txt").read_text(encoding="utf-8").split():
+    for url in urls:
         prev = old.get(url, {})
         if "cover" in prev and url not in COVER_OVERRIDES and (url not in WEBTOON_TWINS or prev.get("title")):  # a WEBTOON one: its title once
             title, image = prev.get("title"), prev["cover"]
@@ -2044,8 +2057,8 @@ def manga(state, urls):
 def main():
     state = json.loads(STATE.read_text(encoding="utf-8")) if STATE.exists() else {}
     # the manga and WEBTOON pages, read in the background while the anime and F1 checks start (manga() takes them)
-    urls = (HERE / "urls.txt").read_text(encoding="utf-8").split()
-    twins = [WEBTOON_TWINS[u] for u in urls if u in WEBTOON_TWINS and re.search(r"title_no=(\d+)", WEBTOON_TWINS[u])[1] not in WEBTOON_WEEKLY]
+    urls = tracked()
+    twins =[WEBTOON_TWINS[u] for u in urls if u in WEBTOON_TWINS and re.search(r"title_no=(\d+)", WEBTOON_TWINS[u])[1] not in WEBTOON_WEEKLY]
     # first in the queue: the uploads both the alerts and the schedule need, and Bilibili's week (slow, seconds)
     if not VIDEOS:
         VIDEOS.append(POOL.submit(read_youtube))
@@ -2096,7 +2109,7 @@ def main():
         print(f"FAIL schedule: {e}", file=sys.stderr)
     STATE.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
     try:
-        library(state)
+        library(state, urls)
     except Exception as e:  # the LINE list cards must never stop the alerts
         print(f"FAIL library: {e}", file=sys.stderr)
     if failed:
@@ -2287,6 +2300,12 @@ if __name__ == "__main__":
                 manga(st, ["https://x.net/manga/a/"])
             assert st["https://x.net/manga/a/"] == want, st
         assert sent == ["Chapter 2", "Chapter 2"], sent
+        # a line that would stop every check is skipped: a site's home page in urls.txt, an impossible time in thai_times.txt
+        with tempfile.TemporaryDirectory() as tmp, mock.patch(__name__ + ".HERE", Path(tmp)), mock.patch("builtins.print"):
+            Path(tmp, "urls.txt").write_text("https://x.net\nhttps://x.net/\nhttps://x.net/manga/a/\nhttps://www.webtoons.com/th/x/y/list?title_no=1\n", encoding="utf-8")
+            assert tracked() == ["https://x.net/manga/a/", "https://www.webtoons.com/th/x/y/list?title_no=1"], tracked()
+            Path(tmp, "thai_times.txt").write_text("1 | Muse Thailand | Sun | 25:00\n2 | Muse Thailand | Sun | 23.30\n3 | Netflix | - | -\n", encoding="utf-8")
+            assert thai_times() == {2: ("Muse Thailand", "Sun", "23:30", 0), 3: ("Netflix", None, None, 0)}, thai_times()
         print("ok")
     elif sys.argv[1:] == ["ping"]:
         # test: one Webtoon card of each kind, built the same way as real alerts
