@@ -4445,7 +4445,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794369310,
+ "anime_checked": 1794369622,
  "mal_totals": {
   "60601": [
    12,
@@ -5136,6 +5136,15 @@
    "session_name": "Practice 3",
    "date_start": "2026-11-21T00:30:00+00:00",
    "date_end": "2026-11-21T01:30:00+00:00",
+   "meeting_key": 1300,
+   "year": 2026,
+   "country_name": "United States"
+  },
+  {
+   "session_key": 11416,
+   "session_name": "Qualifying",
+   "date_start": "2026-11-21T04:00:00+00:00",
+   "date_end": "2026-11-21T05:00:00+00:00",
    "meeting_key": 1300,
    "year": 2026,
    "country_name": "United States"
