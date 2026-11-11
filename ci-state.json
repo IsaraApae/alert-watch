@@ -2923,7 +2923,8 @@
   "213657:5",
   "207329:6",
   "198727:5",
-  "176314:6"
+  "176314:6",
+  "152677:6"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4248,6 +4249,17 @@
    "published": 1794402000,
    "scheduled": 1794402000,
    "notified": true
+  },
+  "152677:6": {
+   "title": "The Detective Is Already Dead Season 2",
+   "episode": 6,
+   "version": "ซับไทย",
+   "first": "Muse Thailand",
+   "url": "https://www.youtube.com/watch?v=VeaAeccwH7Y",
+   "detected": 1794403802,
+   "published": 1794403800,
+   "scheduled": 1794403800,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4363,7 +4375,8 @@
   "213657:5": "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/ep-17",
   "207329:6": "https://isaraapae.github.io/alert-watch/b.html?v=WvNfDUNw-fg",
   "198727:5": "https://isaraapae.github.io/alert-watch/b.html?v=ug7_Sjh-OOM",
-  "176314:6": "https://isaraapae.github.io/alert-watch/b.html?v=lXeTrODvcco"
+  "176314:6": "https://isaraapae.github.io/alert-watch/b.html?v=lXeTrODvcco",
+  "152677:6": "https://isaraapae.github.io/alert-watch/b.html?v=VeaAeccwH7Y"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4458,7 +4471,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794403215,
+ "anime_checked": 1794403511,
  "mal_totals": {
   "60601": [
    12,
