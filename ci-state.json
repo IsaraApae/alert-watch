@@ -2932,7 +2932,8 @@
   "176314:6",
   "152677:6",
   "159042:7",
-  "206401:7"
+  "206401:7",
+  "213805:7"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4293,6 +4294,16 @@
    "published": 1794486600,
    "scheduled": 1794486600,
    "notified": true
+  },
+  "213805:7": {
+   "title": "The Ramparts of Ice Season 2",
+   "episode": 7,
+   "version": "ซับไทย",
+   "first": "animeruka",
+   "url": "https://animeruka.com/ep/koori-no-jouheki-season-2-ep-7/",
+   "detected": 1794498911,
+   "published": 1794498681,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4411,7 +4422,8 @@
   "176314:6": "https://isaraapae.github.io/alert-watch/b.html?v=lXeTrODvcco",
   "152677:6": "https://isaraapae.github.io/alert-watch/b.html?v=VeaAeccwH7Y",
   "159042:7": "https://isaraapae.github.io/alert-watch/b.html?v=hpEMbywAr7Q",
-  "206401:7": "https://isaraapae.github.io/alert-watch/b.html?v=gbMZFECYMeE"
+  "206401:7": "https://isaraapae.github.io/alert-watch/b.html?v=gbMZFECYMeE",
+  "213805:7": "https://animeruka.com/ep/koori-no-jouheki-season-2-ep-7/"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4506,7 +4518,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794498612,
+ "anime_checked": 1794498911,
  "mal_totals": {
   "60601": [
    12,
