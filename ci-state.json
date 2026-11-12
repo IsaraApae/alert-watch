@@ -2931,7 +2931,8 @@
   "198727:5",
   "176314:6",
   "152677:6",
-  "159042:7"
+  "159042:7",
+  "206401:7"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4279,6 +4280,17 @@
    "published": 1794411000,
    "scheduled": 1794411000,
    "notified": true
+  },
+  "206401:7": {
+   "title": "FX Senshi Kurumi-chan",
+   "episode": 7,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=gbMZFECYMeE",
+   "detected": 1794486602,
+   "published": 1794486600,
+   "scheduled": 1794486600,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4396,7 +4408,8 @@
   "198727:5": "https://isaraapae.github.io/alert-watch/b.html?v=ug7_Sjh-OOM",
   "176314:6": "https://isaraapae.github.io/alert-watch/b.html?v=lXeTrODvcco",
   "152677:6": "https://isaraapae.github.io/alert-watch/b.html?v=VeaAeccwH7Y",
-  "159042:7": "https://isaraapae.github.io/alert-watch/b.html?v=hpEMbywAr7Q"
+  "159042:7": "https://isaraapae.github.io/alert-watch/b.html?v=hpEMbywAr7Q",
+  "206401:7": "https://isaraapae.github.io/alert-watch/b.html?v=gbMZFECYMeE"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4491,7 +4504,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794486017,
+ "anime_checked": 1794486315,
  "mal_totals": {
   "60601": [
    12,
