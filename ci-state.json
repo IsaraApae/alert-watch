@@ -2936,7 +2936,8 @@
   "206401:7",
   "213805:7",
   "212503:6",
-  "210482:8"
+  "210482:8",
+  "195516:7"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4331,6 +4332,16 @@
    "published": null,
    "notified": true,
    "order": "estimated"
+  },
+  "195516:7": {
+   "title": "The Apothecary Diaries Season 3",
+   "episode": 7,
+   "version": "ซับไทย",
+   "first": "animeruka",
+   "url": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-7/",
+   "detected": 1794582924,
+   "published": 1794582726,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4452,7 +4463,8 @@
   "206401:7": "https://isaraapae.github.io/alert-watch/b.html?v=gbMZFECYMeE",
   "213805:7": "https://animeruka.com/ep/koori-no-jouheki-season-2-ep-7/",
   "212503:6": "https://isaraapae.github.io/alert-watch/b.html?v=1XP1FGTWC70",
-  "210482:8": "https://animegojos.com/list/2831/#ep-9"
+  "210482:8": "https://animegojos.com/list/2831/#ep-9",
+  "195516:7": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-7/"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4547,7 +4559,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794582613,
+ "anime_checked": 1794582924,
  "mal_totals": {
   "60601": [
    12,
