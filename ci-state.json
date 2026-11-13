@@ -2935,7 +2935,8 @@
   "159042:7",
   "206401:7",
   "213805:7",
-  "212503:6"
+  "212503:6",
+  "210482:8"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4317,6 +4318,17 @@
    "published": 1794502800,
    "scheduled": 1794502800,
    "notified": true
+  },
+  "210482:8": {
+   "title": "JoJo Part 7: Steel Ball Run 2nd-3rd Stage",
+   "episode": 9,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/2831/#ep-9",
+   "detected": 1794558619,
+   "published": null,
+   "notified": true,
+   "order": "estimated"
   }
  },
  "watch_links": {
@@ -4437,7 +4449,8 @@
   "159042:7": "https://isaraapae.github.io/alert-watch/b.html?v=hpEMbywAr7Q",
   "206401:7": "https://isaraapae.github.io/alert-watch/b.html?v=gbMZFECYMeE",
   "213805:7": "https://animeruka.com/ep/koori-no-jouheki-season-2-ep-7/",
-  "212503:6": "https://isaraapae.github.io/alert-watch/b.html?v=1XP1FGTWC70"
+  "212503:6": "https://isaraapae.github.io/alert-watch/b.html?v=1XP1FGTWC70",
+  "210482:8": "https://animegojos.com/list/2831/#ep-9"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4532,19 +4545,19 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794558312,
+ "anime_checked": 1794558619,
  "mal_totals": {
   "60601": [
    12,
    1793361035
   ],
   "64534": [
-   null,
-   1794537026
+   13,
+   1794558627
   ],
   "63801": [
    null,
-   1794537026
+   1794558627
   ],
   "64254": [
    12,
@@ -4552,11 +4565,11 @@
   ],
   "64503": [
    null,
-   1794537027
+   1794558628
   ],
   "62922": [
    null,
-   1794537027
+   1794558628
   ],
   "63431": [
    null,
