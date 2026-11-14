@@ -2943,7 +2943,8 @@
   "195516:7",
   "178083:7",
   "211778:6",
-  "191656:7"
+  "191656:7",
+  "209872:7"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4379,6 +4380,16 @@
    "detected": 1794676218,
    "published": 1794676093,
    "notified": true
+  },
+  "209872:7": {
+   "title": "Ranma 1/2 Season 3",
+   "episode": 7,
+   "version": "ซับไทย",
+   "first": "animeruka",
+   "url": "https://animeruka.com/ep/ranma-%c2%bd-season-3-ep-7/",
+   "detected": 1794676812,
+   "published": 1794676722,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4504,7 +4515,8 @@
   "195516:7": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-7/",
   "178083:7": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-7/",
   "211778:6": "https://isaraapae.github.io/alert-watch/b.html?v=v_O9SFqW-yk",
-  "191656:7": "https://animeruka.com/ep/seitokai-ni-mo-ana-wa-aru-ep-7/"
+  "191656:7": "https://animeruka.com/ep/seitokai-ni-mo-ana-wa-aru-ep-7/",
+  "209872:7": "https://animeruka.com/ep/ranma-%c2%bd-season-3-ep-7/"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4599,7 +4611,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794676514,
+ "anime_checked": 1794676812,
  "mal_totals": {
   "60601": [
    12,
