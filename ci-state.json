@@ -2944,7 +2944,8 @@
   "178083:7",
   "211778:6",
   "191656:7",
-  "209872:7"
+  "209872:7",
+  "202250:7"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4390,6 +4391,17 @@
    "detected": 1794676812,
    "published": 1794676722,
    "notified": true
+  },
+  "202250:7": {
+   "title": "Magic Repo Man",
+   "episode": 7,
+   "version": "ซับไทย",
+   "first": "Muse Thailand",
+   "url": "https://www.youtube.com/watch?v=MAG-tQLKfFU",
+   "detected": 1794679200,
+   "published": 1794679200,
+   "scheduled": 1794679200,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4516,7 +4528,8 @@
   "178083:7": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-7/",
   "211778:6": "https://isaraapae.github.io/alert-watch/b.html?v=v_O9SFqW-yk",
   "191656:7": "https://animeruka.com/ep/seitokai-ni-mo-ana-wa-aru-ep-7/",
-  "209872:7": "https://animeruka.com/ep/ranma-%c2%bd-season-3-ep-7/"
+  "209872:7": "https://animeruka.com/ep/ranma-%c2%bd-season-3-ep-7/",
+  "202250:7": "https://isaraapae.github.io/alert-watch/b.html?v=MAG-tQLKfFU"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4611,7 +4624,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794678613,
+ "anime_checked": 1794678914,
  "mal_totals": {
   "60601": [
    12,
