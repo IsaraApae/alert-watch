@@ -2941,7 +2941,8 @@
   "212503:6",
   "210482:8",
   "195516:7",
-  "178083:7"
+  "178083:7",
+  "211778:6"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4356,6 +4357,17 @@
    "detected": 1794590712,
    "published": 1794590446,
    "notified": true
+  },
+  "211778:6": {
+   "title": "The World's Strongest Witch",
+   "episode": 6,
+   "version": "ซับไทย",
+   "first": "Muse Thailand",
+   "url": "https://www.youtube.com/watch?v=v_O9SFqW-yk",
+   "detected": 1794640726,
+   "published": 1794402009,
+   "scheduled": 1794402000,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4479,7 +4491,8 @@
   "212503:6": "https://isaraapae.github.io/alert-watch/b.html?v=1XP1FGTWC70",
   "210482:8": "https://animegojos.com/list/2831/#ep-9",
   "195516:7": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-7/",
-  "178083:7": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-7/"
+  "178083:7": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-7/",
+  "211778:6": "https://isaraapae.github.io/alert-watch/b.html?v=v_O9SFqW-yk"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4574,7 +4587,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794640513,
+ "anime_checked": 1794640724,
  "mal_totals": {
   "60601": [
    12,
@@ -4603,6 +4616,10 @@
   "63431": [
    null,
    1794626435
+  ],
+  "64084": [
+   null,
+   1794640726
   ]
  },
  "webtoon_seasons": {
@@ -4756,6 +4773,17 @@
   "178083:11": 1797006180.0,
   "178083:12": 1797610980.0,
   "178083:13": 1798215780.0,
+  "211778:3": 1792587600.0,
+  "211778:4": 1793192400.0,
+  "211778:5": 1793797200.0,
+  "211778:6": 1794402000.0,
+  "211778:7": 1795006800.0,
+  "211778:8": 1795611600.0,
+  "211778:9": 1796216400.0,
+  "211778:10": 1796821200.0,
+  "211778:11": 1797426000.0,
+  "211778:12": 1798030800.0,
+  "211778:2": 1792153800.0,
   "191656:3": 1792251000.0,
   "191656:4": 1792855800.0,
   "191656:5": 1793460600.0,
@@ -5187,6 +5215,18 @@
       "airingAt": 1796371200
      }
     ]
+   }
+  },
+  "211778": {
+   "id": 211778,
+   "idMal": 64084,
+   "status": "RELEASING",
+   "episodes": null,
+   "season": "FALL",
+   "seasonYear": 2026,
+   "format": "TV",
+   "coverImage": {
+    "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx211778-0MXK5HqVFBYH.jpg"
    }
   },
   "212503": {
