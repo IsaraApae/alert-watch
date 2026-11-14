@@ -2942,7 +2942,8 @@
   "210482:8",
   "195516:7",
   "178083:7",
-  "211778:6"
+  "211778:6",
+  "191656:7"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4368,6 +4369,16 @@
    "published": 1794402009,
    "scheduled": 1794402000,
    "notified": true
+  },
+  "191656:7": {
+   "title": "Even the Student Council Has Its Holes!",
+   "episode": 7,
+   "version": "ซับไทย",
+   "first": "animeruka",
+   "url": "https://animeruka.com/ep/seitokai-ni-mo-ana-wa-aru-ep-7/",
+   "detected": 1794676218,
+   "published": 1794676093,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4492,7 +4503,8 @@
   "210482:8": "https://animegojos.com/list/2831/#ep-9",
   "195516:7": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-7/",
   "178083:7": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-7/",
-  "211778:6": "https://isaraapae.github.io/alert-watch/b.html?v=v_O9SFqW-yk"
+  "211778:6": "https://isaraapae.github.io/alert-watch/b.html?v=v_O9SFqW-yk",
+  "191656:7": "https://animeruka.com/ep/seitokai-ni-mo-ana-wa-aru-ep-7/"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4587,7 +4599,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794675915,
+ "anime_checked": 1794676218,
  "mal_totals": {
   "60601": [
    12,
