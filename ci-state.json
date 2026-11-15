@@ -2947,7 +2947,8 @@
   "191656:7",
   "209872:7",
   "202250:7",
-  "189123:6"
+  "189123:6",
+  "185756:8"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4414,6 +4415,17 @@
    "detected": 1794736212,
    "published": 1794735928,
    "notified": true
+  },
+  "185756:8": {
+   "title": "As a Reincarnated Aristocrat Season 3",
+   "episode": 8,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=CoSrmloKHX8",
+   "detected": 1794754800,
+   "published": 1794754800,
+   "scheduled": 1794754800,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4542,7 +4554,8 @@
   "191656:7": "https://animeruka.com/ep/seitokai-ni-mo-ana-wa-aru-ep-7/",
   "209872:7": "https://animeruka.com/ep/ranma-%c2%bd-season-3-ep-7/",
   "202250:7": "https://isaraapae.github.io/alert-watch/b.html?v=MAG-tQLKfFU",
-  "189123:6": "https://animeruka.com/ep/ao-no-hako-blue-box-season-2-ep-6/"
+  "189123:6": "https://animeruka.com/ep/ao-no-hako-blue-box-season-2-ep-6/",
+  "185756:8": "https://isaraapae.github.io/alert-watch/b.html?v=CoSrmloKHX8"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4637,7 +4650,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794754211,
+ "anime_checked": 1794754515,
  "mal_totals": {
   "60601": [
    12,
@@ -4649,7 +4662,7 @@
   ],
   "63801": [
    null,
-   1794732936
+   1794754801
   ],
   "64254": [
    12,
@@ -4657,7 +4670,7 @@
   ],
   "64503": [
    null,
-   1794732936
+   1794754801
   ],
   "62922": [
    12,
