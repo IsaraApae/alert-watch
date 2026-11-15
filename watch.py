@@ -1313,14 +1313,50 @@ GOJO_SHIFT = {213657: 12}
 OTHER_PAGES = {213657: "https://suba-anime.com/yozakura-san-chi-no-daisakusen-ss2/"}
 
 
+# sm-anime: its home page lists every series by its newest update, "<name> ตอนที่ 1-8 ซับไทย", linking the series page,
+# which links each episode (".../episode/48317/" for "ตอนที่ 7 ซับไทย"). Its RSS feed only announces new series, so it isn't
+# used. Competes like suba-anime, for the shows not on Muse/Ani-One. Ordinary requests only: a bot check is reported, not
+# worked around.
+SM = "https://www.sm-anime.com"
+
+
+def sm_latest(page, shows):
+    """{AniList id: (its series page, newest episode)} from sm-anime's home page, for tracked shows; ซับไทย listings only."""
+    out = {}
+    for link, text in re.findall(rf'<a[^>]+href="({re.escape(SM)}/[^"/#?]+/)"[^>]*>(.*?)</a>', page, re.S):
+        t = " ".join(html.unescape(re.sub(r"<[^>]+>", " ", text)).split()).lower()
+        num = re.search(r"ตอนที่\s*(\d+)(?:\s*-\s*(\d+))?\s*ซับไทย", t)
+        if not num or "พากย์ไทย" in t:
+            continue
+        aid = next((i for i, s in shows.items() if s["yt"] and re.search(s["yt"], t[:num.start()])), None)
+        if aid and aid not in out:
+            out[aid] = (link, int(num[2] or num[1]))
+    return out
+
+
+def sm_episodes(page):
+    """{episode number: its page} on a sm-anime series page; a dubbed (พากย์ไทย) page has none."""
+    out = {}
+    for link, text in re.findall(rf'<a[^>]+href="({re.escape(SM)}/episode/\d+/)"[^>]*>(.*?)</a>', page, re.S):
+        t = " ".join(html.unescape(re.sub(r"<[^>]+>", " ", text)).split())
+        num = re.search(r"ตอนที่\s*(\d+)\s*ซับไทย", t)
+        if num and "พากย์ไทย" not in t:
+            out[int(num[1])] = link
+    return out
+
+
 def suba_episodes(page):
     """{episode number: its page} on a suba-anime series page; an episode marked (ยังไม่มา), not out yet, has no link there."""
     return {int(n): link for link, n, text in re.findall(r'<a href="([^"#]+/ep-(\d+))"[^>]*>([^<]*)', page) if "ยังไม่มา" not in text}
 
 
 def site_episodes(url):
-    """{episode number: link} for a series page on animegojo (ซับไทย only) or suba-anime."""
+    """{episode number: link} for a series page on animegojo (ซับไทย only), suba-anime or sm-anime."""
     page = get(url)
+    if url.startswith(SM):
+        if "<title>Just a moment" in page:
+            raise RuntimeError("sm-anime answered with a bot check")
+        return sm_episodes(page)
     if "suba-anime.com" in url:
         if "<title>Just a moment" in page:
             raise RuntimeError("suba-anime answered with a bot check")
@@ -1328,7 +1364,7 @@ def site_episodes(url):
     return {n: f"{url.split('#')[0]}#ep-{n}" for n in gojo_sub_episodes(page)}
 
 
-site_name = lambda url: "suba-anime" if "suba-anime.com" in url else "animegojo"
+site_name = lambda url: "suba-anime" if "suba-anime.com" in url else "sm-anime" if url.startswith(SM) else "animegojo"
 
 
 def series_page(link):
@@ -1555,7 +1591,7 @@ def schedule(state=None):
             if now - 8 * 86400 <= t <= now + 60 * 86400:
                 yt = t <= now and s["yt"] and youtube_episode(videos, s["yt"], {ep, ep + s["offset"], ep + max(s["first"][0], 1) - 1}, t)
                 rec = state.get("first_source", {}).get(f"{i}:{ep}", {})  # the animegojo episode page, if that's where it was found first
-                watch = (in_brave(yt) if yt else None) or links.get(f"{i}:{ep}") or (rec["url"] if rec.get("first") in ("animegojo", "suba-anime", *FEEDS) else None)
+                watch = (in_brave(yt) if yt else None) or links.get(f"{i}:{ep}") or (rec["url"] if rec.get("first") in ("animegojo", "suba-anime", "sm-anime", *FEEDS) else None)
                 if not watch and t <= now and (str(i) in pages or i in OTHER_PAGES) and not (i in thai and thai[i][0] in YT_CHANNELS.values()):
                     shift, have = on_gojo(i)  # aired, no button yet: the episode on its animegojo (or suba-anime) page, if it's up there
                     watch = have.get(ep + s["offset"] + shift)
@@ -1841,6 +1877,7 @@ def anime(state, meanwhile=lambda: None):
             hits += [(ts, site, i, n, link) for i, n, link, ts in feed_episodes(read_feed(url), shows)]
         except Exception as e:
             print(f"FAIL {site}: {e}", file=sys.stderr)
+    due_eps_of = lambda i: [(e, t) for (j, e), t in due.items() if j == i and f"{i}:{e}" not in seen and now >= t - 86400]
     to_ep = lambda i, n: next((e for e in (n - shows[i]["offset"], n - shows[i]["offset"] - GOJO_SHIFT.get(i, 0)) if (i, e) in due), None)
     # suba-anime is for Yozakura only, and races the other sites for every episode
     for i, url in (OTHER_PAGES.items() if not seed else []):
@@ -1856,6 +1893,23 @@ def anime(state, meanwhile=lambda: None):
             continue
         # its numbers carry on through the season (Cour 2's episode 1 is its 13): only the shifted number is this cour's
         hits += [(mid, "suba-anime", i, n, have[n]) for e in waiting for n in [e + shows[i]["offset"] + GOJO_SHIFT.get(i, 0)] if n in have]
+    # sm-anime: its home page (one request) says which shows have a newer episode; those shows' series pages give the links
+    sm_pages = {}
+    waiting_any = {i for (i, e), t in due.items() if gojo_only(i) and f"{i}:{e}" not in seen and now >= t - 86400}
+    if waiting_any and not seed:
+        try:
+            for i, (url, newest) in sm_latest(get(SM + "/"), shows).items():
+                if i not in waiting_any:
+                    continue
+                sm_pages[i] = url
+                wanted = [n for e, t in due_eps_of(i) for n in [e + shows[i]["offset"]] if n <= newest]
+                have = site_episodes(url) if wanted else {}
+                # its numbers must be this season's: a page counting on through every season (Ranma 1-32) would give
+                # an old episode, so its newest has to be an episode of this season due now (or within the week)
+                if have and (i, max(have) - shows[i]["offset"]) in due:
+                    hits += [(mid, "sm-anime", i, n, have[n]) for n in wanted if n in have]
+        except Exception as e:
+            print(f"FAIL sm-anime: {e}", file=sys.stderr)
     pages_read = {}
     for t, site, i, n, link in sorted(hits, key=lambda h: h[0]):  # fastest first
         s, m = shows[i], info.get(i, {})
@@ -1865,8 +1919,8 @@ def anime(state, meanwhile=lambda: None):
         # every episode of the show on this site, by this cour's numbering
         if site in FEEDS:
             on_site = {to_ep(j, k): (l, ts) for ts, w, j, k, l in sorted(hits, key=lambda h: h[0], reverse=True) if w == site and j == i}
-        else:  # animegojo or suba-anime: read the series page (checks animegojo's is ซับไทย)
-            page_url = OTHER_PAGES[i] if site == "suba-anime" else link.split("#")[0]
+        else:  # animegojo, suba-anime or sm-anime: read the series page (checks animegojo's is ซับไทย)
+            page_url = OTHER_PAGES[i] if site == "suba-anime" else sm_pages[i] if site == "sm-anime" else link.split("#")[0]
             try:
                 if page_url not in pages_read:
                     pages_read[page_url] = site_episodes(page_url)
@@ -2185,6 +2239,11 @@ if __name__ == "__main__":
         assert chapter_runs([343, 340, 341, 342, 344, 345]) == "Chapter 340-345"
         assert chapter_runs([340, 341, 343, 9.1]) == "Chapter 9.1, 340-341, 343"
         assert chapter_runs([216]) == "Chapter 216"
+        sm_home = ('<a href="https://www.sm-anime.com/kusuriya-no-hitorigoto-3rd-season/" title="x">Kusuriya no Hitorigoto 3rd Season '
+                   'สืบคดีปริศนา ภาค 3 ตอนที่ 1-8 ซับไทย</a><a href="https://www.sm-anime.com/ranma-2024-thai-dub/">Ranma ½ ตอนที่ 1-32 พากย์ไทย</a>')
+        assert sm_latest(sm_home, {1: {"yt": "kusuriya"}, 2: {"yt": "ranma"}}) == {1: ("https://www.sm-anime.com/kusuriya-no-hitorigoto-3rd-season/", 8)}
+        assert sm_episodes('<a class="episode-btn" href="https://www.sm-anime.com/episode/48317/"><span>Kusuriya ตอนที่ 7 ซับไทย</span></a>'
+                           '<a href="https://www.sm-anime.com/episode/9/">Ranma ตอนที่ 7 พากย์ไทย</a>') == {7: "https://www.sm-anime.com/episode/48317/"}
         # the starting grid: same as qualifying -> nothing; changed -> sent on the second check that sees it
         st = {"f1_final": {"9": [[63, 2, None], [1, 1, None], [16, 3, None]]}}
         q = {"session_key": 9, "session_name": "Qualifying", "date_start": "2026-11-07T18:00:00+00:00", "meeting_key": 1}
@@ -2409,7 +2468,7 @@ if __name__ == "__main__":
         setup_richmenu()
     elif sys.argv[1:] == ["sites"]:
         # can this machine read each anime source? (ordinary requests; a bot check counts as unreadable)
-        for name, url in (("animegojo", GOJO + "/"), ("suba-anime", OTHER_PAGES[213657]), ("animeruka", "https://animeruka.com/"),
+        for name, url in (("animegojo", GOJO + "/"), ("suba-anime", OTHER_PAGES[213657]), ("sm-anime", SM + "/"), ("animeruka", "https://animeruka.com/"),
                           ("animeruka feed", "https://animeruka.com/feed/?post_type=episodes")):
             try:
                 page = get(url)
