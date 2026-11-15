@@ -2949,7 +2949,8 @@
   "202250:7",
   "189123:6",
   "185756:8",
-  "199426:7"
+  "199426:7",
+  "213657:6"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4438,6 +4439,17 @@
    "published": 1794757500,
    "scheduled": 1794757500,
    "notified": true
+  },
+  "213657:6": {
+   "title": "Mission: Yozakura Family Season 2 Cour 2",
+   "episode": 6,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/2927/#ep-18",
+   "detected": 1794758421,
+   "published": null,
+   "notified": true,
+   "order": "estimated"
   }
  },
  "watch_links": {
@@ -4568,7 +4580,8 @@
   "202250:7": "https://isaraapae.github.io/alert-watch/b.html?v=MAG-tQLKfFU",
   "189123:6": "https://animeruka.com/ep/ao-no-hako-blue-box-season-2-ep-6/",
   "185756:8": "https://isaraapae.github.io/alert-watch/b.html?v=CoSrmloKHX8",
-  "199426:7": "https://isaraapae.github.io/alert-watch/b.html?v=nAdSQnMQ-Rc"
+  "199426:7": "https://isaraapae.github.io/alert-watch/b.html?v=nAdSQnMQ-Rc",
+  "213657:6": "https://animegojos.com/list/2927/#ep-18"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4663,7 +4676,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794758109,
+ "anime_checked": 1794758421,
  "mal_totals": {
   "60601": [
    12,
