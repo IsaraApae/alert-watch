@@ -225,10 +225,17 @@ function cover(show, cls, eager) {
   if (show.cover) img.src = small || show.cover;
   return img;
 }
-function watchLink(href) {
+function watchLink(href, older) {  // older: an earlier episode's link, while this one has none yet ("Watch EP 05")
   const a = el("a", "watch press"); a.href = href; a.target = "_blank"; a.rel = "noopener";
-  a.innerHTML = PLAY; a.append("Watch"); a.setAttribute("aria-label", "Watch the Thai-sub episode");
+  a.innerHTML = PLAY; a.append(older ? `Watch EP ${pad(older.epEnd || older.ep)}` : "Watch");
+  a.setAttribute("aria-label", older ? `Watch episode ${older.epEnd || older.ep}, the newest with Thai subs so far` : "Watch the Thai-sub episode");
   return a;
+}
+// the episode's own Watch once it's out; until then the show's newest earlier one, so the last episode is still a tap away
+function watchFor(e, show) {
+  if (e && e.watch && e.at <= Date.now()) return watchLink(e.watch);
+  const older = [...show.eps].reverse().find(x => x.watch && x.at <= Date.now() && (!e || x.at < e.at));
+  return older ? watchLink(older.watch, older) : null;
 }
 
 function renderNext() {
@@ -271,7 +278,7 @@ function episodeRow(e) {
   const side = el("div", "side");
   const u = el("div", "until" + (e.at <= Date.now() ? " aired" : ""), until(e.at)); u.dataset.at = e.at;
   side.append(el("div", "time", hhmm.format(e.at)), u);
-  if (e.watch && e.at <= Date.now()) side.append(watchLink(e.watch));
+  const w = watchFor(e, e.show); if (w) side.append(w);
   row.append(cover(e.show, ""), info, side);
   return row;
 }
@@ -291,13 +298,13 @@ function renderDays() {  // next-episode view: today and the six days after it (
     group(box, `${name} · ${dayDate.format(t)}`, false, episodes.filter(e => dayKey.format(e.at) === key).map(episodeRow), "No episodes");
   }
 }
-function renderAired() {  // aired view: what's already out today, then the 6 days before, newest day first, to catch up
+function renderAired() {  // aired view: today (still to come included), then the 6 days before, newest day first, to catch up
   const box = document.getElementById("week");
   box.replaceChildren();
   const now = Date.now();
   for (let i = 0; i <= 6; i++) {
     const t = now - i * 86400000, key = dayKey.format(t);
-    const rows = episodes.filter(e => dayKey.format(e.at) === key && e.at <= now).map(episodeRow);
+    const rows = episodes.filter(e => dayKey.format(e.at) === key && (i === 0 || e.at <= now)).map(episodeRow);
     if (rows.length) group(box, `${i === 0 ? "Today" : i === 1 ? "Yesterday" : weekdayLong.format(t)} · ${dayDate.format(t)}`, false, rows, "");
   }
   if (!box.children.length) { const c = el("div", "card"); c.append(el("p", "meta", "Nothing aired this past week.")); box.append(c); }
@@ -321,6 +328,7 @@ function renderTimetable() {  // timetable view: each show under the weekday it 
       const side = el("div", "side");
       const u = el("div", "until", until(next.at)); u.dataset.at = next.at;
       side.append(el("div", "time", hhmm.format(next.at)), u);
+      const w = watchFor(next, s); if (w) side.append(w);
       row.append(cover(s, ""), info, side);
       return row;
     });
