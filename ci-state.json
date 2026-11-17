@@ -4677,7 +4677,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794921912,
+ "anime_checked": 1794922221,
  "mal_totals": {
   "60601": [
    12,
@@ -4848,7 +4848,7 @@
   "202250:10": 1796488200.0,
   "202250:11": 1797093000.0,
   "202250:12": 1797697800.0,
-  "202250:3": 1792328400.0,
+  "202250:3": 1792339200.0,
   "202250:13": 1798457400.0,
   "178083:4": 1792772880.0,
   "178083:5": 1793377380.0,
@@ -5393,6 +5393,15 @@
    "meeting_key": 1300,
    "year": 2026,
    "country_name": "United States"
+  },
+  {
+   "session_key": 11421,
+   "session_name": "Practice 1",
+   "date_start": "2026-11-27T13:30:00+00:00",
+   "date_end": "2026-11-27T14:30:00+00:00",
+   "meeting_key": 1301,
+   "year": 2026,
+   "country_name": "Qatar"
   }
  ],
  "f1_meetings": {
@@ -5413,6 +5422,26 @@
    "gmt_offset": "-08:00:00",
    "date_start": "2026-11-20T00:30:00+00:00",
    "date_end": "2026-11-22T06:00:00+00:00",
+   "year": 2026,
+   "is_cancelled": false
+  },
+  "1301": {
+   "meeting_key": 1301,
+   "meeting_name": "Qatar Grand Prix",
+   "meeting_official_name": "FORMULA 1 QATAR AIRWAYS QATAR GRAND PRIX 2026",
+   "location": "Lusail",
+   "country_key": 149,
+   "country_code": "QAT",
+   "country_name": "Qatar",
+   "country_flag": "https://media.formula1.com/content/dam/fom-website/2018-redesign-assets/Flags%2016x9/qatar-flag.png",
+   "circuit_key": 150,
+   "circuit_short_name": "Lusail",
+   "circuit_type": "Permanent",
+   "circuit_info_url": "https://api.multiviewer.app/api/v1/circuits/150/2026",
+   "circuit_image": "https://media.formula1.com/content/dam/fom-website/2018-redesign-assets/Track%20icons%204x3/Qatar%20carbon.png",
+   "gmt_offset": "03:00:00",
+   "date_start": "2026-11-27T13:30:00+00:00",
+   "date_end": "2026-11-29T18:00:00+00:00",
    "year": 2026,
    "is_cancelled": false
   }
