@@ -2951,7 +2951,8 @@
   "189123:6",
   "185756:8",
   "199426:7",
-  "213657:6"
+  "213657:6",
+  "207329:7"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4451,6 +4452,17 @@
    "published": null,
    "notified": true,
    "order": "estimated"
+  },
+  "207329:7": {
+   "title": "The Laid-Off Cheat-Granting Mage Enjoys a Second Lease on Life",
+   "episode": 7,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=iXyrCeDFwE4",
+   "detected": 1794929400,
+   "published": 1794929400,
+   "scheduled": 1794929400,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4582,7 +4594,8 @@
   "189123:6": "https://animeruka.com/ep/ao-no-hako-blue-box-season-2-ep-6/",
   "185756:8": "https://isaraapae.github.io/alert-watch/b.html?v=CoSrmloKHX8",
   "199426:7": "https://isaraapae.github.io/alert-watch/b.html?v=nAdSQnMQ-Rc",
-  "213657:6": "https://animegojos.com/list/2927/#ep-18"
+  "213657:6": "https://animegojos.com/list/2927/#ep-18",
+  "207329:7": "https://isaraapae.github.io/alert-watch/b.html?v=iXyrCeDFwE4"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4677,7 +4690,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794928821,
+ "anime_checked": 1794929111,
  "mal_totals": {
   "60601": [
    12,
