@@ -4703,7 +4703,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794934515,
+ "anime_checked": 1794934828,
  "mal_totals": {
   "60601": [
    12,
@@ -5424,6 +5424,15 @@
    "session_name": "Practice 1",
    "date_start": "2026-11-27T13:30:00+00:00",
    "date_end": "2026-11-27T14:30:00+00:00",
+   "meeting_key": 1301,
+   "year": 2026,
+   "country_name": "Qatar"
+  },
+  {
+   "session_key": 11422,
+   "session_name": "Practice 2",
+   "date_start": "2026-11-27T17:00:00+00:00",
+   "date_end": "2026-11-27T18:00:00+00:00",
    "meeting_key": 1301,
    "year": 2026,
    "country_name": "Qatar"
