@@ -2952,7 +2952,8 @@
   "185756:8",
   "199426:7",
   "213657:6",
-  "207329:7"
+  "207329:7",
+  "198727:6"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4463,6 +4464,17 @@
    "published": 1794929400,
    "scheduled": 1794929400,
    "notified": true
+  },
+  "198727:6": {
+   "title": "Chitose Is in the Ramune Bottle 2nd Cour",
+   "episode": 6,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=tEJsXffElZQ",
+   "detected": 1794933001,
+   "published": 1794933000,
+   "scheduled": 1794933000,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4595,7 +4607,8 @@
   "185756:8": "https://isaraapae.github.io/alert-watch/b.html?v=CoSrmloKHX8",
   "199426:7": "https://isaraapae.github.io/alert-watch/b.html?v=nAdSQnMQ-Rc",
   "213657:6": "https://animegojos.com/list/2927/#ep-18",
-  "207329:7": "https://isaraapae.github.io/alert-watch/b.html?v=iXyrCeDFwE4"
+  "207329:7": "https://isaraapae.github.io/alert-watch/b.html?v=iXyrCeDFwE4",
+  "198727:6": "https://isaraapae.github.io/alert-watch/b.html?v=tEJsXffElZQ"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4690,7 +4703,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794932421,
+ "anime_checked": 1794932713,
  "mal_totals": {
   "60601": [
    12,
