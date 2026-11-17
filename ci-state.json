@@ -4677,7 +4677,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1794886222,
+ "anime_checked": 1794886520,
  "mal_totals": {
   "60601": [
    12,
@@ -5195,7 +5195,7 @@
    "id": 202250,
    "idMal": 62922,
    "status": "RELEASING",
-   "episodes": null,
+   "episodes": 12,
    "season": "FALL",
    "seasonYear": 2026,
    "format": "TV",
@@ -5219,7 +5219,7 @@
    "id": 207329,
    "idMal": 63431,
    "status": "RELEASING",
-   "episodes": null,
+   "episodes": 12,
    "season": "FALL",
    "seasonYear": 2026,
    "format": "TV",
