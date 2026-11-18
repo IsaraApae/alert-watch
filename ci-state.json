@@ -2953,7 +2953,9 @@
   "199426:7",
   "213657:6",
   "207329:7",
-  "198727:6"
+  "198727:6",
+  "176314:7",
+  "211778:7"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4475,6 +4477,28 @@
    "published": 1794933000,
    "scheduled": 1794933000,
    "notified": true
+  },
+  "176314:7": {
+   "title": "Sasaki and Peeps Season 2",
+   "episode": 7,
+   "version": "ซับไทย",
+   "first": "Muse Thailand",
+   "url": "https://www.youtube.com/watch?v=FripBItEz_U",
+   "detected": 1795006800,
+   "published": 1795006800,
+   "scheduled": 1795006800,
+   "notified": true
+  },
+  "211778:7": {
+   "title": "The World's Strongest Witch",
+   "episode": 7,
+   "version": "ซับไทย",
+   "first": "Muse Thailand",
+   "url": "https://www.youtube.com/watch?v=bPrKErZ_lHM",
+   "detected": 1795006800,
+   "published": 1795006800,
+   "scheduled": 1795006800,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4608,7 +4632,9 @@
   "199426:7": "https://isaraapae.github.io/alert-watch/b.html?v=nAdSQnMQ-Rc",
   "213657:6": "https://animegojos.com/list/2927/#ep-18",
   "207329:7": "https://isaraapae.github.io/alert-watch/b.html?v=iXyrCeDFwE4",
-  "198727:6": "https://isaraapae.github.io/alert-watch/b.html?v=tEJsXffElZQ"
+  "198727:6": "https://isaraapae.github.io/alert-watch/b.html?v=tEJsXffElZQ",
+  "176314:7": "https://isaraapae.github.io/alert-watch/b.html?v=FripBItEz_U",
+  "211778:7": "https://isaraapae.github.io/alert-watch/b.html?v=bPrKErZ_lHM"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4703,7 +4729,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1795006215,
+ "anime_checked": 1795006523,
  "mal_totals": {
   "60601": [
    12,
