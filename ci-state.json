@@ -2964,7 +2964,8 @@
   "152677:7",
   "159042:8",
   "206401:8",
-  "213805:8"
+  "213805:8",
+  "212503:7"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4553,6 +4554,17 @@
    "detected": 1795103717,
    "published": 1795103523,
    "notified": true
+  },
+  "212503:7": {
+   "title": "The Iceblade Sorcerer Shall Rule the World Season 2",
+   "episode": 7,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=Q9e4ryzZf1U",
+   "detected": 1795107601,
+   "published": 1795107600,
+   "scheduled": 1795107600,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4692,7 +4704,8 @@
   "152677:7": "https://isaraapae.github.io/alert-watch/b.html?v=UXpk0UThELE",
   "159042:8": "https://isaraapae.github.io/alert-watch/b.html?v=mj2B-peRruE",
   "206401:8": "https://isaraapae.github.io/alert-watch/b.html?v=qF4PMnN5lkQ",
-  "213805:8": "https://animeruka.com/ep/koori-no-jouheki-season-2-ep-8/"
+  "213805:8": "https://animeruka.com/ep/koori-no-jouheki-season-2-ep-8/",
+  "212503:7": "https://isaraapae.github.io/alert-watch/b.html?v=Q9e4ryzZf1U"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4787,7 +4800,7 @@
   "11408",
   "11412"
  ],
- "anime_checked": 1795107014,
+ "anime_checked": 1795107311,
  "mal_totals": {
   "60601": [
    12,
