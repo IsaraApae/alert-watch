@@ -81,6 +81,8 @@ jobs:
           # next run makes its change again. (In a rebase, %A is the pulled version.)
           git config merge.upstream.driver "git merge-file --ours %A %O %B"
           echo "anime.txt merge=upstream" >> .git/info/attributes
+          # the usual case, nothing else pushed during this run: the push goes straight through, no pull needed (a second saved)
+          git push -q 2>/dev/null && exit 0
           for try in 1 2 3; do
             git pull -q --rebase -X theirs && git push -q && exit 0
             git rebase --abort 2>/dev/null || true
