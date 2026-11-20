@@ -89,6 +89,8 @@ You can manage the lists by messaging Alert Watch on LINE:
 
 Every manga card and the LINE list say "Chapter 216" (several new chapters in a row come as one range: "Chapter 340-345"): the manga site's chapter, or for WEBTOON the chapter in the episode's title (WEBTOON's own episode numbers also count notices).
 
+WEBTOON cards don't wait for the next check either. Each series comes out weekly at a set time (most at 22:00, Ivy at 21:45), and its feed shows the episode up to a few minutes later. When a series is due around the time a check starts and its episode isn't in the feed yet, the check keeps reading that feed (every 5 seconds in the first minute, then every 15) and sends the card the moment it's there, alongside the wait for YouTube; the next check takes over 4.5 minutes into the job (`wait_for_webtoon` in `watch.py`, logged as `webtoon: waited ...`). The due time is a week on from the series' last episode, or two after a week off.
+
 You can also edit the files directly:
 
 - [urls.txt](urls.txt): one series link per line. A line that isn't a series' page (a site's front page) is skipped, and the run logs `SKIP ...: not a series' page`. A series taken off the list also loses its saved chapters and what was kept for its WEBTOON side; added back, its chapters so far are recorded without alerts, as for any new series.

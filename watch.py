@@ -130,6 +130,29 @@ def webtoon(url):
     return {f"EP.{n}": link.replace("&amp;", "&") for link, n in re.findall(r"<link>([^<]*episode_no=(\d+))</link>", rss)}
 
 
+THAI_MONTHS = "ม.ค. ก.พ. มี.ค. เม.ย. พ.ค. มิ.ย. ก.ค. ส.ค. ก.ย. ต.ค. พ.ย. ธ.ค.".split()
+
+
+def webtoon_out(rss):
+    """When a WEBTOON series' newest free episode came out, from its feed's first date ("พฤ., 19 พ.ย. 2026 15:00:53 GMT"); 0 if none."""
+    found = re.search(r"<item>.*?<pubDate>[^,<]*,\s*(\d+) (\S+) (\d{4}) (\d+):(\d+):(\d+) GMT", rss, re.S)
+    if not found or found[2] not in THAI_MONTHS:
+        return 0
+    d, m, y, hh, mm, ss = found.groups()
+    return datetime(int(y), THAI_MONTHS.index(m) + 1, int(d), int(hh), int(mm), int(ss), tzinfo=timezone.utc).timestamp()
+
+
+def webtoon_due(rss, start):
+    """When a check starting at `start` should look for a WEBTOON series' next episode: a week on from its newest (two,
+    after a week off), at the same time to the 5 minutes (15:01:11 GMT -> 15:00), if that's between the last check's start
+    and the next one's. None otherwise, and for a series that has stopped."""
+    last = webtoon_out(rss)
+    for weeks in (1, 2):
+        due = last - last % 300 + weeks * 7 * 86400
+        if start - CHECK_EVERY <= due < start + CHECK_EVERY:
+            return due
+
+
 SLOW = set()  # sites that timed out this run: skipped for the rest of it, so one dead site can't hold the run up for 15 minutes
 EARLY = {}  # url -> the page being read in the background since the run began (prefetch); get() waits for it
 # more threads than any one site's limit: a thread waiting its turn at one site must not keep another site's pages
@@ -2041,6 +2064,56 @@ def wait_for_youtube(check, later, saved=lambda: None):
               + (f"; still to come: {', '.join(left)}" if left else ""))
 
 
+def wait_for_webtoon(state, urls):
+    """What wait_for_youtube does for anime, for WEBTOON: a series puts its week's episode out at a set time (most at 22:00,
+    Ivy at 21:45), and it shows in the feed up to a few minutes later (22:00:50 to 22:02 on 19 Nov 2026: the 22:00 check had
+    read the feeds at 22:00:20, so the cards waited for the 22:05 one). A series due between the last check's start and the
+    next one's whose episode isn't in its feed yet is read again, every 5 seconds in the first minute after it's due and
+    every 15 after that, and manga() sends its card as soon as it's there; the next check takes over 4.5 minutes into the
+    job. A manga-site series also on WEBTOON is read the same way, for its WEBTOON app card. Never on the Mac."""
+    if not os.environ.get("LINE_TOKEN"):
+        return
+    look = {}  # {url in urls.txt: (its WEBTOON feed, when its episode is due, when its newest one came out)}
+    for url in urls:
+        feed = url if "webtoons.com" in url else WEBTOON_TWINS.get(url)
+        if not feed or re.search(r"title_no=(\d+)", feed)[1] in WEBTOON_WEEKLY:  # (those two's feeds stopped years ago)
+            continue
+        try:
+            rss = get(webtoon_rss(feed))
+        except Exception:
+            continue
+        due = webtoon_due(rss, JOB_START)
+        if due:
+            look[url] = (webtoon_rss(feed), due, webtoon_out(rss))
+    until, read, began = JOB_START + CHECK_EVERY - 30, 0, time.time()
+    waited = [series_slug(u) for u in look]
+    while look:
+        now = time.time()
+        recent = any(now - 60 <= w <= now for _, w, _ in look.values())
+        at = max(min(w for _, w, _ in look.values()), read + (5 if recent else 15))
+        if at >= until:
+            break
+        time.sleep(max(0, at - now) + 0.2)
+        read = time.time()
+        for url, (feed, due, last) in list(look.items()):
+            if due > read:
+                continue
+            try:
+                rss = fetch(feed)
+            except Exception:
+                continue
+            if webtoon_out(rss) > last:  # it's out: manga() reads this feed, sends the card and records it
+                done = Future()
+                done.set_result(rss)
+                EARLY[feed] = done
+                manga(state, [url])
+                save(state)
+                del look[url]
+    if waited:
+        print(f"webtoon: waited {time.time() - began:.0f}s for {', '.join(waited)}"
+              + (f"; still to come: {', '.join(series_slug(u) for u in look)}" if look else ""))
+
+
 def setup_richmenu():
     """Install the Alert Watch menu at the bottom of the LINE chat: four buttons, the anime countdown, its timetable, what aired and F1 Live.
     Run once (workflow input richmenu); replaces any earlier menu this created."""
@@ -2235,10 +2308,19 @@ def main():
             except Exception:
                 traceback.print_exc()
     save(state)  # the cards so far are out: saved before the wait for YouTube, in case the check is stopped in it
+
+    def run_webtoon():
+        try:
+            wait_for_webtoon(state, urls)
+        except Exception as e:  # waiting must never cost the run its alerts' saved state
+            print(f"FAIL waiting for WEBTOON: {e}", file=sys.stderr)
+    webtoon_thread = threading.Thread(target=run_webtoon)  # alongside the wait for YouTube (both wait for 22:00 episodes)
+    webtoon_thread.start()
     try:
         wait_for_youtube(youtube, later, lambda: save(state))
     except Exception as e:  # waiting must never cost the run its alerts' saved state
         print(f"FAIL waiting for YouTube: {e}", file=sys.stderr)
+    webtoon_thread.join()
     f1_thread.join()
     # a series no longer in urls.txt: its chapter list goes (added back, its first check records its chapters silently
     # again, as for any new series). Not when urls.txt is empty, which is more likely a mistake than the wish to drop all.
@@ -2413,6 +2495,22 @@ if __name__ == "__main__":
         assert same_show("千歳くんはラムネ瓶のなか 2クール", "千歳くんはラムネ瓶のなか(第2クール)") and same_show("アオのハコ Season２", "アオのハコ Season2")
         assert same_show("佐々木とピーちゃん シーズン２", "佐々木とピーちゃん Season2")
         assert not same_show("ジョジョの奇妙な冒険 スティール・ボール・ラン", "ジョジョの奇妙な冒険")  # a franchise name alone isn't the show
+        # wait_for_webtoon, on a fake clock: a series due at 22:00 Thai whose episode shows in its feed 53 s later
+        W = datetime(2026, 11, 19, 15, 0, tzinfo=timezone.utc).timestamp()
+        item = lambda day, t: (f"<item><title>Ep.{day}</title><link>https://www.webtoons.com/th/a/b/viewer?title_no=1&amp;episode_no={day}</link>"
+                               f"<pubDate>พฤ., {day} พ.ย. 2026 {t} GMT</pubDate></item>")
+        old_feed, new_feed = item(12, "15:01:11"), item(19, "15:00:53") + item(12, "15:01:11")
+        assert webtoon_out(new_feed) == W + 53 and webtoon_due(old_feed, W + 5) == W and webtoon_due(new_feed, W + 5) is None
+        assert webtoon_due(item(5, "15:01:11"), W + 5) == W and webtoon_due(item(25, "15:01:11").replace("25 พ.ย.", "25 ก.พ."), W + 5) is None  # a week off; stopped
+        wclock, feed, sent_at = [0.0], "https://www.webtoons.com/th/a/b/rss?title_no=1", []
+        wclock[0] = W + 20
+        with mock.patch(__name__ + ".JOB_START", W + 5), mock.patch.dict(EARLY, {}), mock.patch(__name__ + ".get", lambda u: old_feed), \
+                mock.patch(__name__ + ".fetch", lambda u: new_feed if wclock[0] >= W + 53 else old_feed), \
+                mock.patch(__name__ + ".manga", lambda st, us: sent_at.append((wclock[0] - W, us, EARLY[feed].result()))), \
+                mock.patch(__name__ + ".save", lambda st: None), mock.patch.dict(os.environ, {"LINE_TOKEN": "x"}), mock.patch("builtins.print"), \
+                mock.patch("time.time", lambda: wclock[0]), mock.patch("time.sleep", lambda x: wclock.__setitem__(0, wclock[0] + x)):
+            wait_for_webtoon({}, [feed.replace("/rss?", "/list?")])
+        assert len(sent_at) == 1 and 53 <= sent_at[0][0] <= 60 and sent_at[0][2] == new_feed, sent_at
         # wait_for_youtube, on a fake clock with a fake channel: an Ani-One show's episode 5 due at T
         T, clock, cards, line_up = 1793900000, [0.0], [], [True]  # line_up: whether LINE takes the cards
         media = {"info": {"media": [{"id": 1, "episodes": 12, "coverImage": {"large": "https://x/c.jpg"}}]},
