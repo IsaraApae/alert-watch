@@ -56,7 +56,15 @@ INSTALL = ("sudo sysctl -qw net.ipv4.conf.all.rp_filter=0 net.ipv4.conf.default.
            "command -v openvpn >/dev/null && exit 0; sudo rm -f /var/lib/man-db/auto-update; "
            f"d={shlex.quote(str(DEBS))}; "
            "a() { sudo apt-get install -y -qq --no-install-recommends -o Dpkg::Options::=--force-unsafe-io \"$@\"; }; "
-           "if ls \"$d\"/*.deb >/dev/null 2>&1; then sudo dpkg --force-unsafe-io -i \"$d\"/*.deb >/dev/null || a -f; "
+           # the kept packages are only unpacked (to /tmp/ovpn), not installed: dpkg -i took 2 to 14 seconds of every
+           # check (its database, its triggers), unpacking takes none to speak of. /usr/local/bin/openvpn runs the
+           # unpacked program with the unpacked libraries; if that doesn't start, they're installed as before.
+           "r=/tmp/ovpn; w=/usr/local/bin/openvpn; "
+           "if ls \"$d\"/*.deb >/dev/null 2>&1; then mkdir -p $r; for f in \"$d\"/*.deb; do dpkg-deb -x \"$f\" $r; done; "
+           "printf '#!/bin/sh\\nLD_LIBRARY_PATH=%s exec %s \"$@\"\\n' $r/usr/lib/x86_64-linux-gnu $r/usr/sbin/openvpn "
+           "| sudo tee $w >/dev/null; sudo chmod +x $w; "
+           "openvpn --version 2>&1 | grep -q '^OpenVPN ' && exit 0; sudo rm -f $w; "
+           "sudo dpkg --force-unsafe-io -i \"$d\"/*.deb >/dev/null || a -f; "
            "command -v openvpn >/dev/null && exit 0; fi; "
            "sudo rm -rf \"$d\"; mkdir -p \"$d/partial\"; o=\"-oDir::Cache::Archives=$d/\"; "
            "a \"$o\" openvpn || { sudo apt-get update -qq && a \"$o\" openvpn; }; sudo rm -rf \"$d/partial\" \"$d/lock\"")
