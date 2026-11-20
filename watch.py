@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Alert Watch: LINE alerts for new manga chapters, WEBTOON episodes, Thai-sub anime episodes and every F1 session.
 Runs every 5 minutes on GitHub Actions (.github/workflows/watch.yml); `python3 watch.py test` runs the self-checks. See README.md."""
-import email.utils, html, json, os, re, shutil, subprocess, sys, threading, time, traceback, unicodedata, urllib.error, urllib.request
+import email.utils, gzip, html, json, os, re, shutil, subprocess, sys, threading, time, traceback, unicodedata, urllib.error, urllib.request
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -132,12 +132,15 @@ def webtoon(url):
 
 SLOW = set()  # sites that timed out this run: skipped for the rest of it, so one dead site can't hold the run up for 15 minutes
 EARLY = {}  # url -> the page being read in the background since the run began (prefetch); get() waits for it
-POOL = ThreadPoolExecutor(8)
+# more threads than any one site's limit: a thread waiting its turn at one site must not keep another site's pages
+# waiting behind it (with 8, the manga pages' turns held the WEBTOON feeds up for seconds)
+POOL = ThreadPoolExecutor(24)
 SITES = {}  # host -> at most 3 requests to one site at a time
+SITE_LIMIT = {"www.webtoons.com": 8}  # except WEBTOON, a big site read some 20 times a check: three at a time took 8 seconds
 
 
 def prefetch(urls):
-    """Start reading these pages now, eight at a time, while the run does other things: each is read once, and get() takes it."""
+    """Start reading these pages now, a few per site at a time, while the run does other things: each is read once, and get() takes it."""
     for url in urls:
         EARLY.setdefault(url, POOL.submit(fetch, url))
 
@@ -151,10 +154,12 @@ def fetch(url):
     host = urlparse(url).netloc
     if host in SLOW:
         raise TimeoutError(f"{host} skipped: it timed out earlier in this run")
-    req = urllib.request.Request(quote(url, safe=":/%?&="), headers={"User-Agent": UA})
+    # gzip: a series' page comes at a sixth of its size
+    req = urllib.request.Request(quote(url, safe=":/%?&="), headers={"User-Agent": UA, "Accept-Encoding": "gzip"})
     try:
-        with SITES.setdefault(host, threading.Semaphore(3)):
-            return urllib.request.urlopen(req, timeout=20).read().decode("utf-8", "replace")
+        with SITES.setdefault(host, threading.Semaphore(SITE_LIMIT.get(host, 3))):
+            page = urllib.request.urlopen(req, timeout=20).read()
+        return (gzip.decompress(page) if page[:2] == b"\x1f\x8b" else page).decode("utf-8", "replace")
     except (TimeoutError, urllib.error.URLError) as e:
         if isinstance(e, TimeoutError) or isinstance(getattr(e, "reason", None), TimeoutError):
             SLOW.add(host)
