@@ -749,6 +749,18 @@ def f1_recheck(state, token, s, meeting):
         f1_standings(state, token, s, meeting, again=True)
 
 
+def f1_no_timing_card(meeting, session, when, key):
+    """A session the timing feed never recorded (OpenF1 had no result for Las Vegas 2026 FP1): the usual header, a red
+    NO TIMES label and why, and the weekend on F1 Live."""
+    t = lambda text, **k: {"type": "text", "text": text, **k}
+    return {"type": "bubble", "size": "mega", "header": f1_head(meeting, session, when),
+            "body": {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": [
+                t("NO TIMES", size="xxs", weight="bold", color=F1C["red"]),
+                t("F1's timing data didn't record this session, so there's no classification.", size="sm", color=F1C["text"], wrap=True, margin="sm"),
+                t("If it turns up later, the result card follows.", size="xs", color=F1C["dim"], wrap=True, margin="sm")]},
+            "footer": f1_buttons(("Weekend on F1 Live", f"{F1_SITE}?result={key}"))}
+
+
 def f1_grid_card(meeting, race, grid, drivers, qual, key):
     """The Starting grid card, like the site's grid view of a qualifying: a red Grid penalties panel (who dropped back, P2
     -> P7), then the grid in order in the site's rows, each dropped driver outlined red with ▼5 and "Qualified P2" under, and ▲1 for each who moved up into the gaps."""
@@ -939,9 +951,27 @@ def f1(state):
                     print(f"FAIL f1 grid {s['session_name']}: {e}", file=sys.stderr)
             continue
         try:
-            results = json.loads(get(f"{OPENF1}/session_result?session_key={key}"))
-            if not results:
-                continue  # not published yet: tried again on the next check
+            try:
+                results = json.loads(get(f"{OPENF1}/session_result?session_key={key}"))
+            except urllib.error.HTTPError as e:  # OpenF1 answers 404 "No results found" for a session it has nothing for
+                if e.code != 404:
+                    raise
+                results = []
+            if not results:  # not published yet: tried again on the next check
+                if now - end(s) > 2 * 3600 and key not in state.setdefault("f1_no_timing", []):
+                    # 2 hours on and still nothing: the feed didn't record it (Las Vegas 2026 FP1). One card says so; if the
+                    # result turns up later in the 3 days, its own card still follows
+                    meeting = meeting_of(s)
+                    name, session = meeting.get("meeting_name") or s.get("country_name") or "Formula 1", s["session_name"]
+                    when = datetime.fromisoformat(s["date_start"]).astimezone(THAI).strftime("%a %d %b %Y · %H:%M")
+                    if not token:
+                        print(f"F1 {session} · {name} · no timing recorded")
+                    elif not (line_send(token, {"type": "flex", "altText": f"F1 {session} · {name}: no times recorded",
+                                                 "contents": f1_no_timing_card(meeting, session, when, key)})
+                              or line_send(token, {"type": "text", "text": f"F1 {session} · {name}\n{when}\nNo times: F1's timing data didn't record this session."})):
+                        continue
+                    state["f1_no_timing"].append(key)
+                continue
             drivers = f1_drivers(s, {x["driver_number"] for x in results})
             meeting = meeting_of(s)
             rows = f1_rows(results, drivers)
@@ -969,6 +999,8 @@ def f1(state):
     for kind in ("f1_seen", "f1_grid", "f1_grid_seen"):
         for k in [k for k in state.get(kind, {}) if k not in following]:
             del state[kind][k]
+    if "f1_no_timing" in state:
+        state["f1_no_timing"] = [k for k in state["f1_no_timing"] if k in following]
 
 
 COVER_OVERRIDES = {  # series whose own cover LINE can't show (AVIF): a JPEG copy on the GitHub Pages site
