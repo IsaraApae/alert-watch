@@ -30,9 +30,9 @@ jobs:
     steps:
       # the branch as it is when the job starts, not as it was when cron-job.org started the run: a run that waited for one
       # still going (an F1 session's start, a YouTube video) must read the state that one saved, or it sends the same cards again
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.ref_name }}
+      # a plain clone, not actions/checkout: the same files and the same push rights, without the action's download and
+      # start-up (1 to 4 seconds of every check)
+      - run: git clone -q --depth 1 --branch "${{ github.ref_name }}" "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" .
       # when the job began, so watch.py knows how long it can wait for an F1 session to start or a YouTube video (the check has 8 minutes)
       # (and the OpenVPN cache's name below: the runner's Ubuntu version and this month, so the packages are renewed monthly)
       - run: |
