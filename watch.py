@@ -2536,7 +2536,8 @@ if __name__ == "__main__":
                  "starting grid": {"type": "flex", "altText": "check", "contents": f1_grid_card(
                      meeting, s, [{"driver_number": d.get("driver_number"), "position": i + 1} for i, (_, d, _) in enumerate(rows[:2] + rows[3:6] + rows[2:3] + rows[6:])],
                      drivers, {d.get("driver_number"): i + 1 for i, (_, d, _) in enumerate(rows)}, key)},
-                 "live": {"type": "flex", "altText": "check", "contents": f1_live_card(meeting, "Race", when)}}
+                 "live": {"type": "flex", "altText": "check", "contents": f1_live_card(meeting, "Race", when)},
+                 "no times": {"type": "flex", "altText": "check", "contents": f1_no_timing_card(meeting, "Practice 1", when, key)}}
         captured, line_send = [], lambda token, message: captured.append(message) or True   # module level: f1_standings now captures instead of sending
         f1_standings({}, token, s, meeting)
         cards["standings"] = captured[0]
