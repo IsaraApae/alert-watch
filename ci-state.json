@@ -2969,7 +2969,8 @@
   "206401:8",
   "213805:8",
   "212503:7",
-  "210482:9"
+  "210482:9",
+  "195516:8"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4581,6 +4582,16 @@
    "detected": 1795166721,
    "published": 1795166678,
    "notified": true
+  },
+  "195516:8": {
+   "title": "The Apothecary Diaries Season 3",
+   "episode": 8,
+   "version": "ซับไทย",
+   "first": "animeruka",
+   "url": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-8/",
+   "detected": 1795187725,
+   "published": 1795187656,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4722,7 +4733,8 @@
   "206401:8": "https://isaraapae.github.io/alert-watch/b.html?v=qF4PMnN5lkQ",
   "213805:8": "https://animeruka.com/ep/koori-no-jouheki-season-2-ep-8/",
   "212503:7": "https://isaraapae.github.io/alert-watch/b.html?v=Q9e4ryzZf1U",
-  "210482:9": "https://animeruka.com/ep/steel-ball-run-jojos-bizarre-adventure-ep-10/"
+  "210482:9": "https://animeruka.com/ep/steel-ball-run-jojos-bizarre-adventure-ep-10/",
+  "195516:8": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-8/"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4820,7 +4832,7 @@
   "11413",
   "11414"
  ],
- "anime_checked": 1795187426,
+ "anime_checked": 1795187725,
  "mal_totals": {
   "60601": [
    12,
