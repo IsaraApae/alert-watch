@@ -753,7 +753,7 @@ def f1_no_timing_card(meeting, session, when, key):
     """A session the timing feed never recorded (OpenF1 had no result for Las Vegas 2026 FP1): the usual header, a red
     NO TIMES label and why, and the weekend on F1 Live."""
     t = lambda text, **k: {"type": "text", "text": text, **k}
-    return {"type": "bubble", "size": "mega", "header": f1_head(meeting, session, when),
+    return {"type": "bubble", "size": "mega", "header": f1_head(meeting.get("meeting_name") or "Formula 1", when, meeting, session),
             "body": {"type": "box", "layout": "vertical", "backgroundColor": F1C["panel"], "paddingAll": "12px", "contents": [
                 t("NO TIMES", size="xxs", weight="bold", color=F1C["red"]),
                 t("F1's timing data didn't record this session, so there's no classification.", size="sm", color=F1C["text"], wrap=True, margin="sm"),
@@ -2271,6 +2271,7 @@ if __name__ == "__main__":
         assert chapter_runs([343, 340, 341, 342, 344, 345]) == "Chapter 340-345"
         assert chapter_runs([340, 341, 343, 9.1]) == "Chapter 9.1, 340-341, 343"
         assert chapter_runs([216]) == "Chapter 216"
+        assert "NO TIMES" in json.dumps(f1_no_timing_card({"meeting_name": "Las Vegas Grand Prix"}, "Practice 1", "Fri 20 Nov 2026 · 07:30", "11413"))
         sm_home = ('<a href="https://www.sm-anime.com/kusuriya-no-hitorigoto-3rd-season/" title="x">Kusuriya no Hitorigoto 3rd Season '
                    'สืบคดีปริศนา ภาค 3 ตอนที่ 1-8 ซับไทย</a><a href="https://www.sm-anime.com/ranma-2024-thai-dub/">Ranma ½ ตอนที่ 1-32 พากย์ไทย</a>')
         assert sm_latest(sm_home, {1: {"yt": "kusuriya"}, 2: {"yt": "ranma"}}) == {1: ("https://www.sm-anime.com/kusuriya-no-hitorigoto-3rd-season/", 8)}
