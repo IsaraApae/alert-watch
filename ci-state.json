@@ -2971,7 +2971,8 @@
   "212503:7",
   "210482:9",
   "195516:8",
-  "178083:8"
+  "178083:8",
+  "191656:8"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4603,6 +4604,17 @@
    "detected": 1795195827,
    "published": 1795195632,
    "notified": true
+  },
+  "191656:8": {
+   "title": "Even the Student Council Has Its Holes!",
+   "episode": 8,
+   "version": "ซับไทย",
+   "first": "sm-anime",
+   "url": "https://www.sm-anime.com/episode/48333/",
+   "detected": 1795281617,
+   "published": null,
+   "notified": true,
+   "order": "estimated"
   }
  },
  "watch_links": {
@@ -4746,7 +4758,8 @@
   "212503:7": "https://isaraapae.github.io/alert-watch/b.html?v=Q9e4ryzZf1U",
   "210482:9": "https://animeruka.com/ep/steel-ball-run-jojos-bizarre-adventure-ep-10/",
   "195516:8": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-8/",
-  "178083:8": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-8/"
+  "178083:8": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-8/",
+  "191656:8": "https://www.sm-anime.com/episode/48333/"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4848,7 +4861,7 @@
   "11415",
   "11416"
  ],
- "anime_checked": 1795281316,
+ "anime_checked": 1795281617,
  "mal_totals": {
   "60601": [
    12,
