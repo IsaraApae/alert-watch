@@ -2622,6 +2622,13 @@ if __name__ == "__main__":
     elif sys.argv[1:] == ["f1check"]:
         # LINE checks the F1 cards (the latest race's results, standings and a live card) without sending anything
         token = os.environ["LINE_TOKEN"]
+        try:  # and how many of this month's messages are left (LINE's free plan: 300 a month)
+            line_get = lambda path: json.loads(urllib.request.urlopen(urllib.request.Request(
+                f"https://api.line.me/v2/bot/message/{path}", headers={"Authorization": f"Bearer {token}"}), timeout=20).read())
+            limit, used = line_get("quota"), line_get("quota/consumption")["totalUsage"]
+            print(f"LINE messages this month: {used} used" + (f" of {limit['value']}, {limit['value'] - used} left" if limit.get("type") == "limited" else " (no limit)"))
+        except Exception as e:
+            print(f"FAIL LINE quota: {e}", file=sys.stderr)
         s = [x for x in json.loads(get(f"{OPENF1}/sessions?session_name=Race&year={datetime.now(THAI).year}"))
              if datetime.fromisoformat(x["date_end"]) < datetime.now(THAI)][-1]
         key = s["session_key"]
