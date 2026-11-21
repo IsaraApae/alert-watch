@@ -2973,7 +2973,8 @@
   "195516:8",
   "178083:8",
   "191656:8",
-  "202250:8"
+  "202250:8",
+  "209872:8"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4627,6 +4628,17 @@
    "published": 1795284000,
    "scheduled": 1795284000,
    "notified": true
+  },
+  "209872:8": {
+   "title": "Ranma 1/2 Season 3",
+   "episode": 8,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/3197/#ep-8",
+   "detected": 1795284311,
+   "published": null,
+   "notified": true,
+   "order": "estimated"
   }
  },
  "watch_links": {
@@ -4772,7 +4784,8 @@
   "195516:8": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-8/",
   "178083:8": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-8/",
   "191656:8": "https://www.sm-anime.com/episode/48333/",
-  "202250:8": "https://isaraapae.github.io/alert-watch/b.html?v=P90v2eMmu6c"
+  "202250:8": "https://isaraapae.github.io/alert-watch/b.html?v=P90v2eMmu6c",
+  "209872:8": "https://animegojos.com/list/3197/#ep-8"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4874,7 +4887,7 @@
   "11415",
   "11416"
  ],
- "anime_checked": 1795284029,
+ "anime_checked": 1795284311,
  "mal_totals": {
   "60601": [
    12,
