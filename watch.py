@@ -2624,8 +2624,8 @@ if __name__ == "__main__":
         token = os.environ["LINE_TOKEN"]
         try:  # and how many of this month's messages are left (LINE's free plan: 300 a month)
             line_get = lambda path: json.loads(urllib.request.urlopen(urllib.request.Request(
-                f"https://api.line.me/v2/bot/message/{path}", headers={"Authorization": f"Bearer {token}"}), timeout=20).read())
-            limit, used = line_get("quota"), line_get("quota/consumption")["totalUsage"]
+                f"https://api.line.me/v2/bot/{path}", headers={"Authorization": f"Bearer {token}"}), timeout=20).read())
+            limit, used = line_get("message/quota"), line_get("message/quota/consumption")["totalUsage"]
             print(f"LINE messages this month: {used} used" + (f" of {limit['value']}, {limit['value'] - used} left" if limit.get("type") == "limited" else " (no limit)"))
             # last month's, from LINE's daily counts (Japan time days): the kinds that count toward the limit (replies don't)
             day = datetime.now(timezone(timedelta(hours=9))).replace(day=1) - timedelta(days=1)
