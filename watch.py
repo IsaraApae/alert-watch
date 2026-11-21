@@ -2627,6 +2627,13 @@ if __name__ == "__main__":
                 f"https://api.line.me/v2/bot/message/{path}", headers={"Authorization": f"Bearer {token}"}), timeout=20).read())
             limit, used = line_get("quota"), line_get("quota/consumption")["totalUsage"]
             print(f"LINE messages this month: {used} used" + (f" of {limit['value']}, {limit['value'] - used} left" if limit.get("type") == "limited" else " (no limit)"))
+            # last month's, from LINE's daily counts (Japan time days): the kinds that count toward the limit (replies don't)
+            day = datetime.now(timezone(timedelta(hours=9))).replace(day=1) - timedelta(days=1)
+            days = [day.replace(day=d) for d in range(1, day.day + 1)]
+            counts = [line_get(f"insight/message/delivery?date={d:%Y%m%d}") for d in days]
+            paid = ("broadcast", "targeting", "apiBroadcast", "apiPush", "apiMulticast", "apiNarrowcast")
+            print(f"LINE messages in {day:%B %Y}: {sum(c.get(k) or 0 for c in counts for k in paid)}"
+                  + ("" if all(c.get("status") == "ready" for c in counts) else " (some days not counted by LINE)"))
         except Exception as e:
             print(f"FAIL LINE quota: {e}", file=sys.stderr)
         s = [x for x in json.loads(get(f"{OPENF1}/sessions?session_name=Race&year={datetime.now(THAI).year}"))
