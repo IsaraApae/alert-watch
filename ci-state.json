@@ -2972,7 +2972,8 @@
   "210482:9",
   "195516:8",
   "178083:8",
-  "191656:8"
+  "191656:8",
+  "202250:8"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4615,6 +4616,17 @@
    "published": null,
    "notified": true,
    "order": "estimated"
+  },
+  "202250:8": {
+   "title": "Magic Repo Man",
+   "episode": 8,
+   "version": "ซับไทย",
+   "first": "Muse Thailand",
+   "url": "https://www.youtube.com/watch?v=P90v2eMmu6c",
+   "detected": 1795284002,
+   "published": 1795284000,
+   "scheduled": 1795284000,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4759,7 +4771,8 @@
   "210482:9": "https://animeruka.com/ep/steel-ball-run-jojos-bizarre-adventure-ep-10/",
   "195516:8": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-8/",
   "178083:8": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-8/",
-  "191656:8": "https://www.sm-anime.com/episode/48333/"
+  "191656:8": "https://www.sm-anime.com/episode/48333/",
+  "202250:8": "https://isaraapae.github.io/alert-watch/b.html?v=P90v2eMmu6c"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4861,7 +4874,7 @@
   "11415",
   "11416"
  ],
- "anime_checked": 1795283422,
+ "anime_checked": 1795283712,
  "mal_totals": {
   "60601": [
    12,
