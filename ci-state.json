@@ -2976,7 +2976,8 @@
   "191656:8",
   "202250:8",
   "209872:8",
-  "189123:7"
+  "189123:7",
+  "213657:7"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4652,6 +4653,17 @@
    "published": null,
    "notified": true,
    "order": "estimated"
+  },
+  "213657:7": {
+   "title": "Mission: Yozakura Family Season 2 Cour 2",
+   "episode": 7,
+   "version": "ซับไทย",
+   "first": "animegojo",
+   "url": "https://animegojos.com/list/2927/#ep-19",
+   "detected": 1795351223,
+   "published": null,
+   "notified": true,
+   "order": "estimated"
   }
  },
  "watch_links": {
@@ -4799,7 +4811,8 @@
   "191656:8": "https://www.sm-anime.com/episode/48333/",
   "202250:8": "https://isaraapae.github.io/alert-watch/b.html?v=P90v2eMmu6c",
   "209872:8": "https://animegojos.com/list/3197/#ep-8",
-  "189123:7": "https://www.sm-anime.com/episode/48446/"
+  "189123:7": "https://www.sm-anime.com/episode/48446/",
+  "213657:7": "https://animegojos.com/list/2927/#ep-19"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4904,7 +4917,7 @@
   "11416",
   "11420"
  ],
- "anime_checked": 1795350916,
+ "anime_checked": 1795351223,
  "mal_totals": {
   "60601": [
    12,
