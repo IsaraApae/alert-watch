@@ -689,9 +689,10 @@ def f1_standings(state, token, s, meeting, again=False):
             sent.append(key)
         return
     def cards():
-        # every driver, with as much as LINE's 30 KB allows: every face, then the podium's only, then none, then lighter
-        # rows from P4 down (f1_standings_card's plain: 22 drivers who all moved need 1, 25 need 2, 28 need 3)
-        for keep, plain in ((len(drows), 0), (3, 0), (0, 0), (0, 1), (0, 2), (0, 3)):
+        # every driver, with as much as LINE's 30 KB allows: every face, then the podium's only, then lighter rows from P4
+        # down (f1_standings_card's plain) with the podium's faces still on, and only then none (Las Vegas 2026: 25 drivers,
+        # all faces 38.8 KB; the podium's with full rows 30.3 KB, so the card had gone out with no faces at all; with plain 2, 27.7 KB)
+        for keep, plain in ((len(drows), 0), (3, 0), (3, 1), (3, 2), (3, 3), (0, 3)):
             dcard = f1_standings_card("Drivers' Championship", after, [r if i < keep else r[:3] + (None,) + r[4:] for i, r in enumerate(drows)], plain)
             if f1_size(dcard) <= F1_MAX:
                 break
