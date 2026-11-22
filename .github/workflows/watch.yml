@@ -32,7 +32,15 @@ jobs:
       # still going (an F1 session's start, a YouTube video) must read the state that one saved, or it sends the same cards again
       # a plain clone, not actions/checkout: the same files and the same push rights, without the action's download and
       # start-up (1 to 4 seconds of every check)
-      - run: git clone -q --depth 1 --branch "${{ github.ref_name }}" "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" .
+      # Up to 3 tries of 30 seconds: a runner that can't reach github.com would otherwise hang 2¼ minutes and lose the
+      # check (22 Nov 2026 13:15, "Failed to connect to github.com port 443 after 132688 ms"); the next try usually connects.
+      - id: clone
+        run: |
+          for try in 1 2 3; do
+            timeout 30 git clone -q --depth 1 --branch "${{ github.ref_name }}" "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" . && exit 0
+            echo "::warning::clone try $try didn't finish"; find . -mindepth 1 -delete; sleep 3
+          done
+          exit 1
       # when the job began, so watch.py knows how long it can wait for an F1 session to start or a YouTube video (the check has 8 minutes)
       # (and the OpenVPN cache's name below: the runner's Ubuntu version and this month, so the packages are renewed monthly)
       - run: |
@@ -65,7 +73,7 @@ jobs:
           LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
           YOUTUBE_KEY: ${{ secrets.YOUTUBE_KEY }}
       # also after a failed check, or one ended at 8 minutes: watch.py saves what it sent, and that must be kept or the next check sends it again
-      - if: ${{ !cancelled() }}
+      - if: ${{ !cancelled() && steps.clone.outcome == 'success' }}   # (nothing to save without the repository)
         run: |
           git config user.name manga-watch
           git config user.email manga-watch@users.noreply.github.com
