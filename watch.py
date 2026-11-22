@@ -502,7 +502,9 @@ def f1_slot(pos, d, end, moved=0, team=True, mark=None, out=False, compact=False
                                          "paddingAll": "7px", "paddingStart": "6px", "paddingEnd": "10px", "contents": [
         {"type": "box", "layout": "vertical", "width": "22px", "flex": 0, "contents": [t(pos, size="sm", weight="bold", color=F1C["text"], align="end")]},
         {"type": "box", "layout": "vertical", "contents": main}, *([f1_arrow(arrow, flex=0)] if arrow else []),
-        *([t(end, size="xs", weight="bold", color=F1C["red_ink"] if out else F1C["text"], flex=0, align="end")] if end else [])]}])
+        # the time in a fixed width, so the ▲/▼ just left of it lines up from row to row ("+2.574s", "+17.238s")
+        *([{"type": "box", "layout": "vertical", "flex": 0, "width": "66px", "contents": [
+            t(end, size="xs", weight="bold", color=F1C["red_ink"] if out else F1C["text"], align="end")]}] if end else [])]}])
 
 
 def f1_changes(title, changes):
@@ -537,15 +539,17 @@ def f1_card(meeting, session, when, rows, replay_key=None, note=None, changes=No
     arrows = moved if changes else gains or {}
 
     def podium(pos, d, val):
+        # as on the standings card: P1's tile the tallest, P2 and P3 the same, all on one line; one face size and the name
+        # on one line (shrunk to fit), so faces, names and times line up across the three
         c, first, move = "#" + (d.get("team_colour") or "777777"), pos == "1", arrows.get(d.get("driver_number"), 0)
         return {"type": "box", "layout": "vertical", "flex": 1, "cornerRadius": "12px", "backgroundColor": f1_mix(c, F1C["panel"], .13),
                 "borderWidth": "1px", "borderColor": f1_mix(c, F1C["line"], .4), "paddingStart": "10px", "paddingEnd": "8px",
-                "paddingTop": "16px" if first else "10px", "paddingBottom": "12px" if first else "10px", "contents": [
+                "paddingTop": "28px" if first else "12px", "paddingBottom": "12px", "contents": [
             {"type": "box", "layout": "horizontal", "alignItems": "center", "contents": [
                 t(pos, size="xl", weight="bold", color=F1C["text"]), *([f1_badge(move)] if move else [])]},
-            {"type": "box", "layout": "vertical", "margin": "sm", "contents": [f1_face(f1_photo(d, 200), "64px" if first else "52px")]},
+            {"type": "box", "layout": "vertical", "margin": "sm", "contents": [f1_face(f1_photo(d, 200), "56px")]},
             f1_tag(d, margin="sm"),
-            t(f1_last(d), size="xs", weight="bold", color=F1C["text"]),
+            t(f1_last(d), size="xs", weight="bold", color=F1C["text"], adjustMode="shrink-to-fit"),
             *([t(d["team_name"], size="xxs", color=F1C["dim"])] if d.get("team_name") else []),
             t(val, size="xxs", weight="bold", color=F1C["red_ink"] if val in ("DNF", "DNS", "DSQ") else F1C["text"], margin="sm")]}
 
@@ -596,18 +600,25 @@ def f1_standings_card(title, sub_title, rows, plain=0):
 
     def tile(i, r):
         pos, move, colour, photo, name, team, points, gained = r
-        first, px = i == 0, "64px" if i == 0 else "52px"
+        # the three the same height (unlike a session's podium, where P1's tile is the tallest): the same face size and one
+        # line for each part of the name (shrunk to fit), so the boxes, faces, names and points line up across the three
+        # ("Verstappen" used to wrap to a third line and push its face up)
+        px = "56px"
         names = name.rsplit(" ", 1) if team and " " in name else ["", name]
         return {"type": "box", "layout": "vertical", "flex": 1, "cornerRadius": "16px", "borderWidth": "1px", "borderColor": f1_mix(colour, F1C["line"], .3),
                 "background": {"type": "linearGradient", "angle": "180deg", "startColor": f1_mix(colour, F1C["panel"], .3),
                                "centerColor": F1C["panel"], "centerPosition": "70%", "endColor": F1C["panel"]},
-                "paddingStart": "10px", "paddingEnd": "8px", "paddingTop": "16px" if first else "12px", "paddingBottom": "12px", "contents": [
+                "paddingStart": "10px", "paddingEnd": "8px", "paddingTop": "12px", "paddingBottom": "12px", "contents": [
             {"type": "box", "layout": "horizontal", "alignItems": "center", "contents": [
                 t(str(pos), size="xl", weight="bold", color=f1_mix(colour, F1C["text"], .55)), *([f1_badge(move)] if move else [])]},
             {"type": "box", "layout": "vertical", "margin": "sm", "contents": [picture(photo, colour, px)] + (
                 [{"type": "box", "layout": "vertical", "width": px, "height": "4px", "backgroundColor": colour, "contents": []}] if photo and "logo" not in photo else [])},
-            {"type": "text", "size": "xs", "color": F1C["text"], "wrap": True, "margin": "sm", "contents": [
-                *([{"type": "span", "text": names[0] + " "}] if names[0] else []), {"type": "span", "text": names[1], "weight": "bold"}]},
+            # (a team's name keeps its size and wraps, in room for two lines on every tile: "Red Bull Racing" shrunk to one was tiny)
+            {"type": "box", "layout": "vertical", "margin": "sm", "contents": [
+                t(names[0], size="xs", color=F1C["text"], adjustMode="shrink-to-fit"),
+                t(names[1], size="xs", weight="bold", color=F1C["text"], adjustMode="shrink-to-fit")]} if names[0] else
+            {"type": "box", "layout": "vertical", "margin": "sm", "height": "38px", "contents": [
+                t(names[1], size="xs", weight="bold", color=F1C["text"], wrap=True, maxLines=2)]},
             *([t(team, size="xxs", color=F1C["dim"])] if team else []),
             {"type": "text", "size": "lg", "weight": "bold", "color": F1C["text"], "margin": "sm", "contents": [
                 {"type": "span", "text": f"{points:g}"}, {"type": "span", "text": " pts", "size": "xxs"}]},
@@ -615,14 +626,16 @@ def f1_standings_card(title, sub_title, rows, plain=0):
 
     def row(i, r):
         pos, move, colour, photo, name, team, points, gained = r
+        # (paddingAll and one side apart: ~40 bytes a row fewer than four sides, which keeps the team under each name in 30 KB)
         return f1_row(0 if plain else move, [f1_stripe(colour), {"type": "box", "layout": "horizontal", "alignItems": "center", "spacing": "md",
-                                                  "paddingTop": "6px", "paddingBottom": "6px", "paddingStart": "6px", "paddingEnd": "10px", "contents": [
+                                                  "paddingAll": "6px", "paddingEnd": "10px", "contents": [
             {"type": "box", "layout": "vertical", "width": "22px", "flex": 0, "contents": [t(str(pos), size="sm", weight="bold", color=F1C["text"], align="center")]},
             *([picture(photo, colour, "30px")] if photo else []),
             {"type": "box", "layout": "vertical", "contents": [t(name, size="xs", weight="bold", color=F1C["text"]),
                                                                *([t(team, size="xxs", color=F1C["dim"])] if team and plain < 2 else [])]},
             *([f1_arrow(move, flex=0) if plain else f1_badge(move)] if move else []),
-            {"type": "box", "layout": "vertical", "flex": 0, "contents": [
+            # a fixed width for the points, so every row's ▲/▼ (just left of it) lines up whatever "+18 · −138" takes
+            {"type": "box", "layout": "vertical", "flex": 0, "width": "74px", "contents": [
                 t(f"{points:g}", size="sm", weight="bold", color=F1C["text"], align="end"),
                 *([{**standing(i, points, gained), "align": "end"}] if plain < 3 else [])]}]}])
 
