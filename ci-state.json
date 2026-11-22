@@ -2977,7 +2977,8 @@
   "202250:8",
   "209872:8",
   "189123:7",
-  "213657:7"
+  "213657:7",
+  "185756:9"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4664,6 +4665,17 @@
    "published": null,
    "notified": true,
    "order": "estimated"
+  },
+  "185756:9": {
+   "title": "As a Reincarnated Aristocrat Season 3",
+   "episode": 9,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=omMuU4ahjo8",
+   "detected": 1795359600,
+   "published": 1795359600,
+   "scheduled": 1795359600,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4812,7 +4824,8 @@
   "202250:8": "https://isaraapae.github.io/alert-watch/b.html?v=P90v2eMmu6c",
   "209872:8": "https://animegojos.com/list/3197/#ep-8",
   "189123:7": "https://www.sm-anime.com/episode/48446/",
-  "213657:7": "https://animegojos.com/list/2927/#ep-19"
+  "213657:7": "https://animegojos.com/list/2927/#ep-19",
+  "185756:9": "https://isaraapae.github.io/alert-watch/b.html?v=omMuU4ahjo8"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4917,7 +4930,7 @@
   "11416",
   "11420"
  ],
- "anime_checked": 1795359015,
+ "anime_checked": 1795359319,
  "mal_totals": {
   "60601": [
    12,
