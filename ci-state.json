@@ -4943,7 +4943,7 @@
   "11416",
   "11420"
  ],
- "anime_checked": 1795397112,
+ "anime_checked": 1795397419,
  "mal_totals": {
   "60601": [
    12,
@@ -5598,15 +5598,6 @@
   }
  },
  "f1_schedule": [
-  {
-   "session_key": 11413,
-   "session_name": "Practice 1",
-   "date_start": "2026-11-20T00:30:00+00:00",
-   "date_end": "2026-11-20T01:30:00+00:00",
-   "meeting_key": 1300,
-   "year": 2026,
-   "country_name": "United States"
-  },
   {
    "session_key": 11414,
    "session_name": "Practice 2",
@@ -6275,7 +6266,5 @@
   ]
  },
  "f1_grid_seen": {},
- "f1_no_timing": [
-  "11413"
- ]
+ "f1_no_timing": []
 }
