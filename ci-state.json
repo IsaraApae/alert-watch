@@ -2980,7 +2980,8 @@
   "189123:7",
   "213657:7",
   "185756:9",
-  "199426:8"
+  "199426:8",
+  "207329:8"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4689,6 +4690,17 @@
    "published": 1795362300,
    "scheduled": 1795362300,
    "notified": true
+  },
+  "207329:8": {
+   "title": "The Laid-Off Cheat-Granting Mage Enjoys a Second Lease on Life",
+   "episode": 8,
+   "version": "ซับไทย",
+   "first": "Ani-One Thailand",
+   "url": "https://www.youtube.com/watch?v=tEpPBBiE22s",
+   "detected": 1795534200,
+   "published": 1795534200,
+   "scheduled": 1795534200,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4839,7 +4851,8 @@
   "189123:7": "https://www.sm-anime.com/episode/48446/",
   "213657:7": "https://animegojos.com/list/2927/#ep-19",
   "185756:9": "https://isaraapae.github.io/alert-watch/b.html?v=omMuU4ahjo8",
-  "199426:8": "https://isaraapae.github.io/alert-watch/b.html?v=VvC8cTJ2pMs"
+  "199426:8": "https://isaraapae.github.io/alert-watch/b.html?v=VvC8cTJ2pMs",
+  "207329:8": "https://isaraapae.github.io/alert-watch/b.html?v=tEpPBBiE22s"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -4944,7 +4957,7 @@
   "11416",
   "11420"
  ],
- "anime_checked": 1795533622,
+ "anime_checked": 1795533919,
  "mal_totals": {
   "60601": [
    12,
