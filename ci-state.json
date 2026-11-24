@@ -4944,7 +4944,7 @@
   "11416",
   "11420"
  ],
- "anime_checked": 1795512322,
+ "anime_checked": 1795512619,
  "mal_totals": {
   "60601": [
    12,
@@ -5652,6 +5652,15 @@
    "meeting_key": 1301,
    "year": 2026,
    "country_name": "Qatar"
+  },
+  {
+   "session_key": 11429,
+   "session_name": "Practice 1",
+   "date_start": "2026-12-04T09:30:00+00:00",
+   "date_end": "2026-12-04T10:30:00+00:00",
+   "meeting_key": 1302,
+   "year": 2026,
+   "country_name": "United Arab Emirates"
   }
  ],
  "f1_meetings": {
@@ -5692,6 +5701,26 @@
    "gmt_offset": "03:00:00",
    "date_start": "2026-11-27T13:30:00+00:00",
    "date_end": "2026-11-29T18:00:00+00:00",
+   "year": 2026,
+   "is_cancelled": false
+  },
+  "1302": {
+   "meeting_key": 1302,
+   "meeting_name": "Abu Dhabi Grand Prix",
+   "meeting_official_name": "FORMULA 1 ETIHAD AIRWAYS ABU DHABI GRAND PRIX 2026",
+   "location": "Yas Marina",
+   "country_key": 21,
+   "country_code": "UAE",
+   "country_name": "United Arab Emirates",
+   "country_flag": "https://media.formula1.com/content/dam/fom-website/2018-redesign-assets/Flags%2016x9/united-arab-emirates-flag.png",
+   "circuit_key": 70,
+   "circuit_short_name": "Yas Marina Circuit",
+   "circuit_type": "Permanent",
+   "circuit_info_url": "https://api.multiviewer.app/api/v1/circuits/70/2026",
+   "circuit_image": "https://media.formula1.com/content/dam/fom-website/2018-redesign-assets/Track%20icons%204x3/Abu Dhabi%20carbon.png",
+   "gmt_offset": "04:00:00",
+   "date_start": "2026-12-04T09:30:00+00:00",
+   "date_end": "2026-12-06T15:00:00+00:00",
    "year": 2026,
    "is_cancelled": false
   }
