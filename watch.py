@@ -2646,6 +2646,19 @@ if __name__ == "__main__":
                 print(f"sites {name} via read_feed: readable feed ({len(page)} bytes)")
             except Exception as e:
                 print(f"sites {name} via read_feed: FAILED {type(e).__name__}: {e}")
+        # anime-waku's feed once more, as a reader that says who it is (no browser's name), and what a refusal says about
+        # itself: Cloudflare's error number tells a country rule (1009) from a block on this network or this kind of reader
+        req = urllib.request.Request(FEEDS["anime-waku"], headers={"User-Agent": "alert-watch feed reader (+https://github.com/IsaraApae/alert-watch)"})
+        try:
+            page = urllib.request.urlopen(req, timeout=20).read().decode("utf-8", "replace")
+            print(f"sites anime-waku feed, named reader: {'readable feed' if '<rss' in page[:1000] else 'not its feed'} ({len(page)} bytes)")
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", "replace")
+            said = re.search(r"error code:? *(\d+)|Error (\d{4})|Just a moment|Sorry, you have been blocked|Attention Required", body)
+            print(f"sites anime-waku feed, named reader: HTTP {e.code}, cf-mitigated={e.headers.get('cf-mitigated')}, server={e.headers.get('server')}, "
+                  f"says {said[0] if said else ' '.join(re.sub(r'<[^>]+>', ' ', body)[:160].split())!r}")
+        except Exception as e:
+            print(f"sites anime-waku feed, named reader: FAILED {e}")
     elif sys.argv[1:] == ["f1check"]:
         # LINE checks the F1 cards (the latest race's results, standings and a live card) without sending anything
         token = os.environ["LINE_TOKEN"]
