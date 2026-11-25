@@ -4970,7 +4970,7 @@
   "11416",
   "11420"
  ],
- "anime_checked": 1795586122,
+ "anime_checked": 1795586426,
  "mal_totals": {
   "60601": [
    12,
@@ -5625,15 +5625,6 @@
  },
  "f1_schedule": [
   {
-   "session_key": 11420,
-   "session_name": "Race",
-   "date_start": "2026-11-22T04:00:00+00:00",
-   "date_end": "2026-11-22T06:00:00+00:00",
-   "meeting_key": 1300,
-   "year": 2026,
-   "country_name": "United States"
-  },
-  {
    "session_key": 11421,
    "session_name": "Practice 1",
    "date_start": "2026-11-27T13:30:00+00:00",
@@ -5698,26 +5689,6 @@
   }
  ],
  "f1_meetings": {
-  "1300": {
-   "meeting_key": 1300,
-   "meeting_name": "Las Vegas Grand Prix",
-   "meeting_official_name": "FORMULA 1 HEINEKEN LAS VEGAS GRAND PRIX 2026",
-   "location": "Las Vegas",
-   "country_key": 19,
-   "country_code": "USA",
-   "country_name": "United States",
-   "country_flag": "https://media.formula1.com/content/dam/fom-website/2018-redesign-assets/Flags%2016x9/united-states-flag.png",
-   "circuit_key": 152,
-   "circuit_short_name": "Las Vegas",
-   "circuit_type": "Temporary - Street",
-   "circuit_info_url": "https://api.multiviewer.app/api/v1/circuits/152/2026",
-   "circuit_image": "https://media.formula1.com/content/dam/fom-website/2018-redesign-assets/Track%20icons%204x3/Las Vegas%20carbon.png",
-   "gmt_offset": "-08:00:00",
-   "date_start": "2026-11-20T00:30:00+00:00",
-   "date_end": "2026-11-22T06:00:00+00:00",
-   "year": 2026,
-   "is_cancelled": false
-  },
   "1301": {
    "meeting_key": 1301,
    "meeting_name": "Qatar Grand Prix",
@@ -5759,120 +5730,7 @@
    "is_cancelled": false
   }
  },
- "f1_final": {
-  "11420": [
-   [
-    1,
-    2,
-    18.0
-   ],
-   [
-    3,
-    1,
-    25.0
-   ],
-   [
-    5,
-    12,
-    0.0
-   ],
-   [
-    6,
-    15,
-    0.0
-   ],
-   [
-    10,
-    5,
-    10.0
-   ],
-   [
-    11,
-    null,
-    0.0
-   ],
-   [
-    12,
-    4,
-    12.0
-   ],
-   [
-    14,
-    19,
-    0.0
-   ],
-   [
-    16,
-    10,
-    1.0
-   ],
-   [
-    18,
-    17,
-    0.0
-   ],
-   [
-    23,
-    null,
-    0.0
-   ],
-   [
-    27,
-    11,
-    0.0
-   ],
-   [
-    30,
-    14,
-    0.0
-   ],
-   [
-    41,
-    null,
-    0.0
-   ],
-   [
-    43,
-    6,
-    8.0
-   ],
-   [
-    44,
-    7,
-    6.0
-   ],
-   [
-    51,
-    16,
-    0.0
-   ],
-   [
-    55,
-    8,
-    4.0
-   ],
-   [
-    63,
-    9,
-    2.0
-   ],
-   [
-    77,
-    18,
-    0.0
-   ],
-   [
-    81,
-    3,
-    15.0
-   ],
-   [
-    87,
-    13,
-    0.0
-   ]
-  ]
- },
+ "f1_final": {},
  "f1_seen": {},
  "f1_grid": {},
  "f1_grid_seen": {},
