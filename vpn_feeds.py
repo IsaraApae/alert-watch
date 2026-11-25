@@ -16,9 +16,9 @@ import base64, binascii, csv, io, re, shlex, shutil, signal, socket, subprocess,
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 
-from watch import FEEDS, UA
+from watch import FEEDS, UA, VPN_FEED
 
-SITE = "animeruka"
+SITE = VPN_FEED
 URL = FEEDS[SITE]
 SERVER_LIST = "https://www.vpngate.net/api/iphone/"  # VPN Gate's live server list (CSV)
 TRACE = "https://www.cloudflare.com/cdn-cgi/trace"  # says which country this connection comes from (loc=TH)
