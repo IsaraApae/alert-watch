@@ -2995,7 +2995,8 @@
   "213805:9",
   "212503:8",
   "195516:9",
-  "178083:9"
+  "178083:9",
+  "210482:10"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4826,6 +4827,16 @@
    "detected": 1795800313,
    "published": 1795800285,
    "notified": true
+  },
+  "210482:10": {
+   "title": "JoJo Part 7: Steel Ball Run 2nd-3rd Stage",
+   "episode": 11,
+   "version": "ซับไทย",
+   "first": "animeruka",
+   "url": "https://animeruka.com/ep/steel-ball-run-jojos-bizarre-adventure-ep-11/",
+   "detected": 1795801217,
+   "published": 1795800970,
+   "notified": true
   }
  },
  "watch_links": {
@@ -4987,7 +4998,8 @@
   "213805:9": "https://animeruka.com/ep/koori-no-jouheki-season-2-ep-9/",
   "212503:8": "https://isaraapae.github.io/alert-watch/b.html?v=HZjUZXsdqeA",
   "195516:9": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-9/",
-  "178083:9": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-9/"
+  "178083:9": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-9/",
+  "210482:10": "https://animeruka.com/ep/steel-ball-run-jojos-bizarre-adventure-ep-11/"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -5095,7 +5107,7 @@
   "11421",
   "11422"
  ],
- "anime_checked": 1795800913,
+ "anime_checked": 1795801217,
  "mal_totals": {
   "60601": [
    12,
