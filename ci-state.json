@@ -3198,7 +3198,8 @@
   "EP.49",
   "EP.50",
   "EP.51",
-  "EP.52"
+  "EP.52",
+  "EP.53"
  ],
  "watch_later": {},
  "https://manga-lc.net/manga/solo-leveling-ragnarok/": [
@@ -5040,7 +5041,8 @@
   "11414",
   "11415",
   "11416",
-  "11420"
+  "11420",
+  "11421"
  ],
  "f1_standings": [
   "11388",
@@ -5068,7 +5070,7 @@
   "11420",
   "11421"
  ],
- "anime_checked": 1795791315,
+ "anime_checked": 1795791633,
  "mal_totals": {
   "60601": [
    12,
@@ -5147,7 +5149,7 @@
   "https://www.webtoons.com/th/action/the-toy/list?title_no=6718": 77.0,
   "https://www.webtoons.com/th/action/loan-sharks-genius-grandson/list?title_no=7637": 102.0,
   "https://www.webtoons.com/th/fantasy/what-a-bountiful-harvest-demon-lord/list?title_no=8314": 78.0,
-  "https://www.webtoons.com/th/action/killer-peter/list?title_no=5899": 149.0,
+  "https://www.webtoons.com/th/action/killer-peter/list?title_no=5899": 150.0,
   "https://www.webtoons.com/th/fantasy/ticket-hero/list?title_no=2433": 317.0,
   "https://www.webtoons.com/th/comedy/badguy/list?title_no=2342": 316,
   "https://www.webtoons.com/th/fantasy/reality-quest/list?title_no=4271": 221.0,
@@ -5164,7 +5166,7 @@
   "https://www.webtoons.com/th/action/the-toy/list?title_no=6718": 77.0,
   "https://www.webtoons.com/th/action/loan-sharks-genius-grandson/list?title_no=7637": 102.0,
   "https://www.webtoons.com/th/fantasy/what-a-bountiful-harvest-demon-lord/list?title_no=8314": 78.0,
-  "https://www.webtoons.com/th/action/killer-peter/list?title_no=5899": 149.0,
+  "https://www.webtoons.com/th/action/killer-peter/list?title_no=5899": 150.0,
   "https://www.webtoons.com/th/fantasy/ticket-hero/list?title_no=2433": 317.0,
   "https://www.webtoons.com/th/comedy/badguy/list?title_no=2342": 316,
   "https://www.webtoons.com/th/fantasy/reality-quest/list?title_no=4271": 221.0,
@@ -5178,7 +5180,7 @@
   "https://www.webtoons.com/th/action/kenka-revenge/list?title_no=6843": "Chapter 73",
   "https://www.webtoons.com/th/romance/the-mafia-nanny/list?title_no=6553": "Chapter 63",
   "https://www.webtoons.com/th/action/dead-mansion/list?title_no=6865": "Chapter 51",
-  "https://www.webtoons.com/th/fantasy/my-virtual-god-is-a-teenage-girl/list?title_no=6957": "Chapter 54"
+  "https://www.webtoons.com/th/fantasy/my-virtual-god-is-a-teenage-girl/list?title_no=6957": "Chapter 55"
  },
  "https://manga-lc.net/manga/the-money-keeps-piling-up-even-if-i-spend-it-ยิ่งใช้เงินทำไมมั/": [
   "ซีซั่น-1/ตอนที่-1",
@@ -5369,7 +5371,6 @@
   "195516:11": 1796997600.0,
   "195516:12": 1797602400.0,
   "195516:13": 1798293600.0,
-  "195516:4": 1793197800.0,
   "212503:4": 1793291280.0,
   "212503:5": 1793896080.0,
   "212503:6": 1794500880.0,
@@ -5848,7 +5849,120 @@
    "is_cancelled": false
   }
  },
- "f1_final": {},
+ "f1_final": {
+  "11421": [
+   [
+    1,
+    4,
+    null
+   ],
+   [
+    3,
+    6,
+    null
+   ],
+   [
+    5,
+    11,
+    null
+   ],
+   [
+    6,
+    3,
+    null
+   ],
+   [
+    10,
+    10,
+    null
+   ],
+   [
+    11,
+    21,
+    null
+   ],
+   [
+    12,
+    1,
+    null
+   ],
+   [
+    16,
+    7,
+    null
+   ],
+   [
+    18,
+    20,
+    null
+   ],
+   [
+    23,
+    16,
+    null
+   ],
+   [
+    27,
+    13,
+    null
+   ],
+   [
+    30,
+    14,
+    null
+   ],
+   [
+    34,
+    19,
+    null
+   ],
+   [
+    41,
+    9,
+    null
+   ],
+   [
+    43,
+    12,
+    null
+   ],
+   [
+    44,
+    8,
+    null
+   ],
+   [
+    51,
+    15,
+    null
+   ],
+   [
+    55,
+    18,
+    null
+   ],
+   [
+    63,
+    2,
+    null
+   ],
+   [
+    77,
+    22,
+    null
+   ],
+   [
+    81,
+    5,
+    null
+   ],
+   [
+    87,
+    17,
+    null
+   ]
+  ]
+ },
  "f1_seen": {},
  "f1_grid": {},
  "f1_grid_seen": {},
