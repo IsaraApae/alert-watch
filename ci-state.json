@@ -2999,7 +2999,8 @@
   "212503:8",
   "195516:9",
   "178083:9",
-  "210482:10"
+  "210482:10",
+  "209872:9"
  ],
  "https://m.webtoons.com/th/romance/ivy/list?title_no=4436": [
   "EP.197",
@@ -4840,6 +4841,16 @@
    "detected": 1795801217,
    "published": 1795800970,
    "notified": true
+  },
+  "209872:9": {
+   "title": "Ranma 1/2 Season 3",
+   "episode": 9,
+   "version": "ซับไทย",
+   "first": "animeruka",
+   "url": "https://animeruka.com/ep/ranma-%c2%bd-season-3-ep-9/",
+   "detected": 1795886715,
+   "published": 1795886528,
+   "notified": true
   }
  },
  "watch_links": {
@@ -5002,7 +5013,8 @@
   "212503:8": "https://isaraapae.github.io/alert-watch/b.html?v=HZjUZXsdqeA",
   "195516:9": "https://animeruka.com/ep/kusuriya-no-hitorigoto-season-3-ep-9/",
   "178083:9": "https://animeruka.com/ep/tokyo-revengers-santen-sensou-hen-season-4-ep-9/",
-  "210482:10": "https://animeruka.com/ep/steel-ball-run-jojos-bizarre-adventure-ep-11/"
+  "210482:10": "https://animeruka.com/ep/steel-ball-run-jojos-bizarre-adventure-ep-11/",
+  "209872:9": "https://animeruka.com/ep/ranma-%c2%bd-season-3-ep-9/"
  },
  "special_rows": {},
  "gojo_pages": {
@@ -5113,7 +5125,7 @@
   "11422",
   "11423"
  ],
- "anime_checked": 1795886416,
+ "anime_checked": 1795886715,
  "mal_totals": {
   "60601": [
    12,
@@ -5365,7 +5377,6 @@
   "209872:10": 1796487000.0,
   "209872:11": 1797090900.0,
   "209872:12": 1797695700.0,
-  "209872:4": 1793292840.0,
   "199426:5": 1793544300.0,
   "199426:6": 1794149100.0,
   "199426:7": 1794753900.0,
